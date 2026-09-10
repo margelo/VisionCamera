@@ -49,12 +49,14 @@ import VisionCamera
 
 func printZoom(controller: CameraController) {
 	print("Native zoom:", controller.zoom)
-	print("Display zoom:", controller.displayableZoomFactor)
+	if #available(iOS 18.0, *) {
+		print("Display zoom:", controller.displayableZoomFactor)
+	}
 	print("Lens switch factors:", controller.device.zoomLensSwitchFactors)
 }
 ```
 
-`zoom` uses AVFoundation's native zoom factor. A virtual Camera's minimum native factor does not necessarily correspond to the familiar "1x" wide-angle view. On iOS 18 and later, `displayableZoomFactor` applies Apple's display multiplier. On earlier versions, it returns the native factor.
+`zoom` uses AVFoundation's native zoom factor. A virtual Camera's minimum native factor does not necessarily correspond to the familiar "1x" wide-angle view. `displayableZoomFactor` requires iOS 18 or later and applies Apple's display multiplier.
 
 Use native factors when setting zoom. Use `displayableZoomFactor` when displaying the current value in your UI.
 

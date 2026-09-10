@@ -6,13 +6,13 @@ Exposure, focus, and white balance typically adjust automatically as the scene c
 
 ## Set exposure duration and ISO
 
-If the ``CameraDevice`` supports exposure locking, set a custom exposure duration and ISO with `setExposureLocked(duration:iso:)`:
+If the ``CameraDevice`` supports custom exposure, set a custom exposure duration and ISO with `setExposureLocked(duration:iso:)`:
 
 ```swift
 import VisionCamera
 
 func setManualExposure(controller: CameraController) async throws {
-	guard controller.device.supportsExposureLocking else { return }
+	guard controller.device.supportsCustomExposure else { return }
 	let duration = min(max(1.0 / 60.0, controller.minExposureDuration), controller.maxExposureDuration)
 	let iso = min(max(100, controller.minISO), controller.maxISO)
 	try await controller.setExposureLocked(duration: duration, iso: iso)
@@ -23,13 +23,13 @@ Exposure duration is measured in seconds. Both values must stay within the contr
 
 ## Set focus lens position
 
-If the device supports focus locking, set a lens position between `0` and `1`:
+If the device supports a custom lens position, set a lens position between `0` and `1`:
 
 ```swift
 import VisionCamera
 
 func setManualFocus(controller: CameraController) async throws {
-	guard controller.device.supportsFocusLocking else { return }
+	guard controller.device.supportsCustomLensPosition else { return }
 	try await controller.setFocusLocked(lensPosition: 0.5)
 }
 ```
@@ -38,13 +38,13 @@ Lens position is a normalized lens setting, not a distance in meters.
 
 ## Set white balance
 
-To set a color temperature and tint, first convert them to native ``WhiteBalanceGains``. Clamp each gain to the device's supported range before applying it:
+To set a color temperature and tint, first convert them to native white-balance gains. Clamp each gain to the device's supported range before applying it:
 
 ```swift
 import VisionCamera
 
 func setDaylightWhiteBalance(controller: CameraController) async throws {
-	guard controller.device.supportsWhiteBalanceLocking else { return }
+	guard controller.device.supportsCustomWhiteBalanceGains else { return }
 	var gains = controller.convertWhiteBalanceTemperatureAndTintValues(
 		whiteBalanceTemperatureAndTint: .init(temperature: 5500, tint: 0)
 	)
@@ -62,7 +62,7 @@ The ``CameraController`` exposes `exposureDuration`, `iso`, `lensPosition`, and 
 
 ## Lock current values
 
-To lock the current values, for example after a <doc:TapToFocus> action, call `lockCurrentExposure()`, `lockCurrentFocus()`, or `lockCurrentWhiteBalance()`:
+Locking current values is supported independently of manually specifying a lens position or white-balance gains. To lock the current values, for example after a <doc:TapToFocus> action, call `lockCurrentExposure()`, `lockCurrentFocus()`, or `lockCurrentWhiteBalance()`:
 
 ```swift
 import VisionCamera

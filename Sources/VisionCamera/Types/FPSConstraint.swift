@@ -8,7 +8,8 @@
 /// FPSConstraint(fps: 60)
 /// ```
 public struct FPSConstraint: Equatable, Sendable {
-  /// The target frame rate, in frames per second.
+  /// The target frame rate, in frames per second. Fractional rates such as 29.97 are supported.
+  /// Session configuration rejects non-finite values and values at or below zero.
   public var fps: Double
 
   /// Creates a preferred frame rate, in frames per second.

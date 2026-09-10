@@ -121,8 +121,6 @@ public final class Frame {
   public var isPlanar: Bool { pixelBuffer.map { CVPixelBufferIsPlanar($0) } ?? false }
   /// Get whether this Frame has a `CVPixelBuffer` attached to it. Returns `false` after disposal.
   public var hasPixelBuffer: Bool { pixelBuffer != nil }
-  /// Get whether this Frame has a native pixel buffer attached to it. See ``Frame/getNativeBuffer()``.
-  public var hasNativeBuffer: Bool { pixelBuffer != nil }
 
   /// Gets the ``PixelFormat`` of this Frame's pixel data.
   ///
@@ -136,7 +134,7 @@ public final class Frame {
 
   /// Gets the Camera intrinsic matrix for this Frame.
   ///
-  /// The returned array is a 3x3 matrix with column-major ordering.
+  /// The returned value is a native 3x3 matrix with column-major indexing.
   /// Its origin is the top-left of the Frame.
   ///
   /// ```
@@ -153,12 +151,12 @@ public final class Frame {
   ///
   /// ```swift
   /// if let matrix = frame.cameraIntrinsicMatrix {
-  ///   let fx = matrix[0]
-  ///   let fy = matrix[4]
+  ///   let fx = matrix[0, 0]
+  ///   let fy = matrix[1, 1]
   /// }
   /// ```
-  public var cameraIntrinsicMatrix: [Double]? {
-    sampleBuffer?.getCameraIntrinsicMatrix()?.toDoubleArray()
+  public var cameraIntrinsicMatrix: simd_float3x3? {
+    sampleBuffer?.getCameraIntrinsicMatrix()
   }
 
   /// Releases this instance's reference to its native buffer early.
@@ -193,18 +191,6 @@ public final class Frame {
     return pixelBuffer
   }
 
-  /// Returns the retained native `CVPixelBuffer` for use with native image, GPU, or encoder APIs.
-  ///
-  /// The returned buffer remains valid after this instance is disposed while the caller retains it.
-  /// - Throws: If this instance has been disposed or has no pixel buffer.
-  ///
-  /// ```swift
-  /// let pixelBuffer = try frame.getNativeBuffer()
-  /// frame.dispose()
-  /// // pixelBuffer is still retained and can be used with Core Video or Metal.
-  /// ```
-  public func getNativeBuffer() throws -> CVPixelBuffer { try getPixelBuffer() }
-
   /// Provides scoped, read-only access to the non-planar pixel buffer's bytes without copying them.
   ///
   /// The buffer is locked for the duration of `body` and unlocked even if `body` throws. The pointer must not escape the closure. Copy the bytes into `Data` to keep them beyond the closure.
@@ -225,7 +211,7 @@ public final class Frame {
   /// camera sensor coordinates into a ``Point``
   /// in Frame coordinates, relative to this ``Frame``.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Camera sensor coordinates are normalized from `0.0` to `1.0` in the unrotated, unmirrored image.
   ///
   /// ```swift
   /// let cameraPoint = Point(x: 0.5, y: 0.5)
@@ -242,7 +228,7 @@ public final class Frame {
   /// Frame coordinates relative to this ``Frame``
   /// into a ``Point`` in camera sensor coordinates.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Camera sensor coordinates are normalized from `0.0` to `1.0` in the unrotated, unmirrored image.
   ///
   /// ```swift
   /// let framePoint = Point(x: frame.width / 2, y: frame.height / 2)

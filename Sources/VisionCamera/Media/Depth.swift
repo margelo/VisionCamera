@@ -103,9 +103,12 @@ public final class Depth {
   /// ``Depth`` can be converted to using ``Depth/convert(pixelFormat:)``.
   ///
   /// - Note: If this ``Depth`` is invalid (``Depth/isValid``), this returns an empty array (`[]`).
-  /// - Note: Some platforms may return an empty array (`[]`) if conversion is not supported.
+  /// Native types that this version of VisionCamera does not recognize are omitted.
   public var availableDepthPixelFormats: [DepthPixelFormat] {
-    depthData?.availableDepthDataTypes.map { DepthPixelFormat(osType: $0) } ?? []
+    depthData?.availableDepthDataTypes.compactMap { nativeFormat in
+      let format = DepthPixelFormat(osType: nativeFormat)
+      return format == .unknown ? nil : format
+    } ?? []
   }
 
   /// Gets the associated ``CameraCalibrationData`` for this
@@ -136,11 +139,6 @@ public final class Depth {
   /// The returned buffer remains valid after this instance is disposed while the caller retains it.
   /// - Throws: If this instance has been disposed or has no pixel buffer.
   public func getPixelBuffer() throws -> CVPixelBuffer { try getDepthData().depthDataMap }
-  /// Returns the retained native `CVPixelBuffer` for use with native image, GPU, or encoder APIs.
-  ///
-  /// The returned buffer remains valid after this instance is disposed while the caller retains it.
-  /// - Throws: If this instance has been disposed or has no pixel buffer.
-  public func getNativeBuffer() throws -> CVPixelBuffer { try getPixelBuffer() }
 
   /// Provides scoped, read-only access to the non-planar pixel buffer's bytes without copying them.
   ///
@@ -186,7 +184,8 @@ public final class Depth {
   /// The returned Depth retains the original presentation metadata. Throws if this Depth Frame has been disposed or the target pixel format is unsupported.
   public func convert(pixelFormat: DepthPixelFormat) throws -> Depth {
     let depthData = try getDepthData()
-    let converted = depthData.converting(toDepthDataType: try pixelFormat.toCVPixelFormatType())
+    let nativeFormat = try pixelFormat.validatedNativeFormat(availableDepthDataTypes: depthData.availableDepthDataTypes)
+    let converted = depthData.converting(toDepthDataType: nativeFormat)
     return Depth(depthData: converted, metadata: metadata)
   }
 
@@ -199,7 +198,7 @@ public final class Depth {
   public func convertAsync(pixelFormat: DepthPixelFormat) async throws -> Depth {
     let depthData = try getDepthData()
     let metadata = metadata
-    let osFormat = try pixelFormat.toCVPixelFormatType()
+    let osFormat = try pixelFormat.validatedNativeFormat(availableDepthDataTypes: depthData.availableDepthDataTypes)
     try Task.checkCancellation()
     return await Self.conversionQueue.perform {
       Depth(depthData: depthData.converting(toDepthDataType: osFormat), metadata: metadata)
@@ -210,7 +209,7 @@ public final class Depth {
   /// camera sensor coordinates into a ``Point``
   /// in Depth coordinates, relative to this ``Depth``.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Camera sensor coordinates are normalized from `0.0` to `1.0` in the unrotated, unmirrored image.
   ///
   /// ```swift
   /// let cameraPoint = Point(x: 0.5, y: 0.5)
@@ -226,7 +225,7 @@ public final class Depth {
   /// Depth coordinates relative to this ``Depth``
   /// into a ``Point`` in camera sensor coordinates.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Camera sensor coordinates are normalized from `0.0` to `1.0` in the unrotated, unmirrored image.
   ///
   /// ```swift
   /// let depthPoint = Point(x: depth.width / 2, y: depth.height / 2)

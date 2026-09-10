@@ -89,7 +89,7 @@ final class SampleBufferOutput: CameraOutput, NativeCameraOutput {
 }
 ```
 
-The session calls `configure(config:)` during its configuration batch on the session's serial queue. Do not independently add this native output to another capture session. Coordinate subsequent configuration changes with the owner of your session.
+The session calls `configure(config:)` during its configuration batch on the session's serial queue. The method can throw to reject an unsupported format or setting before AVFoundation applies it. `MediaType.other(_:)` preserves native media identifiers for custom outputs. Do not independently add this native output to another capture session. Coordinate subsequent configuration changes with the owner of your session.
 
 This sample requests physical buffer rotation and native mirroring. Its delegate receives transformed buffers. For processing that accepts orientation metadata, you can design an output that leaves pixels in sensor orientation instead. See <doc:Orientation>.
 

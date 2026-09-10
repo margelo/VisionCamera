@@ -28,7 +28,6 @@
 - ``pixelBuffer``
 - ``getDepthData()``
 - ``getPixelBuffer()``
-- ``getNativeBuffer()``
 - ``withUnsafeBytes(_:)``
 - ``toFrame()``
 

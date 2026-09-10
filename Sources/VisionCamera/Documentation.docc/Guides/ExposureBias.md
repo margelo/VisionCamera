@@ -13,13 +13,12 @@ import VisionCamera
 
 func brighten(controller: CameraController) async throws {
 	let device = controller.device
-	guard device.supportsExposureBias else { return }
 	let exposure = min(max(1, device.minExposureBias), device.maxExposureBias)
 	try await controller.setExposureBias(exposure: exposure)
 }
 ```
 
-Make sure your ``CameraDevice`` supports exposure bias, and that your value stays within its `minExposureBias` and `maxExposureBias` range.
+Keep the requested bias within the device's `minExposureBias` and `maxExposureBias` range.
 
 ## Get exposure bias
 

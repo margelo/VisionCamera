@@ -6,18 +6,18 @@ A ``Frame`` wraps a native GPU-backed buffer. To interoperate with other librari
 
 ## Get a native buffer
 
-Use `getNativeBuffer()` or `getPixelBuffer()` to retrieve a retained `CVPixelBuffer`:
+Use `getPixelBuffer()` to retrieve a retained `CVPixelBuffer`:
 
 ```swift
 import CoreVideo
 import VisionCamera
 
 func nativeBuffer(frame: Frame) throws -> CVPixelBuffer {
-	return try frame.getNativeBuffer()
+	return try frame.getPixelBuffer()
 }
 ```
 
-Both methods return the same kind of native object. The optional `sampleBuffer` property provides the `CMSampleBuffer` with its timing and attachments.
+The optional `sampleBuffer` property provides the `CMSampleBuffer` with its timing and attachments.
 
 ## Retain a buffer while using it
 

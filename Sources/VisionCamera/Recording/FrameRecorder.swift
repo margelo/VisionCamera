@@ -23,11 +23,6 @@ public final class FrameRecorder: Recorder {
   private let delegate: RecorderDelegate
   private let settings: RecorderSettings
 
-  /// Sum of all appended sample sizes. Accumulated rather than stat'd because
-  /// `AVAssetWriter` buffers writes, so on-disk size lags significantly behind
-  /// the actual recorded data until `finishWriting` flushes.
-  private var accumulatedBytes: Int64 = 0
-
   private var onRecordingFinished: ((String, RecordingFinishedReason) -> Void)? = nil
   private var onRecordingError: ((any Error) -> Void)? = nil
   private var onRecordingPaused: (() -> Void)? = nil
@@ -88,13 +83,13 @@ public final class FrameRecorder: Recorder {
   }
 
   /// Returns the currently recorded file size, in bytes. Buffered writes can make the on-disk size lag behind recording; returns `0` if the file size is unavailable.
-  public var recordedFileSize: Double {
+  public var recordedFileSize: Int64 {
     if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
       let sizeBytes = attrs[.size] as? NSNumber
     {
-      return sizeBytes.doubleValue
+      return sizeBytes.int64Value
     }
-    return 0.0
+    return 0
   }
 
   /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mp4`, not a `file://` URL.
@@ -302,7 +297,6 @@ public final class FrameRecorder: Recorder {
         do {
           let track = try self.getTrack(ofType: type)
           try track.append(buffer: buffer)
-          self.accumulatedBytes += Int64(CMSampleBufferGetTotalSampleSize(buffer))
         } catch {
           logger.error("Failed to append buffer to \(type.rawValue) track! \(error)")
           self.fail(self.assetWriter.error ?? error)
@@ -338,7 +332,7 @@ public final class FrameRecorder: Recorder {
   private func reachedFileSizeLimit() -> Bool {
     if let maxFileSize = settings.maxFileSize {
       // Check if video size >= max target file size
-      if accumulatedBytes >= Int64(maxFileSize) {
+      if recordedFileSize >= maxFileSize {
         logger.info("Reached maxFileSize of \(maxFileSize) bytes - finishing recording.")
         return true
       }

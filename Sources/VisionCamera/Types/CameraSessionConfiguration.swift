@@ -2,46 +2,41 @@
 
 /// Configuration for a ``CameraSession``.
 public struct CameraSessionConfiguration: Equatable, Sendable {
-  /// If enabled, the device may play haptics/vibrations
-  /// and system sounds while the ``CameraSession``
-  /// is active.
+  /// Whether audio recording allows haptics and system sounds.
   ///
-  /// If disabled, all haptics and system
-  /// sounds will be muted while the ``CameraSession``
-  /// is active.
-  ///
-  /// - Note: If ``CameraSessionConfiguration/allowHapticsAndSystemSoundsPlayback``
-  /// is true, haptics or system sounds may also be captured
-  /// in Video recordings.
-  /// Haptics may also affect stabilization or focus operations.
-  ///
-  /// When `nil`, the current AVFoundation setting is left unchanged.
+  /// Haptics can affect stabilization or focus, and sounds may be captured in recordings.
+  /// A `nil` value leaves the shared audio-session setting unchanged.
   public var allowHapticsAndSystemSoundsPlayback: Bool?
-  /// If enabled, the device may play background audio,
-  /// possibly from another app (e.g. Apple Music) while
-  /// the ``CameraSession`` is active.
+  /// Whether AVFoundation mixes recording audio with audio playing in other apps.
   ///
-  /// If disabled, any playing audio will be
-  /// stopped while the ``CameraSession`` is active.
-  ///
-  /// - Note: If ``CameraSessionConfiguration/allowBackgroundAudioPlayback`` is true,
-  /// background audio may also be captured in Video recordings.
-  ///
-  /// When `nil`, the current AVFoundation setting is left unchanged.
-  ///
-  /// This option is applied on iOS 18 and later.
-  public var allowBackgroundAudioPlayback: Bool?
+  /// This controls automatic configuration of the app's shared audio session. Other apps' audio may
+  /// be captured in the recording. A `nil` value leaves the current setting unchanged.
+  @available(iOS 18.0, *)
+  public var allowBackgroundAudioPlayback: Bool? {
+    get { backgroundAudioPlayback }
+    set { backgroundAudioPlayback = newValue }
+  }
+  private var backgroundAudioPlayback: Bool?
 
-  /// Creates the audio-playback configuration for a Camera session.
+  /// Creates changes to haptics and system-sound playback during audio recording.
+  ///
+  /// - Parameter allowHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
+  public init(allowHapticsAndSystemSoundsPlayback: Bool? = nil) {
+    self.allowHapticsAndSystemSoundsPlayback = allowHapticsAndSystemSoundsPlayback
+    self.backgroundAudioPlayback = nil
+  }
+
+  /// Creates changes to haptics, system-sound playback, and mixing with other apps' audio.
   ///
   /// - Parameters:
-  ///   - allowHapticsAndSystemSoundsPlayback: If enabled, the device may play haptics/vibrations and system sounds while the ``CameraSession`` is active.
-  ///   - allowBackgroundAudioPlayback: If enabled, the device may play background audio, possibly from another app (e.g. Apple Music) while the ``CameraSession`` is active.
+  ///   - allowHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
+  ///   - allowBackgroundAudioPlayback: Whether AVFoundation mixes the shared audio session with other apps. A `nil` value leaves the current setting unchanged.
+  @available(iOS 18.0, *)
   public init(
     allowHapticsAndSystemSoundsPlayback: Bool? = nil,
-    allowBackgroundAudioPlayback: Bool? = nil
+    allowBackgroundAudioPlayback: Bool?
   ) {
     self.allowHapticsAndSystemSoundsPlayback = allowHapticsAndSystemSoundsPlayback
-    self.allowBackgroundAudioPlayback = allowBackgroundAudioPlayback
+    self.backgroundAudioPlayback = allowBackgroundAudioPlayback
   }
 }

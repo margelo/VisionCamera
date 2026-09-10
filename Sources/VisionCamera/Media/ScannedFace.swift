@@ -12,8 +12,8 @@ public final class ScannedFace: ScannedObject {
   /// Creates a ScannedFace that retains the given native AVFoundation metadata object.
   public init(object: AVMetadataFaceObject) { self.face = object }
 
-  /// The ``ScannedObjectType`` of this ``ScannedObject``.
-  public var type: ScannedObjectType { ScannedObjectType(type: face.type) }
+  /// The native metadata type, including types introduced by newer Apple SDKs.
+  public var type: AVMetadataObject.ObjectType { face.type }
   /// The bounding box coordinates of this ``ScannedObject``.
   ///
   /// Coordinates are in camera-space (`0.0` ... `1.0`), and can be
@@ -21,13 +21,9 @@ public final class ScannedFace: ScannedObject {
   public var boundingBox: BoundingBox { BoundingBox(face.bounds) }
   /// The ID of this ``ScannedFace`` used to
   /// identify multiple faces in the same scene.
-  public var faceID: Double { Double(face.faceID) }
-  /// A Boolean value indicating whether there is a valid roll angle associated with the face.
-  public var hasRollAngle: Bool { face.hasRollAngle }
-  /// The roll angle of the face specified in degrees.
-  public var rollAngle: Double { Double(face.rollAngle) }
-  /// A Boolean value indicating whether there is a valid yaw angle associated with the face.
-  public var hasYawAngle: Bool { face.hasYawAngle }
-  /// The yaw angle of the face specified in degrees.
-  public var yawAngle: Double { Double(face.yawAngle) }
+  public var faceID: Int { face.faceID }
+  /// The roll angle in degrees, or `nil` when AVFoundation has no valid roll angle.
+  public var rollAngle: CGFloat? { face.hasRollAngle ? face.rollAngle : nil }
+  /// The yaw angle in degrees, or `nil` when AVFoundation has no valid yaw angle.
+  public var yawAngle: CGFloat? { face.hasYawAngle ? face.yawAngle : nil }
 }

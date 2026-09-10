@@ -28,9 +28,6 @@ extension DepthPixelFormat {
     case .unknown:
       throw CameraError(
         message: "Cannot convert DepthPixelFormat \"unknown\" to native OSType!")
-    case .depthPointCloud32Bit:
-      throw CameraError(
-        message: "DepthPixelFormat \"depth-point-cloud-32-bit\" is not supported on iOS!")
     case .depth16Bit:
       return kCVPixelFormatType_DepthFloat16
     case .depth32Bit:

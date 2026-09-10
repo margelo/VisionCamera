@@ -29,16 +29,14 @@ import Foundation
 public enum VisionCamera {
   private static let queue = DispatchQueue(label: "com.margelo.camera.constraints", qos: .userInitiated)
 
-  /// Get the current Camera ``PermissionStatus``.
-  public static var cameraPermissionStatus: PermissionStatus {
-    let status = AVCaptureDevice.authorizationStatus(for: .video)
-    return PermissionStatus(avStatus: status)
+  /// The native Camera authorization status.
+  public static var cameraPermissionStatus: AVAuthorizationStatus {
+    return AVCaptureDevice.authorizationStatus(for: .video)
   }
 
-  /// Get the current Microphone ``PermissionStatus``.
-  public static var microphonePermissionStatus: PermissionStatus {
-    let status = AVCaptureDevice.authorizationStatus(for: .audio)
-    return PermissionStatus(avStatus: status)
+  /// The native Microphone authorization status.
+  public static var microphonePermissionStatus: AVAuthorizationStatus {
+    return AVCaptureDevice.authorizationStatus(for: .audio)
   }
 
   /// Request Camera permission.
@@ -116,7 +114,7 @@ public enum VisionCamera {
     device: CameraDevice,
     outputConfigurations: [CameraOutputConfiguration],
     constraints: [Constraint],
-    requiresMultiCam: Bool? = nil
+    requiresMultiCam: Bool = false
   ) async throws -> CameraSessionConfig {
     return try await queue.perform {
       let outputs = outputConfigurations.map { $0.output }
@@ -124,7 +122,7 @@ public enum VisionCamera {
         for: device,
         constraints: constraints,
         outputs: outputs,
-        isMultiCam: requiresMultiCam == true)
+        isMultiCam: requiresMultiCam)
       return CameraSessionConfig(
         negotiatedFormat: resolvedConstraints.negotiatedFormat,
         enabledConstraints: resolvedConstraints.enabledConstraints)

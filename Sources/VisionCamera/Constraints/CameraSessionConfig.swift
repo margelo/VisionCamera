@@ -43,16 +43,14 @@ public final class CameraSessionConfig {
   }
 
   /// Gets the currently selected dynamic range for video streams, or `nil` if no specific dynamic range has been configured.
-  public var selectedVideoDynamicRange: TargetDynamicRange? {
+  public var selectedVideoDynamicRange: DynamicRange? {
     return enabledConstraints.selectedVideoDynamicRange
   }
 
-  /// Gets whether the selected format supports the highest photo quality, which allows Smart HDR.
+  /// Whether the selected capture format supports AVFoundation's highest photo quality.
   ///
-  /// AVFoundation decides whether to apply Smart HDR to an individual photo. This value does not guarantee
-  /// that a captured photo uses HDR.
-  public var isPhotoHDREnabled: Bool {
-    // Highest Photo Quality implies Smart HDR, this is not directly controllable.
+  /// This capability does not describe whether HDR processing is active for a photo.
+  public var supportsHighestPhotoQuality: Bool {
     return negotiatedFormat.format.isHighestPhotoQualitySupported
   }
 
@@ -94,7 +92,7 @@ public final class CameraSessionConfig {
       "selectedVideoStabilizationMode: \(String(describing: selectedVideoStabilizationMode))",
       "selectedPreviewStabilizationMode: \(String(describing: selectedPreviewStabilizationMode))",
       "selectedVideoDynamicRange: \(String(describing: selectedVideoDynamicRange))",
-      "isPhotoHDREnabled: \(isPhotoHDREnabled)",
+      "supportsHighestPhotoQuality: \(supportsHighestPhotoQuality)",
     ]
     return "CameraSessionConfig(\(components.joined(separator: ", ")))"
   }

@@ -109,6 +109,6 @@ Binned formats combine multiple neighboring sensor pixels into one larger effect
 
 Use `.binned(.init(binned: true))` to prefer a binned format, or `false` to prefer a non-binned format. Omitting the constraint means no preference.
 
-> Note: ``PhotoHDRConstraint`` is retained in the type model, but it does not enable or disable Photo HDR on iOS. See <doc:PhotoHDR>.
+> Note: AVFoundation manages photo HDR processing separately from format constraints. See <doc:PhotoHDR>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: constraints. -->

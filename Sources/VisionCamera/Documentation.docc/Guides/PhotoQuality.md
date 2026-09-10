@@ -18,6 +18,8 @@ func makeQualityPhotoOutput() -> PhotoOutput {
 }
 ```
 
+When no quality prioritization is specified, AVFoundation uses balanced prioritization for processed photos and speed for Bayer RAW. Bayer RAW rejects an explicit balanced or quality preference. ProRAW supports quality prioritization.
+
 Support depends on the output configuration and device. A speed preference does not guarantee zero shutter lag on every device or OS version.
 
 ## Configure compression quality
@@ -29,8 +31,7 @@ import VisionCamera
 
 func makeJPEGOutput() -> PhotoOutput {
 	return PhotoOutput(options: .init(
-		containerFormat: .jpeg,
-		quality: 1,
+		containerFormat: .jpeg(quality: 1),
 		qualityPrioritization: .balanced
 	))
 }
@@ -38,6 +39,6 @@ func makeJPEGOutput() -> PhotoOutput {
 
 A lower value such as `0.7` can produce smaller files with more compression artifacts. Compression quality is separate from resolution and capture prioritization.
 
-> Note: RAW DNG capture does not use this processed-image compression quality setting. See <doc:RawPhotos>.
+> Note: `.dng` has no processed-image compression quality parameter. See <doc:RawPhotos>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs/photo-quality.mdx. -->

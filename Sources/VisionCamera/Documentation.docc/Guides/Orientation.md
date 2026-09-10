@@ -40,7 +40,7 @@ Apply changes from one owner in your app. Avoid changing output properties concu
 
 For manual control, assign an output's `outputOrientation` directly. ``CameraOrientation`` has `.up`, `.right`, `.down`, and `.left` values.
 
-The preview follows the interface orientation automatically. Assigning `PreviewOutput.outputOrientation` does not override that behavior.
+The preview follows the interface orientation automatically. `PreviewOutput.outputOrientation` is read-only.
 
 ## Rotate UI controls
 

@@ -41,6 +41,6 @@ See <doc:Constraints> for resolution negotiation.
 
 ## Orientation
 
-The preview follows the app's interface orientation. Setting `outputOrientation` on a preview output does not override that behavior. Photo, video, frame, and depth outputs can follow a separate orientation source. See <doc:Orientation>.
+The preview follows the app's interface orientation. Its `outputOrientation` property is read-only. Photo, video, frame, and depth outputs can follow a separate orientation source. See <doc:Orientation>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: preview-output. -->

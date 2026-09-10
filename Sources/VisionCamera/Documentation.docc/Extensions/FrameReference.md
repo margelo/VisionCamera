@@ -22,11 +22,9 @@
 
 - ``isPlanar``
 - ``hasPixelBuffer``
-- ``hasNativeBuffer``
 - ``pixelBuffer``
 - ``sampleBuffer``
 - ``getPixelBuffer()``
-- ``getNativeBuffer()``
 - ``getPlanes()``
 - ``withUnsafeBytes(_:)``
 

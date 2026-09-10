@@ -7,9 +7,9 @@ final class ModelTests: XCTestCase {
   func testPhotoDefaultsPreserveCaptureQuality() {
     let options = PhotoOutputOptions()
     XCTAssertEqual(options.targetResolution, Size(width: 3024, height: 4032))
-    XCTAssertEqual(options.containerFormat, .native)
-    XCTAssertEqual(options.quality, 0.9)
-    XCTAssertEqual(options.qualityPrioritization, .balanced)
+    XCTAssertEqual(options.containerFormat, .automatic(quality: 0.9))
+    XCTAssertNil(options.qualityPrioritization)
+    XCTAssertFalse(options.enableDepthDataDelivery)
     XCTAssertNil(options.previewImageTargetSize)
   }
 
@@ -36,10 +36,8 @@ final class ModelTests: XCTestCase {
   func testVideoDefaultsDeferOptionalSettingsToTheRecorder() {
     let options = VideoOutputOptions()
     XCTAssertEqual(options.targetResolution, Size(width: 1080, height: 1920))
-    XCTAssertNil(options.enableAudio)
+    XCTAssertFalse(options.enableAudio)
     XCTAssertNil(options.targetBitRate)
-    XCTAssertNil(options.fileType)
-    XCTAssertNil(VideoOutputSettings().codec)
   }
 
   func testPublicCaptureSettingsAcceptNativeValues() {
@@ -60,8 +58,8 @@ final class ModelTests: XCTestCase {
     XCTAssertTrue(deliveredImage === image)
   }
 
-  func testFocusResetDistinguishesDefaultDisabledAndTimedBehavior() {
-    XCTAssertNil(FocusOptions().autoResetAfter)
+  func testFocusResetUsesAConcreteDefaultAndSupportsDisabledAndTimedBehavior() {
+    XCTAssertEqual(FocusOptions().autoResetAfter, .after(5))
     XCTAssertEqual(FocusOptions(autoResetAfter: .never).autoResetAfter, .never)
     XCTAssertEqual(FocusOptions(autoResetAfter: .after(2)).autoResetAfter, .after(2))
   }

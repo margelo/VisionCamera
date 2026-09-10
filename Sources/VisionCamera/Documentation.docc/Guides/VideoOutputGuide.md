@@ -54,15 +54,31 @@ Retain and reconnect the same output when switching devices. ``VideoFrameOutput`
 
 ### File container format
 
-By default, VisionCamera records to a QuickTime container with a `.mov` extension. Set `fileType` to `.mp4` to use an MPEG-4 container:
+``MovieFileVideoOutput`` records QuickTime movies. Temporary files use a `.mov` extension; a custom destination path does not change the container. To record MPEG-4, use ``VideoFrameOutput`` with `fileType: .mp4`:
 
 ```swift
 import VisionCamera
 
 func makeMP4Output() -> any VideoOutput {
-	return MovieFileVideoOutput(options: .init(fileType: .mp4))
+	return VideoFrameOutput(fileType: .mp4)
 }
 ```
+
+## Select a codec
+
+Query the connected output for its native codecs, then select one before preparing the recorder:
+
+```swift
+import VisionCamera
+
+func selectH264(output: any VideoOutput) async throws {
+	if try output.getSupportedVideoCodecs().contains(.h264) {
+		try await output.setVideoCodec(.h264)
+	}
+}
+```
+
+Codecs use AVFoundation's `AVVideoCodecType`, including HEVC, ProRes, and future codec identifiers. Availability depends on the device, selected format, container, and operating system. If no codec is selected, AVFoundation chooses the encoding settings. ProRes variants determine their own bit rates. ProRes RAW recording requires locked white balance before recorder preparation. After changing the camera or active format, recorder preparation rechecks codec availability.
 
 ## Prepare a recorder
 
@@ -76,7 +92,7 @@ func prepareRecorder(output: any VideoOutput) async throws -> any Recorder {
 }
 ```
 
-Recorder preparation runs on the output's queue and can throw if encoding settings, audio input, or the destination file cannot be prepared. ``VideoFrameOutput`` also needs a configured Camera connection to read its master clock.
+Recorder preparation runs on the output's queue and can throw if encoding settings, audio input, or the destination file cannot be prepared. Both backends require a configured Camera connection before recorder preparation.
 
 See <doc:RecorderGuide> to start, pause, resume, stop, or cancel the recording.
 

@@ -4,6 +4,8 @@ Start a focus metering action at a specific point in the Camera.
 
 A "focus metering action" adjusts Auto-Exposure (AE), Auto-Focus (AF), and Auto-White-Balance (AWB) to bring a specific point in the Camera "into focus". This operation is also often called "3A metering".
 
+A metering point is a normalized capture-device coordinate. Focus and exposure use this point; automatic white balance adjusts the whole scene. The focus operation uses AVFoundation's point-of-interest API and does not configure a region size.
+
 ## Start a focus metering action
 
 First, create a ``MeteringPoint``. A ``PreviewView`` converts a point in the view to Camera coordinates:
@@ -55,7 +57,7 @@ func meterExposure(controller: CameraController, point: MeteringPoint) async thr
 }
 ```
 
-Now, only exposure is metered to the given point. Focus and white balance remain at their current positions.
+Only exposure is metered to the given point. This operation does not change the focus or white-balance mode.
 
 > Important: If you pass a custom `modes` array, each mode must be supported by the current device.
 
@@ -90,7 +92,7 @@ func lockOnSubject(controller: CameraController, point: MeteringPoint) async thr
 
 ### Auto reset
 
-Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. Leaving `autoResetAfter` as `nil` uses the default 5 seconds.
+Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. The default is `.after(5)`.
 
 ## Reset focus
 

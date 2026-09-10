@@ -17,7 +17,7 @@ public protocol Recorder: AnyObject {
   /// The currently recorded file size, in bytes.
   ///
   /// Encoder buffering can cause the on-disk size to lag behind captured data.
-  var recordedFileSize: Double { get }
+  var recordedFileSize: Int64 { get }
   /// The absolute filesystem path to the file that this Recorder is recording, or will record, to.
   ///
   /// For example, `/var/mobile/.../video.mov`. This is a filesystem path, not a `file://` URL.

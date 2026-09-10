@@ -47,6 +47,22 @@ There's three levels of Camera configuration:
 
 > Note: Properties like zoom, exposure, or focus can be adjusted without session reconfiguration. See <doc:CameraControllerGuide>.
 
+## Mix audio with other apps
+
+On iOS 18 and later, configure whether AVFoundation mixes recording audio with other apps:
+
+```swift
+import VisionCamera
+
+@available(iOS 18.0, *)
+func configureAudioMixing(session: CameraSession, connections: [CameraSessionConnection]) async throws {
+	let config = CameraSessionConfiguration(allowBackgroundAudioPlayback: true)
+	_ = try await session.configure(connections: connections, config: config)
+}
+```
+
+This setting applies when the capture session automatically configures the app's shared audio session. Leave it unspecified to preserve the current setting.
+
 ## Handle interruptions
 
 A ``CameraSession`` can be interrupted, for example due to an incoming FaceTime call or device thermal throttling. See ``InterruptionReason``.

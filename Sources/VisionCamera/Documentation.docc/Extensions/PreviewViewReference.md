@@ -24,7 +24,7 @@
 - ``convertCameraPointToViewPoint(cameraPoint:)``
 - ``convertViewPointToCameraPoint(viewPoint:)``
 - ``convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)``
-- ``meteringPoint(at:size:)``
+- ``meteringPoint(at:)``
 
 ### Laying out the preview
 

@@ -10,13 +10,17 @@ import AVFoundation
 extension CMSampleBuffer {
   func getCameraIntrinsicMatrix() -> simd_float3x3? {
     guard let matrixAttachment = self.attachments[.cameraIntrinsicMatrix],
-      let matrixData = matrixAttachment.value as? Data
+      let matrixData = matrixAttachment.value as? Data,
+      matrixData.count >= MemoryLayout<simd_float3x3>.stride
     else {
       return nil
     }
     let matrix: simd_float3x3 = matrixData.withUnsafeBytes { buffer in
-      precondition(buffer.count >= MemoryLayout<matrix_float3x3>.stride)
-      return buffer.load(as: matrix_float3x3.self)
+      var matrix = matrix_identity_float3x3
+      withUnsafeMutableBytes(of: &matrix) { destination in
+        destination.copyBytes(from: buffer.prefix(destination.count))
+      }
+      return matrix
     }
     return matrix
   }

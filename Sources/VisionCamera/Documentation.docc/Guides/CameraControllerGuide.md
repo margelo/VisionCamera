@@ -29,7 +29,6 @@ Since Camera hardware varies, always probe for available features. To use exposu
 import VisionCamera
 
 func brighten(controller: CameraController) async throws {
-	guard controller.device.supportsExposureBias else { return }
 	let exposure = min(1, controller.device.maxExposureBias)
 	try await controller.setExposureBias(exposure: exposure)
 }

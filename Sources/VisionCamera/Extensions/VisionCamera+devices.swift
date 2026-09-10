@@ -79,21 +79,16 @@ extension VisionCamera {
   /// Get or set the user's default preferred camera device.
   /// Setting a device here will persist the preference between apps.
   ///
-  /// Requires iOS 17 or later. On earlier versions, reading returns `nil` and setting has no effect.
+  /// Requires iOS 17 or later.
+  @available(iOS 17.0, *)
   public static var userPreferredCamera: CameraDevice? {
     get {
-      guard #available(iOS 17.0, *) else {
-        return nil
-      }
       guard let device = AVCaptureDevice.userPreferredCamera else {
         return nil
       }
       return CameraDevice(device: device)
     }
     set {
-      guard #available(iOS 17.0, *) else {
-        return
-      }
       AVCaptureDevice.userPreferredCamera = newValue?.device
     }
   }

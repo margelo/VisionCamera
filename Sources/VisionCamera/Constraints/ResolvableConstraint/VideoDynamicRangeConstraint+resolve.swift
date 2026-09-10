@@ -3,9 +3,9 @@
 import AVFoundation
 
 extension VideoDynamicRangeConstraint: ResolvableConstraint {
-  typealias ResolvedValue = TargetDynamicRange
+  typealias ResolvedValue = DynamicRange
 
-  func resolve(for format: AVCaptureDevice.Format) -> ConstraintResolution<TargetDynamicRange> {
-    return videoDynamicRange.resolve(for: format)
+  func resolve(for format: AVCaptureDevice.Format) throws(CameraError) -> ConstraintResolution<DynamicRange> {
+    return try videoDynamicRange.resolve(for: format)
   }
 }

@@ -21,8 +21,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   private let delegate: DepthFrameDelegate
   private let queue: DispatchQueue
   private let options: DepthOutputOptions
-  private var mirrorMode: MirrorMode = .auto
-  private var metadataOrientation: CameraOrientation = .up
+  private let orientationState = OutputOrientationState()
   /// The media type of the content being streamed
   /// by this ``CameraOutput``.
   public let mediaType: MediaType = .depth
@@ -46,8 +45,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// physically rotate buffers.
   public var outputOrientation: CameraOrientation = .up {
     didSet {
-      let orientation = outputOrientation
-      queue.async { self.metadataOrientation = orientation }
+      orientationState.setOrientation(outputOrientation)
       guard let connection = output.connection(with: .depthData) else { return }
       if options.enablePhysicalBufferRotation {
         // TODO: Should we apply that within the CameraSession's DispatchQueue? Batch it?
@@ -75,7 +73,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// The stream type used when negotiating this output's target resolution.
-  public var streamType: StreamType = .depthVideo
+  public let streamType: StreamType = .depthVideo
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
     return .closestTo(options.targetResolution)
@@ -108,45 +106,26 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) {
-    queue.async { self.mirrorMode = config.mirrorMode }
+  public func configure(config: OutputConfiguration) throws {
+    orientationState.setMirrorMode(config.mirrorMode)
 
     guard let connection = output.connection(with: .depthData) else {
       return
     }
     if options.enablePhysicalBufferRotation {
       // Pipeline should physically rotate buffers on the `connection`
-      try? connection.setOrientation(outputOrientation)
-      try? connection.setMirrorMode(config.mirrorMode)
+      try connection.setOrientation(outputOrientation)
+      try connection.setMirrorMode(config.mirrorMode)
     }
   }
 
-  private func getMediaSampleMetadata(
+  func getMediaSampleMetadata(
     at timestamp: CMTime,
     orientation bufferOrientation: CameraOrientation,
     isMirrored isBufferMirrored: Bool
   ) -> MediaSampleMetadata {
-    // `isMirrored` is relative; if the buffer is already mirrored & we want mirror, good.
-    // If not, we need to counter-mirror.
-    var isMirrored: Bool
-    switch self.mirrorMode {
-    case .auto:
-      // We just follow along with what the connection gives us.
-      isMirrored = false
-    case .on:
-      // We enabled mirroring. If the buffer is not mirrored, we need to mirror.
-      isMirrored = isBufferMirrored == false
-    case .off:
-      // We disabled mirroring. If the buffer is mirrored, we need to counter-mirror.
-      isMirrored = isBufferMirrored == true
-    }
-    // `orientation` is relative to the target output orientation.
-    let relativeOrientation = bufferOrientation.relativeTo(self.metadataOrientation)
-
-    return MediaSampleMetadata(
-      timestamp: timestamp,
-      orientation: relativeOrientation,
-      isMirrored: isMirrored)
+    return orientationState.metadata(
+      at: timestamp, bufferOrientation: bufferOrientation, isBufferMirrored: isBufferMirrored)
   }
 
   /// Adds a callback that calls the given `onDepthFrame` function

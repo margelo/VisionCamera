@@ -83,7 +83,7 @@ public final class Photo {
   /// for this ``Photo`` if calibration data delivery
   /// was enabled.
   ///
-  /// See ``CapturePhotoSettings/enableCameraCalibrationDataDelivery``
+  /// Native captures can include calibration data when configured for constituent photo delivery.
   public var calibrationData: CameraCalibrationData? {
     photo.cameraCalibrationData.map { CameraCalibrationData(calibrationData: $0) }
   }

@@ -49,7 +49,7 @@ public final class CameraCalibrationData {
   /// Gets the Camera intrinsic matrix, which maps 3D Camera coordinates
   /// to 2D Pixel coordinates.
   ///
-  /// The returned array is a 3x3 matrix with column-major ordering.
+  /// The returned SIMD value has three columns and three rows.
   /// Its origin is the top-left of the Frame.
   ///
   /// ```
@@ -62,17 +62,15 @@ public final class CameraCalibrationData {
   ///
   /// ```swift
   /// let matrix = calibrationData.cameraIntrinsicMatrix
-  /// let fx = matrix[0]
-  /// let fy = matrix[4]
+  /// let fx = matrix[0, 0]
+  /// let fy = matrix[1, 1]
   /// ```
-  public private(set) lazy var cameraIntrinsicMatrix: [Double] = {
-    return calibrationData.intrinsicMatrix.toDoubleArray()
-  }()
+  public var cameraIntrinsicMatrix: simd_float3x3 { calibrationData.intrinsicMatrix }
 
   /// Gets the Camera extrinsic matrix, which maps world space
   /// to camera space.
   ///
-  /// The returned array is a 3x4 matrix with column-major ordering.
+  /// The returned SIMD value has four columns and three rows.
   ///
   /// ```
   /// K = [ r11 r12 r13 tx ]
@@ -81,7 +79,5 @@ public final class CameraCalibrationData {
   /// ```
   /// - `r`: Rotation/orientation
   /// - `t`: Translation/position (in millimeters)
-  public private(set) lazy var cameraExtrinsicsMatrix: [Double] = {
-    return calibrationData.extrinsicMatrix.toDoubleArray()
-  }()
+  public var cameraExtrinsicsMatrix: simd_float4x3 { calibrationData.extrinsicMatrix }
 }

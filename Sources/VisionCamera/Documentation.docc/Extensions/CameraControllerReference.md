@@ -8,7 +8,6 @@
 - ``device``
 - ``isConnected``
 - ``isSuspended``
-- ``isUsedByAnotherApp``
 
 ### Zooming
 
@@ -58,9 +57,9 @@
 ### Controlling the torch
 
 - ``torchMode``
-- ``torchStrength``
+- ``torchLevel``
 - ``setTorchMode(mode:)``
-- ``enableTorchWithStrength(strength:)``
+- ``setTorchModeOn(level:)``
 
 ### Accessing native controls
 

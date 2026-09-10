@@ -34,6 +34,8 @@ func configure60FPS(session: CameraSession, output: any CameraOutput) async thro
 }
 ```
 
+Fractional rates such as `29.97` keep their precision when converted to native frame durations. Zero, negative, and non-finite requests throw during negotiation.
+
 Inspect ``CameraSessionConfig`` in `onSessionConfigSelected` to see the selected FPS. Constraint ordering controls whether FPS or another preference wins. See <doc:Constraints>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: fps. -->

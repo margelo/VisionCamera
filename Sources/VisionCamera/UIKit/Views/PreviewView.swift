@@ -82,7 +82,7 @@ public final class PreviewView: UIView {
   /// camera sensor coordinates into a ``Point``
   /// in view coordinates, relative to this ``PreviewView``.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Capture-device coordinates range from `0` to `1`, relative to the unrotated image. The conversion accounts for preview orientation, mirroring, and video gravity.
   /// - Throws: If the ``PreviewView`` isn't ready yet.
   ///
   /// ```swift
@@ -97,7 +97,7 @@ public final class PreviewView: UIView {
   /// view coordinates relative to this ``PreviewView``
   /// into a ``Point`` in camera sensor coordinates.
   ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// Capture-device coordinates range from `0` to `1`, relative to the unrotated image. The conversion accounts for preview orientation, mirroring, and video gravity.
   /// - Throws: If the ``PreviewView`` isn't ready yet.
   ///
   /// ```swift
@@ -123,21 +123,18 @@ public final class PreviewView: UIView {
   }
 
   /// Creates a ``MeteringPoint`` that can be used for
-  /// focusing AE/AF/AWB on the Camera via ``CameraController/focusTo(point:options:)``.
+  /// setting focus and exposure points of interest via ``CameraController/focusTo(point:options:)``.
   ///
   /// The point is relative to this
   /// ``PreviewView``, and takes orientation, scaling and cropping
   /// into account.
   /// - Parameter point: A point in the View's coordinate system, such as the location of a tap.
-  /// - Parameter size: (Optional) The size of the ``MeteringPoint`` within
-  /// the View's coordinate system.
   ///
   /// - Throws: If the ``PreviewView`` isn't ready yet.
-  public func meteringPoint(at point: CGPoint, size: Double? = nil) throws -> MeteringPoint {
+  public func meteringPoint(at point: CGPoint) throws -> MeteringPoint {
     let layer = try requirePreviewLayer()
     let normalizedPoint = layer.captureDevicePointConverted(fromLayerPoint: point)
     return MeteringPoint(
-      relativeX: point.x, relativeY: point.y, relativeSize: size,
       normalizedX: normalizedPoint.x, normalizedY: normalizedPoint.y)
   }
 

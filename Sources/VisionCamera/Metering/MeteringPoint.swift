@@ -4,94 +4,33 @@
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
 
-import AVFoundation
 import CoreGraphics
-import Foundation
 
-/// Represents a point that can be used for focusing AE/AF/AWB
-/// on the Camera via ``CameraController``.
+/// A normalized capture-device point of interest for automatic focus and exposure.
 ///
-/// You can create a ``MeteringPoint`` from a ``PreviewView`` with
-/// ``PreviewView/meteringPoint(at:size:)``, or manually
-/// with ``MeteringPoint/init(normalizedX:normalizedY:normalizedSize:)``.
+/// Coordinates range from `0` to `1`, with `(0, 0)` at the top-left of the unrotated image.
+/// White balance uses the whole scene and does not consume this point.
+/// Use ``PreviewView/meteringPoint(at:)`` to account for the preview's orientation, scaling, and cropping.
 ///
 /// ```swift
 /// let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
-/// try await controller.focusTo(point: point, options: .init())
-///
-/// let tappedPoint = try previewView.meteringPoint(at: CGPoint(x: tapX, y: tapY))
-/// try await controller.focusTo(point: tappedPoint, options: .init())
+/// try await controller.focusTo(point: point)
 /// ```
-public final class MeteringPoint {
-  /// Represents the X coordinate of this ``MeteringPoint``,
-  /// relative to whatever source was used to create this point.
-  ///
-  /// - If created from a ``PreviewView``, this will be the
-  /// given View X coordinate (e.g. of the user tap).
-  /// - If created from a normalized Point (``MeteringPoint/init(normalizedX:normalizedY:normalizedSize:)``),
-  /// this will be the given normalized X coordinate (0...1)
-  public var relativeX: Double
-  /// Represents the Y coordinate of this ``MeteringPoint``,
-  /// relative to whatever source was used to create this point.
-  ///
-  /// - If created from a ``PreviewView``, this will be the
-  /// given View Y coordinate (e.g. of the user tap).
-  /// - If created from a normalized Point (``MeteringPoint/init(normalizedX:normalizedY:normalizedSize:)``),
-  /// this will be the given normalized Y coordinate (0...1)
-  public var relativeY: Double
-  /// Represents the size/radius of this ``MeteringPoint``,
-  /// relative to whatever source was used to create this point - or
-  /// `nil` if no relative size was set.
-  public var relativeSize: Double?
+public struct MeteringPoint: Equatable, Sendable {
+  /// The horizontal coordinate in the capture device's normalized coordinate system.
+  public let normalizedX: Double
+  /// The vertical coordinate in the capture device's normalized coordinate system.
+  public let normalizedY: Double
 
-  /// Represents the X coordinate of this ``MeteringPoint``,
-  /// normalized to the Camera's coordinate system after applying
-  /// orientation, cropping, and scaling.
-  public var normalizedX: Double
-  /// Represents the Y coordinate of this ``MeteringPoint``,
-  /// normalized to the Camera's coordinate system after applying
-  /// orientation, cropping, and scaling.
-  public var normalizedY: Double
-  /// Represents the size of this ``MeteringPoint``,
-  /// normalized to the Camera's coordinate system after applying
-  /// orientation, cropping, and scaling.
-  public var normalizedSize: Double
-
-  /// Creates a Metering Point from normalized Camera coordinates.
+  /// Creates a point in the capture device's normalized coordinate system.
   ///
-  /// You are responsible for handling orientation, cropping, and scaling.
-  /// - Parameters:
-  ///   - normalizedX: The X coordinate ranging from `0.0` to `1.0`.
-  ///   - normalizedY: The Y coordinate ranging from `0.0` to `1.0`.
-  ///   - normalizedSize: The normalized size/radius of the Metering Point. Defaults to `0.1`.
-  public init(normalizedX: Double, normalizedY: Double, normalizedSize: Double = 0.1) {
-    self.relativeX = normalizedX
-    self.relativeY = normalizedY
-    self.relativeSize = normalizedSize
+  /// Both coordinates must be finite and within `0...1` when passed to ``CameraController/focusTo(point:options:)``.
+  public init(normalizedX: Double, normalizedY: Double) {
     self.normalizedX = normalizedX
     self.normalizedY = normalizedY
-    self.normalizedSize = normalizedSize
-  }
-  /// Creates a Metering Point with both relative view coordinates and normalized Camera coordinates. An omitted relative size uses a normalized size of `0.1`.
-  public init(
-    relativeX: Double, relativeY: Double, relativeSize: Double?, normalizedX: Double,
-    normalizedY: Double
-  ) {
-    self.relativeX = relativeX
-    self.relativeY = relativeY
-    self.relativeSize = relativeSize
-    self.normalizedX = normalizedX
-    self.normalizedY = normalizedY
-
-    if let relativeSize {
-      let fullX = relativeX / normalizedX
-      self.normalizedSize = relativeSize / fullX
-    } else {
-      self.normalizedSize = 0.1
-    }
   }
 
-  /// Returns this Metering Point's normalized Camera coordinates as a `CGPoint`.
+  /// Returns the normalized capture-device point as a `CGPoint`.
   public func toNormalizedPoint() -> CGPoint {
     return CGPoint(x: normalizedX, y: normalizedY)
   }

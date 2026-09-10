@@ -5,11 +5,11 @@ import AVFoundation
 extension TargetDynamicRangeBitDepth {
   func penalty(to target: DynamicRangeBitDepth) -> Int {
     switch (self, target) {
-    case (.sdr8Bit, .sdr8Bit), (.hdr10Bit, .hdr10Bit):
+    case (.bit8, .bit8), (.bit10, .bit10):
       return 0
-    case (.sdr8Bit, .hdr10Bit):
+    case (.bit8, .bit10):
       return 1
-    case (.hdr10Bit, .sdr8Bit):
+    case (.bit10, .bit8):
       return 2
     case (_, .unknown):
       return 3

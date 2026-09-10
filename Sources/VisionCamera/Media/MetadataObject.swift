@@ -12,8 +12,8 @@ public final class MetadataObject: ScannedObject {
   /// Creates a MetadataObject that retains the given native AVFoundation metadata object.
   public init(object: AVMetadataObject) { self.object = object }
 
-  /// The ``ScannedObjectType`` of this ``ScannedObject``.
-  public var type: ScannedObjectType { ScannedObjectType(type: object.type) }
+  /// The native metadata type, including types introduced by newer Apple SDKs.
+  public var type: AVMetadataObject.ObjectType { object.type }
   /// The bounding box coordinates of this ``ScannedObject``.
   ///
   /// Coordinates are in camera-space (`0.0` ... `1.0`), and can be

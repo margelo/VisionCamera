@@ -13,7 +13,7 @@ import VisionCamera
 
 func prepareFrameCamera() async throws -> (CameraSession, FrameOutput) {
 	let session = CameraSession()
-	let output = FrameOutput(options: .init(pixelFormat: .yuv))
+	let output = FrameOutput(options: .init(pixelFormat: .pixelFormat(.yuv4208BitFull)))
 	await output.setOnFrameCallback { frame in
 		print("Frame:", frame.width, frame.height, frame.timestamp)
 	}
@@ -39,7 +39,7 @@ If processing continues after the callback returns, keep the frame alive until t
 
 ## Choose a pixel format
 
-Choose the format your processing code can consume directly. `.native` uses the format negotiated by the Camera. `.yuv` requests YUV buffers. `.rgb` requests BGRA buffers.
+Choose the format your processing code can consume directly. `.native` uses the format negotiated by the Camera. `.pixelFormat(.yuv4208BitFull)` requests full-range 8-bit YUV buffers. `.pixelFormat(.rgbBgra8Bit)` requests BGRA buffers.
 
 RGB is familiar, but often requires conversion and uses about 2.6 times the bandwidth of 8-bit YUV 4:2:0. If your processing supports YUV, avoid converting just to access pixels.
 

@@ -23,7 +23,7 @@ public struct RecorderSettings {
   /// Defaults to `nil`.
   public var filePath: String?
   /// If set, the recording automatically stops once it reaches
-  /// this duration, in seconds.
+  /// this positive, finite duration, in seconds.
   ///
   /// When the limit is reached, the recording is finalized
   /// successfully, and the `onRecordingFinished` callback
@@ -32,10 +32,13 @@ public struct RecorderSettings {
   /// is invoked with the resulting file path, the same
   /// behavior as calling ``Recorder/stopRecording()``.
   ///
+  /// The value must remain finite and positive when converted to a time at 600 ticks per second.
   /// Defaults to `nil`.
   public var maxDuration: Double?
   /// If set, the recording automatically stops once the file
-  /// reaches this size, in bytes.
+  /// reaches this positive size, in bytes.
+  ///
+  /// Encoder buffering can delay the file-size check. The finalized file may exceed the limit.
   ///
   /// When the limit is reached, the recording is finalized
   /// successfully, and the `onRecordingFinished` callback
@@ -45,7 +48,7 @@ public struct RecorderSettings {
   /// behavior as calling ``Recorder/stopRecording()``.
   ///
   /// Defaults to `nil`.
-  public var maxFileSize: Double?
+  public var maxFileSize: Int64?
 
   /// Creates settings for one recording, including its destination and optional recording limits.
   ///
@@ -58,7 +61,7 @@ public struct RecorderSettings {
     location: CLLocation? = nil,
     filePath: String? = nil,
     maxDuration: Double? = nil,
-    maxFileSize: Double? = nil
+    maxFileSize: Int64? = nil
   ) {
     self.location = location
     self.filePath = filePath

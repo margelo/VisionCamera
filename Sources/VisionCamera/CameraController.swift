@@ -49,8 +49,9 @@ public final class CameraController {
     self.queue = queue
   }
 
-  /// Gets whether this ``CameraController`` is
-  /// currently connected to the session.
+  /// Whether the underlying capture device is connected to the system.
+  ///
+  /// This describes device availability, not membership in a Camera session.
   public var isConnected: Bool {
     return captureDevice.isConnected
   }
@@ -65,58 +66,29 @@ public final class CameraController {
     return captureDevice.isSuspended
   }
 
-  /// Whether another app is using this Camera device. This property returns `false` on iOS.
-  public var isUsedByAnotherApp: Bool {
-    #if os(macOS)
-      return captureDevice.isInUseByAnotherApplication
-    #else
-      return false
-    #endif
+  /// The current native focus mode, including any future mode reported by AVFoundation.
+  public var focusMode: AVCaptureDevice.FocusMode {
+    return captureDevice.focusMode
   }
 
-  /// Represents the current ``FocusMode``.
-  /// - `'continuous-auto-focus'`: The session is continuously adjusting AF as the scene changes. (the default)
-  /// - `'auto-focus'`: The session is currently metering to a specific focus length position via ``CameraController/focusTo(point:options:)``.
-  /// - `'locked'`: The session is currently locked at a specific ``CameraController/lensPosition`` via ``CameraController/setFocusLocked(lensPosition:)``.
-  public var focusMode: FocusMode {
-    return FocusMode(mode: captureDevice.focusMode)
+  /// The current native exposure mode. Manually configured duration and ISO use `.custom`.
+  public var exposureMode: AVCaptureDevice.ExposureMode {
+    return captureDevice.exposureMode
   }
 
-  /// Represents the current ``ExposureMode``.
-  /// - `'continuous-auto-exposure'`: The session is continuously adjusting AE as the scene changes. (the default)
-  /// - `'auto-exposure'`: The session is currently metering to a specific exposure value via ``CameraController/focusTo(point:options:)``.
-  /// - `'locked'`: The session is currently locked at a specific ``CameraController/exposureDuration``/``CameraController/iso`` via ``CameraController/setExposureLocked(duration:iso:)``.
-  public var exposureMode: ExposureMode {
-    return ExposureMode(mode: captureDevice.exposureMode)
+  /// The current native white-balance mode, including any future mode reported by AVFoundation.
+  public var whiteBalanceMode: AVCaptureDevice.WhiteBalanceMode {
+    return captureDevice.whiteBalanceMode
   }
 
-  /// Represents the current ``WhiteBalanceMode``.
-  /// - `'continuous-auto-white-balance'`: The session is continuously adjusting AWB as the scene changes. (the default)
-  /// - `'auto-white-balance'`: The session is currently metering to a specific white-balance value via ``CameraController/focusTo(point:options:)``.
-  /// - `'locked'`: The session is currently locked at a specific ``CameraController/whiteBalanceGains`` value via ``CameraController/setWhiteBalanceLocked(whiteBalanceGains:)``.
-  public var whiteBalanceMode: WhiteBalanceMode {
-    return WhiteBalanceMode(mode: captureDevice.whiteBalanceMode)
-  }
-
-  /// Represents the current white balance gains, or
-  /// `{ 0, 0, 0 }` if the ``CameraController/device`` does not
-  /// support manual white-balance control - see
-  /// ``CameraDevice/supportsWhiteBalanceLocking``..
+  /// The current white-balance gains reported by the device.
   ///
-  /// The ``CameraController/whiteBalanceGains`` change over time (via continuous
-  /// auto-focus/3A), when focused to a specific point (via
-  /// ``CameraController/focusTo(point:options:)``), or when locked to
-  /// specific ``WhiteBalanceGains`` (via
-  /// ``CameraController/setWhiteBalanceLocked(whiteBalanceGains:)``).
-  public var whiteBalanceGains: WhiteBalanceGains {
-    let gains = captureDevice.deviceWhiteBalanceGains
-    return WhiteBalanceGains(
-      redGain: Double(gains.redGain),
-      blueGain: Double(gains.blueGain),
-      greenGain: Double(gains.greenGain))
+  /// Automatic white balance adjusts these gains across the scene. It does not use a point of interest.
+  public var whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains {
+    return captureDevice.deviceWhiteBalanceGains
   }
 
-  /// Gets whether low light boost is currently enabled.
+  /// Whether the device is currently applying low-light boost to captured images.
   ///
   /// You can enable low light boost via ``CameraController/configure(config:)``.
   ///
@@ -126,7 +98,7 @@ public final class CameraController {
   /// }
   /// ```
   public var isLowLightBoostEnabled: Bool {
-    return captureDevice.automaticallyEnablesLowLightBoostWhenAvailable
+    return captureDevice.isLowLightBoostEnabled
   }
 
   /// Gets whether smooth auto-focus is currently enabled.
@@ -170,45 +142,33 @@ public final class CameraController {
   /// A user-displayable zoom factor.
   ///
   /// ```swift
-  /// let zoomLabel = String(format: "%.1fx", controller.displayableZoomFactor)
+  /// if #available(iOS 18.0, *) {
+  ///   let zoomLabel = String(format: "%.1fx", controller.displayableZoomFactor)
+  /// }
   /// ```
+  @available(iOS 18.0, *)
   public var displayableZoomFactor: Double {
-    guard #available(iOS 18.0, *) else {
-      return zoom
-    }
     return zoom * captureDevice.displayVideoZoomFactorMultiplier
   }
 
-  /// Get the Torch's configured brightness strength.
+  /// The current torch brightness, from `0` when off to a theoretical maximum of `1`.
   ///
-  /// The ``CameraController/torchStrength`` is a value within the
-  /// `[device.minTorchStrength, device.maxTorchStrength]` range.
-  ///
-  /// When the Torch is ``TorchMode/on``, this strength
-  /// will be used.
-  ///
-  /// The torch's strength can be configured via
-  /// ``CameraController/enableTorchWithStrength(strength:)``
-  /// on devices that support custom torch brightness
-  /// (see ``CameraDevice/supportsTorchStrength``).
-  public var torchStrength: Double {
-    return Double(captureDevice.torchLevel)
+  /// The available brightness can decrease when the device overheats.
+  public var torchLevel: Float {
+    return captureDevice.torchLevel
   }
 
-  /// Get the current ``TorchMode``.
+  /// The native torch mode, including automatic illumination when the device supports it.
   ///
-  /// The torch can be enabled or disabled via
-  /// ``CameraController/setTorchMode(mode:)``, or enabled
-  /// at a custom brightness level via
-  /// ``CameraController/enableTorchWithStrength(strength:)``.
-  public var torchMode: TorchMode {
-    return TorchMode(mode: captureDevice.torchMode)
+  /// Set the mode with ``CameraController/setTorchMode(mode:)`` or turn the torch on at a chosen
+  /// brightness with ``CameraController/setTorchModeOn(level:)``.
+  public var torchMode: AVCaptureDevice.TorchMode {
+    return captureDevice.torchMode
   }
 
-  /// Represents the current focus length, from `0.0` (closest)
-  /// to `1.0` (furthest), or `0` if the ``CameraController/device`` does
-  /// not support manual focus control - see
-  /// ``CameraDevice/supportsFocusLocking``.
+  /// The current lens position, from `0.0` at the nearest focus limit to `1.0` at the furthest.
+  ///
+  /// This normalized setting does not represent a distance in meters.
   ///
   /// The ``CameraController/lensPosition`` changes over time (via continuous
   /// auto-focus/3A), when focused to a specific point (via
@@ -218,10 +178,7 @@ public final class CameraController {
     return Double(captureDevice.lensPosition)
   }
 
-  /// Represents the current exposure duration, in seconds,
-  /// or `0` if the ``CameraController/device`` does not support
-  /// manual exposure control - see
-  /// ``CameraDevice/supportsExposureLocking``..
+  /// The current exposure duration, in seconds, including values selected by automatic exposure.
   ///
   /// The ``CameraController/exposureDuration`` value changes over time (via
   /// continuous auto-focus/3A), when focused to a specific point (via
@@ -236,10 +193,7 @@ public final class CameraController {
     return captureDevice.activeMaxExposureDuration.seconds
   }
 
-  /// Get the current exposure compensation bias, or `0`
-  /// if the ``CameraController/device`` does not support exposure
-  /// bias compensation - see
-  /// ``CameraDevice/supportsExposureBias``.
+  /// The current exposure compensation bias, in EV units.
   ///
   /// A positive value (like `1`) means over-exposed ("brighter"),
   /// whereas a negative value (like `-1`) means under-exposed ("darker").
@@ -251,10 +205,7 @@ public final class CameraController {
     return Double(captureDevice.exposureTargetBias)
   }
 
-  /// Represents the current ISO value, or `0`
-  /// if the ``CameraController/device`` does not support
-  /// manual exposure control - see
-  /// ``CameraDevice/supportsExposureLocking``..
+  /// The current sensor sensitivity, including values selected by automatic exposure.
   ///
   /// The ``CameraController/iso`` value changes over time (via continuous
   /// auto-focus/3A), when focused to a specific point (via
@@ -378,12 +329,14 @@ public final class CameraController {
   /// An omitted ``FocusOptions/autoResetAfter`` resets metering after 5 seconds. Use ``FocusReset/never`` to keep the selected behavior until you reset it.
   public func focusTo(
     point: MeteringPoint,
-    options: FocusOptions
+    options: FocusOptions = FocusOptions()
   ) async throws {
     return try await captureDevice.withLock(queue) { resolve, reject in
-      let responsiveness = options.responsiveness ?? .snappy
-      let adaptiveness = options.adaptiveness ?? .continuous
-      let autoResetAfter = options.autoResetAfter ?? FocusReset.after(5.0)
+      try point.validate()
+      try options.autoResetAfter.validate()
+      let responsiveness = options.responsiveness
+      let adaptiveness = options.adaptiveness
+      let autoResetAfter = options.autoResetAfter
       let modes = options.modes ?? self.getAllSupportedMeteringModes()
       guard !modes.isEmpty else {
         throw CameraError(message: "MeteringModes cannot be empty!")
@@ -429,14 +382,14 @@ public final class CameraController {
   /// Get a list of all [MeteringMode]s that are supported on this device.
   private func getAllSupportedMeteringModes() -> [MeteringMode] {
     var modes: [MeteringMode] = []
-    if captureDevice.isExposurePointOfInterestSupported {
+    if device.supportsExposureMetering {
       modes.append(.ae)
     }
-    if captureDevice.isFocusPointOfInterestSupported {
+    if device.supportsFocusMetering {
       modes.append(.af)
     }
     // White Balance adjusting is not point-based, but it still requires a supported auto mode.
-    if captureDevice.isWhiteBalanceModeSupported(.autoWhiteBalance) || captureDevice.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
+    if device.supportsWhiteBalanceMetering {
       modes.append(.awb)
     }
     return modes
@@ -519,72 +472,37 @@ public final class CameraController {
       onSubjectAreaDidChange: onSubjectAreaChanged)
   }
 
-  /// Sets the torch to the specified `mode`.
+  /// Sets the device's native torch mode.
   ///
-  /// To enable the torch with a specific brightness level,
-  /// use ``CameraController/enableTorchWithStrength(strength:)``
-  /// instead.
-  ///
-  /// - Throws: If the ``CameraController/device`` does not have a torch (see ``CameraDevice/hasTorch``).
-  /// See ``CameraController/enableTorchWithStrength(strength:)``
-  public func setTorchMode(mode: TorchMode) async throws {
+  /// Use `.auto` to let the device illuminate dark scenes when it supports automatic torch control.
+  /// Setting `.off` succeeds when the device has no torch.
+  /// - Throws: If the device does not support the requested mode.
+  public func setTorchMode(mode: AVCaptureDevice.TorchMode) async throws {
     return try await captureDevice.withLock(queue) {
-      // 1. Ensure we have a torch
-      if !self.captureDevice.hasTorch {
-        if mode == .off {
-          // We set it to off, we can ignore that we don't have a torch.
-          return
-        }
-        throw CameraError(
-          message:
-            "Tried setting torch mode to `\(mode)`, but the device does not have a `torch`!"
-        )
+      let device = self.captureDevice
+      if !device.hasTorch && mode == .off { return }
+      guard device.isTorchModeSupported(mode) else {
+        throw CameraError(message: "This CameraDevice does not support torch mode \(mode.rawValue).")
       }
-
-      // 2. Set mode to on or off
-      switch mode {
-      case .off:
-        self.captureDevice.torchMode = .off
-      case .on:
-        self.captureDevice.torchMode = .on
-      }
+      device.torchMode = mode
     }
   }
 
-  /// Sets the ``CameraController/torchStrength`` to the given
-  /// `strength` value.
+  /// Turns the torch on at the given brightness level.
   ///
-  /// This method always turns on the torch, but in contrast to ``CameraController/setTorchMode(mode:)``
-  /// (which always uses the default torch strength, often just the maximum), allows you to choose
-  /// a custom torch strength level - often useful for dimming the torch slightly rather than using
-  /// full strength. On some devices, this also allows using a higher torch strength than the default.
-  /// If you simply want to enable the torch, use ``CameraController/setTorchMode(mode:)``
-  /// instead.
-  ///
-  /// To turn the torch off again, use ``CameraController/setTorchMode(mode:)``.
-  ///
-  /// - Throws: If the ``CameraController/device`` does not support setting torch strength (see ``CameraDevice/supportsTorchStrength``)
-  /// - Throws: If the ``CameraController/device`` does not support this `strength` value (see ``CameraDevice/minTorchStrength`` / ``CameraDevice/maxTorchStrength``)
+  /// - Parameter level: A finite value greater than `0` and no greater than `1`, or `AVCaptureDevice.maxAvailableTorchLevel` to use the currently available maximum.
+  /// - Throws: If the level is outside that range, the device has no torch, or AVFoundation cannot enable it.
   ///
   /// ```swift
-  /// try await controller.enableTorchWithStrength(strength: 0.5)
+  /// try await controller.setTorchModeOn(level: 0.5)
   /// ```
-  public func enableTorchWithStrength(strength: Double) async throws {
+  public func setTorchModeOn(level: Float) async throws {
+    try Self.validateTorchLevel(level)
     return try await captureDevice.withLock(queue) {
-      guard self.device.supportsTorchStrength else {
-        throw CameraError(
-          message: "Cannot enable torch - this CameraDevice does not support setting torch strength! (See `device.supportsTorchStrength`)"
-        )
+      guard self.captureDevice.isTorchModeSupported(.on) else {
+        throw CameraError(message: "This CameraDevice does not support turning on the torch.")
       }
-      let minStrength = self.captureDevice.minTorchStrength
-      let maxStrength = self.captureDevice.maxTorchStrength
-      guard strength >= minStrength && strength <= maxStrength else {
-        throw CameraError(
-          message:
-            "`strength` is not within the device's `minTorchStrength` and `maxTorchStrength` range! (Received: \(strength), `device.minTorchStrength`: \(minStrength), `device.maxTorchStrength`: \(maxStrength)"
-        )
-      }
-      try self.captureDevice.setTorchModeOn(level: Float(strength))
+      try self.captureDevice.setTorchModeOn(level: level)
     }
   }
 
@@ -602,6 +520,7 @@ public final class CameraController {
   /// Returns when the device finishes ramping, including when the ramp is canceled. The target zoom must be within the controller's available zoom range, and the rate must be positive.
   public func startZoomAnimation(zoom: Double, rate: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
+      try Self.validateZoom(zoom, rate: rate, range: self.minZoom...self.maxZoom)
       if self.captureDevice.videoZoomFactor == zoom {
         // We are already exactly on our target value
         completion()
@@ -639,7 +558,6 @@ public final class CameraController {
   /// whereas a negative value (like `-1`) means under-exposed ("darker").
   /// The default exposure bias is `0`.
   ///
-  /// - Throws: If the ``CameraController/device`` does not support setting exposure bias (see ``CameraDevice/supportsExposureBias``)
   /// - Throws: If the ``CameraController/device`` does not support this `exposure` bias value (see ``CameraDevice/minExposureBias`` / ``CameraDevice/maxExposureBias``)
   ///
   /// ```swift
@@ -670,9 +588,12 @@ public final class CameraController {
   /// - Parameter lensPosition: The position of the Camera lens, from `0.0` (closest) to `1.0` (furthest).
   ///
   /// - Throws: If ``CameraController/lensPosition`` is outside of `0.0` ... `1.0`.
-  /// - Throws: If the ``CameraController/device`` does not support manual focus locking (see ``CameraDevice/supportsFocusLocking``)
+  /// - Throws: If the ``CameraController/device`` does not support manual focus locking (see ``CameraDevice/supportsCustomLensPosition``)
   public func setFocusLocked(lensPosition: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
+      guard self.captureDevice.isLockingFocusWithCustomLensPositionSupported else {
+        throw CameraError(message: "This CameraDevice does not support a custom lens position.")
+      }
       // 1. Ensure values are within valid range
       guard lensPosition >= 0 && lensPosition <= 1 else {
         throw CameraError(
@@ -691,7 +612,7 @@ public final class CameraController {
   ///
   /// You can read the current focus values via
   /// ``CameraController/lensPosition``.
-  /// - Throws: If the ``CameraDevice`` does not support manual focus -
+  /// - Throws: If the device does not support locking focus -
   /// see ``CameraDevice/supportsFocusLocking``
   ///
   /// To reset focus again to be automatically adjusted by the Camera,
@@ -702,6 +623,9 @@ public final class CameraController {
   /// ```
   public func lockCurrentFocus() async throws {
     return try await captureDevice.withLock(queue) { completion in
+      guard self.captureDevice.isFocusModeSupported(.locked) else {
+        throw CameraError(message: "This CameraDevice does not support locking focus.")
+      }
       self.captureDevice.setFocusModeLocked(lensPosition: AVCaptureDevice.currentLensPosition) {
         _ in
         completion()
@@ -710,29 +634,25 @@ public final class CameraController {
   }
 
   /// Represents the minimum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)``, or `0`
-  /// if ``CameraDevice/supportsExposureLocking`` is `false`.
+  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
   public var minExposureDuration: Double {
     return captureDevice.activeFormat.minExposureDuration.seconds
   }
 
   /// Represents the maximum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)``, or `0`
-  /// if ``CameraDevice/supportsExposureLocking`` is `false`.
+  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
   public var maxExposureDuration: Double {
     return captureDevice.activeFormat.maxExposureDuration.seconds
   }
 
   /// Represents the minimum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)``, or `0`
-  /// if ``CameraDevice/supportsExposureLocking`` is `false`.
+  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
   public var minISO: Double {
     return Double(captureDevice.activeFormat.minISO)
   }
 
   /// Represents the maximum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)``, or `0`
-  /// if ``CameraDevice/supportsExposureLocking`` is `false`.
+  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
   public var maxISO: Double {
     return Double(captureDevice.activeFormat.maxISO)
   }
@@ -744,10 +664,13 @@ public final class CameraController {
   /// - Parameter iso: The ISO value for the Camera. It must be a value between ``CameraController/minISO`` and ``CameraController/maxISO``.
   ///
   /// - Throws: If `duration` or ``CameraController/iso`` are not valid values.
-  /// - Throws: If the ``CameraController/device`` does not support manual exposure locking (see ``CameraDevice/supportsExposureLocking``)
+  /// - Throws: If the ``CameraController/device`` does not support manual exposure locking (see ``CameraDevice/supportsCustomExposure``)
   public func setExposureLocked(duration: Double, iso: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
       let device = self.captureDevice
+      guard device.isExposureModeSupported(.custom) else {
+        throw CameraError(message: "This CameraDevice does not support custom exposure.")
+      }
       // 1. Ensure values are within valid range
       guard
         duration >= device.activeFormat.minExposureDuration.seconds
@@ -779,7 +702,7 @@ public final class CameraController {
   ///
   /// You can read the current exposure values via
   /// ``CameraController/exposureDuration`` and ``CameraController/iso``.
-  /// - Throws: If the ``CameraDevice`` does not support manual exposure -
+  /// - Throws: If the device does not support locking exposure -
   /// see ``CameraDevice/supportsExposureLocking``
   ///
   /// To reset exposure again to be automatically adjusted by the Camera,
@@ -789,50 +712,42 @@ public final class CameraController {
   /// try await controller.lockCurrentExposure()
   /// ```
   public func lockCurrentExposure() async throws {
-    return try await captureDevice.withLock(queue) { completion in
-      self.captureDevice.setExposureModeCustom(
-        duration: AVCaptureDevice.currentExposureDuration,
-        iso: AVCaptureDevice.currentISO
-      ) { _ in
-        completion()
+    return try await captureDevice.withLock(queue) {
+      guard self.captureDevice.isExposureModeSupported(.locked) else {
+        throw CameraError(message: "This CameraDevice does not support locking exposure.")
       }
+      self.captureDevice.exposureMode = .locked
     }
   }
 
-  /// Converts the given `whiteBalanceTemperatureAndTint` values
-  /// to ``WhiteBalanceGains``.
+  /// Converts native temperature and tint values into gains for this device.
+  ///
+  /// Clamp each returned gain to `1...device.maxWhiteBalanceGain` before locking white balance.
   public func convertWhiteBalanceTemperatureAndTintValues(
-    whiteBalanceTemperatureAndTint: WhiteBalanceTemperatureAndTint
-  ) -> WhiteBalanceGains {
-    // 1. Convert our type to the AVFoundation type
-    let tintValues = AVCaptureDevice.WhiteBalanceTemperatureAndTintValues(
-      temperature: Float(whiteBalanceTemperatureAndTint.temperature),
-      tint: Float(whiteBalanceTemperatureAndTint.tint))
-    // 2. Do the actual device conversion
-    let gains = self.captureDevice.deviceWhiteBalanceGains(for: tintValues)
-    // 3. Convert the returned AVFoundation gains to our type
-    return WhiteBalanceGains(
-      redGain: Double(gains.redGain),
-      blueGain: Double(gains.blueGain),
-      greenGain: Double(gains.greenGain))
+    whiteBalanceTemperatureAndTint: AVCaptureDevice.WhiteBalanceTemperatureAndTintValues
+  ) -> AVCaptureDevice.WhiteBalanceGains {
+    return captureDevice.deviceWhiteBalanceGains(for: whiteBalanceTemperatureAndTint)
   }
 
   /// Locks the white-balance at the specified ``CameraController/whiteBalanceGains``
   /// value.
   ///
-  /// - Parameter whiteBalanceGains: The ``WhiteBalanceGains`` values.
+  /// - Parameter whiteBalanceGains: The native red, green, and blue channel gains.
   /// Each channel's value must be within `1` and the current ``CameraController/device``'s
   /// ``CameraDevice/maxWhiteBalanceGain`` value.
   ///
   /// - Throws: If one of the channels in ``CameraController/whiteBalanceGains`` is out-of-range.
-  /// - Throws: If the ``CameraController/device`` does not support manual white-balance locking (see ``CameraDevice/supportsWhiteBalanceLocking``)
-  public func setWhiteBalanceLocked(whiteBalanceGains: WhiteBalanceGains) async throws {
+  /// - Throws: If the ``CameraController/device`` does not support manual white-balance locking (see ``CameraDevice/supportsCustomWhiteBalanceGains``)
+  public func setWhiteBalanceLocked(whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains) async throws {
     return try await captureDevice.withLock(queue) { completion in
       // 1. Ensure values are within valid range
       let device = self.captureDevice
-      let redGain = Float(whiteBalanceGains.redGain)
-      let greenGain = Float(whiteBalanceGains.greenGain)
-      let blueGain = Float(whiteBalanceGains.blueGain)
+      guard device.isLockingWhiteBalanceWithCustomDeviceGainsSupported else {
+        throw CameraError(message: "This CameraDevice does not support custom white-balance gains.")
+      }
+      let redGain = whiteBalanceGains.redGain
+      let greenGain = whiteBalanceGains.greenGain
+      let blueGain = whiteBalanceGains.blueGain
       guard redGain >= 1 && redGain <= device.maxWhiteBalanceGain else {
         throw CameraError(
           message:
@@ -868,7 +783,7 @@ public final class CameraController {
   ///
   /// You can read the current white-balance values via
   /// ``CameraController/whiteBalanceGains``.
-  /// - Throws: If the ``CameraDevice`` does not support manual white-balance -
+  /// - Throws: If the device does not support locking white balance -
   /// see ``CameraDevice/supportsWhiteBalanceLocking``
   ///
   /// To reset white-balance again to be automatically adjusted by the Camera,
@@ -879,6 +794,9 @@ public final class CameraController {
   /// ```
   public func lockCurrentWhiteBalance() async throws {
     return try await captureDevice.withLock(queue) { completion in
+      guard self.captureDevice.isWhiteBalanceModeSupported(.locked) else {
+        throw CameraError(message: "This CameraDevice does not support locking white balance.")
+      }
       self.captureDevice.setWhiteBalanceModeLocked(with: AVCaptureDevice.currentWhiteBalanceGains) {
         _ in
         completion()

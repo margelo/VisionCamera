@@ -6,7 +6,7 @@
 /// ```swift
 /// VideoDynamicRangeConstraint(
 ///   videoDynamicRange: TargetDynamicRange(
-///     bitDepth: .hdr10Bit, colorSpace: .hlgBt2020, colorRange: .full))
+///     bitDepth: .bit10, colorSpace: .hlgBt2020, colorRange: .full))
 /// ```
 public struct VideoDynamicRangeConstraint: Equatable, Sendable {
   /// The bit depth, color space, and component range to request for video.

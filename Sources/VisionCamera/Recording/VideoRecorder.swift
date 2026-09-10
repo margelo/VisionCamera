@@ -55,10 +55,10 @@ public final class VideoRecorder: Recorder {
     return videoOutput.recordedDuration.seconds
   }
   /// Returns the currently recorded file size, in bytes.
-  public var recordedFileSize: Double {
-    return Double(videoOutput.recordedFileSize)
+  public var recordedFileSize: Int64 {
+    return videoOutput.recordedFileSize
   }
-  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mp4`, not a `file://` URL.
+  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mov`, not a `file://` URL.
   public var filePath: String {
     return fileURL.path
   }
@@ -127,7 +127,7 @@ public final class VideoRecorder: Recorder {
           } else {
             self.videoOutput.maxRecordedDuration = .invalid
           }
-          self.videoOutput.maxRecordedFileSize = self.settings.maxFileSize.map(Int64.init) ?? 0
+          self.videoOutput.maxRecordedFileSize = self.settings.maxFileSize ?? 0
           self.videoOutput.startRecording(to: self.fileURL, recordingDelegate: delegate)
         })
     }

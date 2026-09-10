@@ -25,25 +25,21 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   /// Specifies the ``TargetPhotoContainerFormat`` to
   /// shoot the ``Photo`` in.
   ///
-  /// Defaults to ``TargetPhotoContainerFormat/native``.
+  /// Defaults to ``TargetPhotoContainerFormat/automatic(quality:)``.
   public var containerFormat: TargetPhotoContainerFormat
-  /// Defines the compression quality for processed photo formats.
-  ///
-  /// The value must be within the normalized range from `0.0` to `1.0`,
-  /// where `1.0` is the highest quality and `0.0` is the strongest compression.
-  ///
-  /// RAW photo formats such as `dng`
-  /// ignore this option.
-  ///
-  /// Defaults to `0.9`.
-  public var quality: Double
   /// Specifies the balance between speed and image quality for the photo capture pipeline.
   ///
   /// Use ``QualityPrioritization/speed`` to minimize capture latency, ``QualityPrioritization/balanced`` to
   /// balance latency with quality, or ``QualityPrioritization/quality`` to allow more processing time.
   ///
-  /// Defaults to ``QualityPrioritization/balanced``.
-  public var qualityPrioritization: QualityPrioritization
+  /// When `nil`, keeps balanced prioritization for processed photos and uses the required speed prioritization for Bayer RAW.
+  /// Explicit values unsupported by the selected RAW format throw during capture.
+  public var qualityPrioritization: QualityPrioritization?
+  /// Configures the capture pipeline to deliver depth data with processed photos.
+  ///
+  /// The session selects a depth-capable format. Request depth for individual captures with
+  /// ``CapturePhotoSettings/enableDepthData``. RAW capture cannot deliver depth data.
+  public var enableDepthDataDelivery: Bool
   /// When this is set to a specific ``Size``,
   /// a ready to display `UIImage` is delivered with the processed Photo when the capture pipeline supplies a
   /// preview image.
@@ -61,25 +57,25 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   /// Defaults to `nil`.
   public var previewImageTargetSize: Size?
 
-  /// Creates photo-output options with balanced quality prioritization and 0.9 compression quality.
+  /// Creates photo-output options with automatic processed-format selection.
   ///
   /// - Parameters:
   ///   - targetResolution: The target Photo Resolution to use.
   ///   - containerFormat: Specifies the ``TargetPhotoContainerFormat`` to shoot the ``Photo`` in.
-  ///   - quality: Defines the compression quality for processed photo formats.
   ///   - qualityPrioritization: Specifies the balance between speed and image quality for the photo capture pipeline.
+  ///   - enableDepthDataDelivery: Configures the session for depth photo delivery.
   ///   - previewImageTargetSize: When this is set to a specific ``Size``, a ready to display `UIImage` is delivered with the processed Photo when the capture pipeline supplies a preview image.
   public init(
     targetResolution: Size = Size(width: 3024, height: 4032),
-    containerFormat: TargetPhotoContainerFormat = .native,
-    quality: Double = 0.9,
-    qualityPrioritization: QualityPrioritization = .balanced,
+    containerFormat: TargetPhotoContainerFormat = .automatic(),
+    qualityPrioritization: QualityPrioritization? = nil,
+    enableDepthDataDelivery: Bool = false,
     previewImageTargetSize: Size? = nil
   ) {
     self.targetResolution = targetResolution
     self.containerFormat = containerFormat
-    self.quality = quality
     self.qualityPrioritization = qualityPrioritization
+    self.enableDepthDataDelivery = enableDepthDataDelivery
     self.previewImageTargetSize = previewImageTargetSize
   }
 }

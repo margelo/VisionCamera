@@ -12,9 +12,6 @@ public enum DepthPixelFormat: CaseIterable, Sendable {
   case depth16Bit
   /// Depth values stored as 32-bit floating-point samples.
   case depth32Bit
-  /// Interleaved 32-bit floating-point point-cloud samples containing x, y, z, and confidence. This layout
-  /// is not supported by the iOS pixel-format converter.
-  case depthPointCloud32Bit
   /// Disparity values stored as 16-bit floating-point samples.
   case disparity16Bit
   /// Disparity values stored as 32-bit floating-point samples.

@@ -5,8 +5,8 @@ import XCTest
 
 final class PublicAPITests: XCTestCase {
   func testStaticCameraQueriesDoNotRequireAFactoryInstance() {
-    XCTAssertTrue(PermissionStatus.allCases.contains(VisionCamera.cameraPermissionStatus))
-    XCTAssertTrue(PermissionStatus.allCases.contains(VisionCamera.microphonePermissionStatus))
+    XCTAssertEqual(VisionCamera.cameraPermissionStatus, AVCaptureDevice.authorizationStatus(for: .video))
+    XCTAssertEqual(VisionCamera.microphonePermissionStatus, AVCaptureDevice.authorizationStatus(for: .audio))
     XCTAssertEqual(VisionCamera.supportsMultiCamSessions, AVCaptureMultiCamSession.isMultiCamSupported)
     XCTAssertNil(VisionCamera.getCameraForId(id: "VisionCameraTests.missing-camera.\(UUID())"))
 
@@ -63,10 +63,10 @@ final class PublicAPITests: XCTestCase {
     XCTAssertTrue(previewView.previewOutput === preview)
   }
 
-  func testNormalizedMeteringPointUsesThePublicDefaultSize() {
+  func testNormalizedMeteringPointPreservesCaptureDeviceCoordinates() {
     let point = MeteringPoint(normalizedX: 0.25, normalizedY: 0.75)
-    XCTAssertEqual(point.normalizedSize, 0.1)
-    XCTAssertEqual(point.relativeSize, 0.1)
+    XCTAssertEqual(point.normalizedX, 0.25)
+    XCTAssertEqual(point.normalizedY, 0.75)
     XCTAssertEqual(point.toNormalizedPoint(), CGPoint(x: 0.25, y: 0.75))
   }
 
@@ -113,25 +113,13 @@ final class PublicAPITests: XCTestCase {
     }
   }
 
-  func testMovieFileRecorderPreparesWithoutAConnectionButCannotStart() async throws {
+  func testMovieFileRecorderPreparationRequiresAConnection() async {
     let output: any VideoOutput = MovieFileVideoOutput()
-    let recorder = try await output.makeRecorder()
-    XCTAssertFalse(recorder.isRecording)
-    XCTAssertTrue(recorder.filePath.hasPrefix("/"))
-    XCTAssertEqual(URL(fileURLWithPath: recorder.filePath).pathExtension, "mov")
-    XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.filePath))
-
     do {
-      try await recorder.startRecording(
-        onRecordingFinished: { _, _ in XCTFail("A disconnected recording cannot finish") },
-        onRecordingError: { _ in XCTFail("An error before recording starts must be thrown") },
-        onRecordingPaused: nil,
-        onRecordingResumed: nil)
-      XCTFail("A disconnected movie-file recorder cannot start")
+      _ = try await output.makeRecorder()
+      XCTFail("Preparing a movie-file recorder requires a Camera connection")
     } catch {
       XCTAssertTrue(error is CameraError)
     }
-    XCTAssertFalse(recorder.isRecording)
-    XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.filePath))
   }
 }
