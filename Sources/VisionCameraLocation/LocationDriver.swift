@@ -1,7 +1,7 @@
 import CoreLocation
 
 @MainActor
-protocol LocationDriver: AnyObject {
+protocol LocationDriver: AnyObject, Sendable {
   var authorizationStatus: CLAuthorizationStatus { get }
   var accuracyAuthorization: CLAccuracyAuthorization { get }
   var location: CLLocation? { get }

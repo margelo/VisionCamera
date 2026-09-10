@@ -11,8 +11,8 @@ import Foundation
 /// Construction does not request authorization or start location updates.
 ///
 /// Retain the manager while collecting locations, then call ``stopUpdating()`` when
-/// the feature closes. Releasing the manager also stops its updates; if the last
-/// reference is released outside the main actor, cleanup waits for the main actor.
+/// the feature closes. Releasing the manager schedules cleanup on the main queue;
+/// the native driver stays alive until that cleanup stops its updates.
 /// This module never requests Always authorization or enables background location updates.
 @MainActor
 public final class LocationManager {
@@ -78,11 +78,17 @@ public final class LocationManager {
     driver.onError = { [weak self] error in self?.receive(error) }
   }
 
-  isolated deinit {
-    driver.onLocations = nil
-    driver.onAuthorization = nil
-    driver.onError = nil
-    if isUpdating { driver.stopUpdatingLocation() }
+  deinit {
+    // Avoid the isolated-deinit runtime crash on iOS 26.2 outside a Swift Task.
+    // https://github.com/swiftlang/swift/issues/87316
+    let driver = driver
+    let wasUpdating = isUpdating
+    DispatchQueue.main.async {
+      driver.onLocations = nil
+      driver.onAuthorization = nil
+      driver.onError = nil
+      if wasUpdating { driver.stopUpdatingLocation() }
+    }
   }
 
   /// Asks the system for When In Use authorization if the current status is not determined.

@@ -78,8 +78,8 @@ cannot prompt again. Explain how the user can enable location in Settings if the
 choose to use the feature later.
 
 Stop updates when geotagging is disabled or the camera screen closes. Releasing
-the manager also stops updates, with cleanup scheduled on the main actor if the
-last reference is released elsewhere. Callbacks execute on the main actor. Apple
+the manager schedules cleanup on the main queue and retains its native driver
+until updates have stopped. Callbacks execute on the main actor. Apple
 delivers [`CLLocationManager`](https://developer.apple.com/documentation/corelocation/cllocationmanager)
 events on the creating thread's run loop, so this module creates the native manager
 on the main thread. Move unrelated expensive work out of the callback.

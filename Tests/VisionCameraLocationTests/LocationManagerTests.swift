@@ -119,9 +119,11 @@ final class LocationManagerTests: XCTestCase {
   }
 
   @MainActor
-  func testNewestValidLocationIsAnOwnedNativeValue() throws {
+  func testNewestValidLocationIsAnOwnedNativeValue() async throws {
     let driver = FakeLocationDriver()
     driver.authorizationStatus = .authorizedWhenInUse
+    let stopped = expectation(description: "Releasing the manager stops updates")
+    driver.onStop = { stopped.fulfill() }
     var manager: LocationManager? = LocationManager(driver: driver) {}
     var retainedLocation: CLLocation?
     manager?.onLocationChanged = { retainedLocation = $0 }
@@ -140,10 +142,47 @@ final class LocationManagerTests: XCTestCase {
     XCTAssertTrue(manager?.lastKnownLocation === new)
     manager = nil
     XCTAssertTrue(retainedLocation === new)
+    await fulfillment(of: [stopped], timeout: 2)
     XCTAssertEqual(driver.stops, 1)
     XCTAssertNil(driver.onLocations)
     XCTAssertNil(driver.onAuthorization)
     XCTAssertNil(driver.onError)
+  }
+
+  @MainActor
+  func testOffMainFinalReleaseStopsAndReleasesDriverOnMainThread() async throws {
+    let stopped = expectation(description: "Updates stop on the main thread")
+    let released = expectation(description: "Cleanup releases its retained driver")
+    let releaseQueue = DispatchQueue(label: "VisionCameraLocationTests.release")
+    releaseQueue.suspend()
+    weak var weakDriver: FakeLocationDriver?
+
+    do {
+      defer { releaseQueue.resume() }
+      try autoreleasepool {
+        let driver = FakeLocationDriver()
+        weakDriver = driver
+        driver.authorizationStatus = .authorizedWhenInUse
+        driver.onStop = {
+          XCTAssertTrue(Thread.isMainThread)
+          stopped.fulfill()
+        }
+        driver.onDeinit = {
+          XCTAssertTrue(Thread.isMainThread)
+          released.fulfill()
+        }
+        let manager = LocationManager(driver: driver) {}
+        try manager.startUpdating()
+        // This suspended queue owns the last reference after the autorelease pool exits.
+        releaseQueue.async { [manager] in
+          XCTAssertFalse(Thread.isMainThread)
+          withExtendedLifetime(manager) {}
+        }
+      }
+    }
+
+    await fulfillment(of: [stopped, released], timeout: 2, enforceOrder: true)
+    XCTAssertNil(weakDriver)
   }
 
   @MainActor
