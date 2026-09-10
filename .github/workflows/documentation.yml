@@ -37,11 +37,13 @@ jobs:
         env:
           HOSTING_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: scripts/build-documentation.sh "$HOSTING_BASE_PATH"
+      - name: Package Xcode documentation archive
+        run: tar -czf build/VisionCamera.doccarchive.tar.gz -C build/documentation/Build/Products/Release-iphoneos/VisionCamera VisionCamera.doccarchive
       - name: Upload Xcode documentation archive
         uses: actions/upload-artifact@v7
         with:
           name: VisionCamera.doccarchive
-          path: build/documentation/Build/Products/Release-iphoneos/VisionCamera/VisionCamera.doccarchive
+          path: build/VisionCamera.doccarchive.tar.gz
           if-no-files-found: error
       - name: Upload Pages website
         uses: actions/upload-pages-artifact@v5

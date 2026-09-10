@@ -51,6 +51,8 @@ The initial documentation was adapted from the TypeScript specs and `docs/conten
 
 The [Documentation workflow](./.github/workflows/documentation.yml) checks documentation on pull requests and pushes to `main`. Each run uploads an Xcode documentation archive and a Pages website artifact.
 
+The Xcode archive is packaged as `VisionCamera.doccarchive.tar.gz` to preserve Swift symbol filenames. Extract it to open the resulting `.doccarchive` in Xcode.
+
 To publish from this repository:
 
 1. Enable GitHub Pages in the repository settings and select **GitHub Actions** as the build source.
