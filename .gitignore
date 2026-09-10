@@ -9,3 +9,8 @@ xcuserdata/
 *.xcresult/
 .bundle/
 vendor/bundle/
+
+# Swift Package Manager build products and local workspace state
+.build/
+.swiftpm/
+/Package.resolved
