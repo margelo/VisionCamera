@@ -22,9 +22,8 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   public let mediaType: MediaType = .video
   /// Whether the Camera Session must connect an audio input to this output.
   public let requiresAudioInput: Bool = false
-  // TODO: If depth data delivery is configured, we probably should return `true` here
   /// Whether the Camera Session must select an active depth format for this output.
-  public let requiresDepthFormat: Bool = false
+  public var requiresDepthFormat: Bool { options.isDepthDataDeliveryEnabled }
   /// The underlying AVFoundation output connected to the Camera Session.
   public let output: AVCapturePhotoOutput
 
@@ -36,13 +35,6 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
     return output.isDepthDataDeliverySupported
   }
 
-  /// get whether this ``PhotoOutput`` supports
-  /// delivering camera calibration data, e.g. for reconstructing
-  /// lens-distortion or geometry.
-  /// See ``CapturePhotoSettings/isCameraCalibrationDataDeliveryEnabled``
-  public var supportsCameraCalibrationDataDelivery: Bool {
-    return output.isCameraCalibrationDataDeliverySupported
-  }
   /// Gets or sets the output orientation of this ``CameraOutput``.
   ///
   /// Individual implementations of ``CameraOutput``
@@ -76,6 +68,7 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
   public var currentResolution: CGSize? {
+    guard output.connection(with: .video) != nil else { return nil }
     // Reads back what `configure(_:)` pinned via
     // `output.maxPhotoDimensions = format.supportedMaxPhotoDimensions.nearest(...)`.
     if #available(iOS 16.0, *) {
@@ -90,7 +83,7 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// The stream type used when negotiating this output's target resolution.
-  public var streamType: StreamType = .photo
+  public let streamType: StreamType = .photo
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
     return .closest(to: options.targetResolution)
@@ -101,12 +94,8 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
     self.output = AVCapturePhotoOutput()
     self.options = options
 
-    output.maxPhotoQualityPrioritization = options.qualityPrioritization.toAVQualityPrioritization()
-
-    if options.containerFormat == .dng {
-      // If we capture RAW photos, try using Apple ProRAW. If not, Bayer14 RAW will be used.
-      output.isAppleProRAWEnabled = output.isAppleProRAWSupported
-    }
+    output.maxPhotoQualityPrioritization = options.qualityPrioritization?.toAVQualityPrioritization() ?? .balanced
+    if #unavailable(iOS 16.0) { output.isHighResolutionCaptureEnabled = true }
 
     if #available(iOS 26, *),
       output.isCameraSensorOrientationCompensationSupported
@@ -114,22 +103,31 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
       // Don't rotate Photo buffers - we handle orientation later on in file capture or toImage().
       output.isCameraSensorOrientationCompensationEnabled = false
     }
-
-    // Prepare the default Photo Settings to make the pipeline ready - some things (like flashMode)
-    // might change on a per-capture basis, but containerFormat and preview size is already known
-    // and can be prepared already.
-    try? prepareDefaultPhotoSettings()
   }
 
-  /// Applies mirroring and orientation settings to this output's current connection.
+  /// Applies connection settings and prepares the requested photo format and depth pipeline.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(_ config: OutputConfiguration) {
+  /// - Throws: If the connected output cannot apply the requested format, depth delivery, or capture options.
+  public func configure(_ config: OutputConfiguration) throws {
     guard let connection = output.connection(with: .video) else {
       return
     }
-    try? connection.setOrientation(outputOrientation)
-    try? connection.setMirrorMode(config.mirrorMode)
+    try connection.setOrientation(outputOrientation)
+    try connection.setMirrorMode(config.mirrorMode)
+    if options.containerFormat == .dng {
+      guard !options.isDepthDataDeliveryEnabled else {
+        throw CaptureError.depthDataUnavailableForRawPhoto
+      }
+      // ProRAW support depends on the connected device and active format.
+      output.isAppleProRAWEnabled = output.isAppleProRAWSupported
+    }
+    if options.isDepthDataDeliveryEnabled {
+      guard output.isDepthDataDeliverySupported else {
+        throw CaptureError.depthDataUnsupported
+      }
+      output.isDepthDataDeliveryEnabled = true
+    }
 
     if #available(iOS 16.0, *) {
       // Configure PhotoOutput to the currently selected Format's max photo size
@@ -142,26 +140,11 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
         {
           // Target max photo dimensions have changed, re-configure
           output.maxPhotoDimensions = nearestPhotoDimension
-          try? prepareDefaultPhotoSettings()
         }
       }
     }
-  }
-
-  private func prepareDefaultPhotoSettings() throws {
-    // Create default capture settings
-    let settings = CapturePhotoSettings(
-      flashMode: .off,
-      isShutterSoundEnabled: true,
-      isDepthDataEnabled: false,
-      isRedEyeReductionEnabled: true,
-      isCameraCalibrationDataDeliveryEnabled: false,
-      isDistortionCorrectionEnabled: false,
-      isVirtualDeviceFusionEnabled: true,
-      location: nil)
-    let avSettings = try settings.toAVCapturePhotoSettings(for: output, withOptions: options)
-    // Prepare the AVCapturePhotoOutput for those settings so coming up captures are faster
-    self.output.setPreparedPhotoSettingsArray([avSettings])
+    let settings = try CapturePhotoSettings().toAVCapturePhotoSettings(for: output, withOptions: options)
+    output.setPreparedPhotoSettingsArray([settings])
   }
 
   /// Captures a ``Photo`` using the given ``CapturePhotoSettings``.
@@ -191,7 +174,7 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
             }
             let captureSettings = try settings.toAVCapturePhotoSettings(for: self.output, withOptions: self.options)
             let id = captureSettings.uniqueID
-            let resultingFormat = PhotoContainerFormat(targetFormat: self.options.containerFormat)
+            let resultingFormat = PhotoContainerFormat(settings: captureSettings)
             let delegate = CapturePhotoDelegate(
               queue: self.queue,
               onCaptured: { photo, metadata in

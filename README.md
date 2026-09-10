@@ -9,7 +9,7 @@
 <br />
 
 VisionCamera is a powerful, high-performance Camera framework for Swift, built on AVFoundation.
-It brings the camera engine from [react-native-vision-camera](https://github.com/margelo/react-native-vision-camera) to native iOS apps. It features:
+It brings the camera engine from [react-native-vision-camera](https://github.com/margelo/react-native-vision-camera) to native iOS apps, with Apple camera types and Swift APIs. It features:
 
 * Photo capture, RAW photos, and Video recording with audio
 * UIKit previews, smooth zooming, and tap-to-focus
@@ -106,6 +106,8 @@ See the [UIKit example app](./Example/) for a full camera screen with permission
 
 Read the [guides and API reference](https://margelo.github.io/VisionCamera/documentation/visioncamera/) on the documentation website.
 They are written with DocC, Apple's documentation compiler. You can also [read the guides here](./Sources/VisionCamera/Documentation.docc/VisionCamera.md), open them in Xcode, or [build the website locally](./Documentation.md).
+
+The [Apple API audit and migration notes](./APPLE_API_AUDIT.md) explain the compatibility APIs removed from the original extraction and their native replacements.
 
 ### Build and test
 

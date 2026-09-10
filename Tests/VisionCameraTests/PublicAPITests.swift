@@ -7,8 +7,8 @@ final class PublicAPITests: XCTestCase {
   private var defaultBackCamera: CameraDevice? { VisionCamera.defaultCamera(for: .back) }
 
   func testStaticCameraQueriesDoNotRequireAFactoryInstance() {
-    XCTAssertTrue(PermissionStatus.allCases.contains(VisionCamera.cameraPermissionStatus))
-    XCTAssertTrue(PermissionStatus.allCases.contains(VisionCamera.microphonePermissionStatus))
+    XCTAssertEqual(VisionCamera.cameraPermissionStatus, AVCaptureDevice.authorizationStatus(for: .video))
+    XCTAssertEqual(VisionCamera.microphonePermissionStatus, AVCaptureDevice.authorizationStatus(for: .audio))
     XCTAssertEqual(VisionCamera.supportsMultiCamSessions, AVCaptureMultiCamSession.isMultiCamSupported)
     XCTAssertNil(VisionCamera.camera(withID: "VisionCameraTests.missing-camera.\(UUID())"))
     if let camera = defaultBackCamera {
@@ -73,9 +73,8 @@ final class PublicAPITests: XCTestCase {
     XCTAssertTrue(previewView.output === preview)
   }
 
-  func testNormalizedMeteringPointUsesThePublicDefaultSize() {
+  func testNormalizedMeteringPointPreservesNativeLocation() {
     let point = MeteringPoint(location: CGPoint(x: 0.25, y: 0.75))
-    XCTAssertEqual(point.size, 0.1)
     XCTAssertEqual(point.location, CGPoint(x: 0.25, y: 0.75))
   }
 
@@ -88,21 +87,6 @@ final class PublicAPITests: XCTestCase {
     } catch PreviewError.outputNotAttached {
     } catch {
       XCTFail("Unexpected error: \(error)")
-    }
-  }
-
-  @MainActor
-  func testPreviewMeteringRejectsInvalidViewRadius() async {
-    let preview = PreviewView(output: PreviewOutput())
-    for radius: CGFloat in [-1, .infinity, .nan] {
-      do {
-        _ = try preview.meteringPoint(at: .zero, size: radius)
-        XCTFail("An invalid metering radius must fail")
-      } catch PreviewError.invalidMeteringRadius(let invalid) {
-        if radius.isNaN { XCTAssertTrue(invalid.isNaN) } else { XCTAssertEqual(invalid, radius) }
-      } catch {
-        XCTFail("Unexpected error: \(error)")
-      }
     }
   }
 
@@ -148,33 +132,21 @@ final class PublicAPITests: XCTestCase {
     }
   }
 
-  func testMovieFileRecorderPreparesWithoutAConnectionButCannotStart() async throws {
+  func testMovieFileRecorderPreparationRequiresAConnection() async {
     let output: any VideoOutput = MovieFileVideoOutput()
-    let recorder = try await output.makeRecorder()
-    let initialStatus = try await recorder.status()
-    XCTAssertFalse(initialStatus.isRecording)
-    XCTAssertFalse(initialStatus.isPaused)
-    XCTAssertEqual(initialStatus.fileSize, 0)
-    XCTAssertTrue(recorder.fileURL.isFileURL)
-    XCTAssertEqual(recorder.fileURL.pathExtension, "mov")
-    XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.fileURL.path))
-
     do {
-      try await recorder.start(
-        onFinished: { _ in XCTFail("A disconnected recording cannot finish") },
-        onError: { _ in XCTFail("An error before recording starts must be thrown") })
-      XCTFail("A disconnected movie-file recorder cannot start")
-    } catch RecordingError.outputNotConnected {
+      _ = try await output.makeRecorder()
+      XCTFail("Preparing a movie-file recorder requires a Camera connection")
+    } catch {
+      XCTAssertTrue(error is RecordingError)
     }
-    let status = try await recorder.status()
-    XCTAssertFalse(status.isRecording)
-    XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.fileURL.path))
   }
 
-  func testConcreteVideoOutputPreservesRecorderType() async throws {
-    let recorder: VideoRecorder = try await MovieFileVideoOutput().makeRecorder()
-    let status = await recorder.status()
-    XCTAssertFalse(status.isRecording)
+  func testConcreteVideoOutputPreservesRecorderType() {
+    let movie = MovieFileVideoOutput()
+    let frame = VideoFrameOutput()
+    let _: (RecorderSettings) async throws -> VideoRecorder = movie.makeRecorder(settings:)
+    let _: (RecorderSettings) async throws -> FrameRecorder = frame.makeRecorder(settings:)
   }
 
   func testDirectConstraintsKeepExplicitPrioritiesAheadOfOutputResolution() {

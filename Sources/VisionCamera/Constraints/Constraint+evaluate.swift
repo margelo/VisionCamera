@@ -4,7 +4,7 @@ extension Constraint {
   func evaluate(for format: AVCaptureDevice.Format) throws(ConfigurationError) -> ConstraintEvaluation {
     switch self {
     case .frameRate(let frameRate):
-      let r = FPSConstraint(fps: frameRate).resolve(for: format)
+      let r = try FPSConstraint(fps: frameRate).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .fps(r.resolvedValue))
     case .videoStabilization(let videoStab):
       let r = VideoStabilizationModeConstraint(videoStabilizationMode: videoStab).resolve(for: format)
@@ -16,11 +16,8 @@ extension Constraint {
       let r = try ResolutionBiasConstraint(resolutionBias: resolutionBias).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .formatOnly)
     case .videoDynamicRange(let dynamicRange):
-      let r = VideoDynamicRangeConstraint(videoDynamicRange: dynamicRange).resolve(for: format)
+      let r = try VideoDynamicRangeConstraint(videoDynamicRange: dynamicRange).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .videoDynamicRange(r.resolvedValue))
-    case .photoHDR(_):
-      // Photo HDR is not supported on iOS.
-      return ConstraintEvaluation(penalty: .noPenalty, resolved: .formatOnly)
     case .pixelFormat(let pixelFormat):
       let r = PixelFormatConstraint(pixelFormat: pixelFormat).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .formatOnly)

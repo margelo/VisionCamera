@@ -1,5 +1,6 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+import AVFoundation
 import Foundation
 
 /// A missing usage description or authorization required to use a Camera or microphone.
@@ -7,9 +8,9 @@ public enum PermissionError: Error, LocalizedError {
   /// The app's Info.plist does not contain the required privacy usage description.
   case missingUsageDescription(key: String)
   /// Camera capture requires authorization that the app does not currently have.
-  case cameraAccessDenied(status: PermissionStatus)
+  case cameraAccessDenied(status: AVAuthorizationStatus)
   /// Audio capture requires authorization that the app does not currently have.
-  case microphoneAccessDenied(status: PermissionStatus)
+  case microphoneAccessDenied(status: AVAuthorizationStatus)
 
   /// A description of the missing permission or app configuration.
   public var errorDescription: String? {

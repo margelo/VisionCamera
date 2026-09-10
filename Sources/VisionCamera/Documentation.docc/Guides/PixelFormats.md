@@ -6,11 +6,11 @@ A frame's ``PixelFormat`` describes how pixels are stored in its native buffer. 
 
 ## Request a format
 
-``FrameOutputOptions`` offers three ``TargetVideoPixelFormat`` choices:
+``FrameOutputOptions`` accepts a ``TargetVideoPixelFormat``:
 
 - `.native` uses the negotiated Camera format without requesting a conversion.
-- `.yuv` requests YUV buffers, which usually avoid a costly color conversion.
-- `.rgb` requests BGRA buffers, which often require conversion and use more memory.
+- `.pixelFormat(.yuv4208BitFull)` requests full-range 8-bit bi-planar YUV buffers.
+- `.pixelFormat(.rgbBgra8Bit)` requests BGRA buffers, which often require conversion and use more memory.
 
 Use YUV when your CPU processing supports it. Use the native format when your downstream pipeline accepts the negotiated buffer directly. Request RGB when your consumer requires it.
 
@@ -18,7 +18,9 @@ The native format may use a layout your processing does not support. Inspect the
 
 ## Inspect a format
 
-A received ``Frame`` exposes its precise `pixelFormat`. These common formats map to Core Video constants:
+A received ``Frame`` exposes its precise `pixelFormat`. ``PixelFormat/rawValue`` preserves the Core Video identifier, including compressed and future formats. Construct a value with ``PixelFormat/init(rawValue:)`` when it has no named constant. The session rejects a requested output format unless AVFoundation reports it in `availableVideoPixelFormatTypes`.
+
+These common formats map to Core Video constants:
 
 | VisionCamera format | Core Video format |
 | --- | --- |

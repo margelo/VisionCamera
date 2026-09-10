@@ -47,7 +47,10 @@ public struct Depth {
   public var quality: DepthDataQuality { DepthDataQuality(av: depthData.depthDataQuality) }
   /// The formats this sample can be converted to through ``Depth/converted(to:)``.
   public var availablePixelFormats: [DepthPixelFormat] {
-    depthData.availableDepthDataTypes.map { DepthPixelFormat(osType: $0) }
+    depthData.availableDepthDataTypes.compactMap {
+      let format = DepthPixelFormat(osType: $0)
+      return format == .unknown ? nil : format
+    }
   }
   /// Calibration data for projecting depth values into Camera or world coordinates, if available.
   public var calibrationData: CameraCalibrationData? {

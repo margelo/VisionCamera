@@ -33,10 +33,13 @@ public struct RecorderSettings {
   /// is invoked with the resulting video file, the same
   /// behavior as calling ``Recorder/stop()``.
   ///
+  /// The value must remain finite and positive when converted to a time at 600 ticks per second.
   /// Defaults to `nil`.
   public var maxDuration: CMTime?
   /// If set, the recording automatically stops once the file
-  /// reaches this size, in bytes.
+  /// reaches this positive size, in bytes.
+  ///
+  /// Encoder buffering can delay the file-size check. The finalized file may exceed the limit.
   ///
   /// When the limit is reached, the recording is finalized
   /// successfully, and the `onFinished` callback

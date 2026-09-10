@@ -27,7 +27,7 @@ func prepareRAWCamera(device: CameraDevice) async throws -> (CameraSession, Phot
 }
 ```
 
-RAW support depends on the selected device and configuration. Handle configuration and capture errors when RAW is unavailable.
+RAW support depends on the selected device and configuration. Handle configuration and capture errors when RAW is unavailable. Bayer RAW requires speed quality prioritization and device and connection zoom factors of `1`; incompatible requests throw before capture. Apple ProRAW supports quality prioritization and is not subject to that Bayer zoom restriction.
 
 Since RAW capture uses more bandwidth, a capture can take longer. Request a preview image to display as a thumbnail when available. See <doc:PhotoCallbacks>.
 

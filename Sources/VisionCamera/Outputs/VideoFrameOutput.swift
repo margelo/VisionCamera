@@ -30,7 +30,7 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   private let fileType: RecorderFileType
 
   /// The stream type used when negotiating this output's target resolution.
-  public var streamType: StreamType = .video
+  public let streamType: StreamType = .video
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
     return .closest(to: options.targetResolution)
@@ -47,6 +47,8 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   /// - A Frame output might not apply orientation and only pass it as a
   /// property via the `Frame` object, unless explicitly configured to
   /// physically rotate buffers.
+  ///
+  /// When disconnected, the requested orientation is applied and validated at the next session configuration.
   public var outputOrientation: CameraOrientation = .up {
     didSet {
       guard let connection = output.connection(with: .video) else { return }
@@ -74,12 +76,12 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   }
 
   private var videoCodec: AVVideoCodecType?
-  /// Creates a Camera output with the given options.
-  public init(options: VideoOutputOptions = .init()) {
+  /// Creates a video frame output with the requested recording container.
+  public init(options: VideoOutputOptions = .init(), fileType: RecorderFileType = .mov) {
     self.output = AVCaptureVideoDataOutput()
     self.delegate = FrameDelegate()
     self.options = options
-    self.fileType = options.fileType
+    self.fileType = fileType
     self.queue = DispatchQueue(
       label: "com.margelo.camera.video-frame",
       qos: .userInteractive,
@@ -116,18 +118,19 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(_ config: OutputConfiguration) {
+  /// - Throws: If the connection does not support the requested orientation or mirroring.
+  public func configure(_ config: OutputConfiguration) throws {
     // TODO: Set orientation via video metadata flags to avoid physically rotating buffers.
     //       The problem with that is that we need to support switching Camera devices on the fly,
     //       which rotates buffer later on somehow.
     guard let connection = output.connection(with: .video) else {
       return
     }
-    try? connection.setMirrorMode(config.mirrorMode)
-    try? connection.setOrientation(outputOrientation)
+    try connection.setMirrorMode(config.mirrorMode)
+    try connection.setOrientation(outputOrientation)
   }
 
-  /// Queries all supported ``VideoCodec``s this
+  /// Get all supported `AVVideoCodecType` values this
   /// ``VideoOutput`` currently can record in.
   ///
   /// This method must be called after the ``VideoOutput``
@@ -137,38 +140,30 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   /// is attached to a Camera Session (via ``CameraSession/configure(_:configuration:)``).
   ///
   /// The query runs on the output's serial queue.
-  public func supportedVideoCodecs() async throws -> [VideoCodec] {
+  public func supportedVideoCodecs() async throws -> [AVVideoCodecType] {
     return try await queue.perform {
       guard self.output.connection(with: .video) != nil else {
         throw RecordingError.outputNotConnected
       }
       let availableCodecs = self.output.availableVideoCodecTypesForAssetWriter(writingTo: self.fileType.toAVFileType())
-      return availableCodecs.map { VideoCodec(avCodec: $0) }
+      return availableCodecs
     }
   }
 
-  /// Set the output settings for this video output.
-  /// This method must be called after the output has been
-  /// attached to the Camera Session, and before
-  /// ``VideoFrameOutput/makeRecorder(settings:)``.
+  /// Selects a supported native codec before creating a recorder.
   ///
-  /// Settings are applied on the output's serial queue. Unsupported codecs and incompatible codec/bit-rate settings throw.
-  public func setOutputSettings(_ settings: VideoOutputSettings) async throws {
+  /// - Throws: If the output is disconnected or the codec or bit rate is unsupported.
+  public func setVideoCodec(_ codec: AVVideoCodecType) async throws {
     try await queue.perform {
       guard self.output.connection(with: .video) != nil else {
         throw RecordingError.outputNotConnected
       }
-      if let codec = settings.codec {
-        let nativeCodec = try codec.toAVVideoCodecType()
-        let availableCodecs = self.output.availableVideoCodecTypesForAssetWriter(writingTo: self.fileType.toAVFileType())
-        guard availableCodecs.contains(nativeCodec) else {
-          throw RecordingError.unsupportedCodec(codec)
-        }
-        guard !codec.isRawCodec || self.options.bitRate == nil else {
-          throw RecordingError.bitRateUnsupported(codec)
-        }
-        self.videoCodec = nativeCodec
+      let availableCodecs = self.output.availableVideoCodecTypesForAssetWriter(writingTo: self.fileType.toAVFileType())
+      guard availableCodecs.contains(codec) else {
+        throw RecordingError.unsupportedCodec(codec)
       }
+      try self.options.validateBitRate(for: codec)
+      self.videoCodec = codec
     }
   }
 
@@ -185,6 +180,7 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
   /// Create the recorder after connecting this output to a configured Camera Session. Creation runs on the output's serial queue and can throw if a video connection, encoding settings, or audio input is unavailable.
   public func makeRecorder(settings: RecorderSettings = .init()) async throws -> FrameRecorder {
     return try await queue.perform {
+      try settings.validate()
       // 1. Create AVAssetWriter Recorder
       let clock = try self.getMasterClock()
       let recorder = try FrameRecorder(
@@ -194,13 +190,22 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
         settings: settings,
         delegate: self)
       // 2. Initialize its video track immediately
-      guard
-        var videoSettings = self.output.recommendedVideoSettingsForAssetWriter(
-          writingTo: self.fileType.toAVFileType())
-      else {
+      let availableCodecs = self.output.availableVideoCodecTypesForAssetWriter(writingTo: self.fileType.toAVFileType())
+      let recommendedSettings: [String: Any]?
+      if let codec = self.videoCodec {
+        guard availableCodecs.contains(codec) else {
+          throw RecordingError.unsupportedCodec(codec)
+        }
+        recommendedSettings = self.output.recommendedVideoSettings(
+          forVideoCodecType: codec, assetWriterOutputFileType: self.fileType.toAVFileType())
+      } else {
+        recommendedSettings = self.output.recommendedVideoSettingsForAssetWriter(writingTo: self.fileType.toAVFileType())
+      }
+      guard var videoSettings = recommendedSettings else {
         throw RecordingError.videoSettingsUnavailable
       }
-      if let codec = self.videoCodec { videoSettings[AVVideoCodecKey] = codec }
+      let selectedCodec = videoSettings[AVVideoCodecKey] as? AVVideoCodecType
+      try self.options.validateBitRate(for: selectedCodec)
       if let bitRate = self.options.bitRate {
         var compression = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] ?? [:]
         compression[AVVideoAverageBitRateKey] = bitRate
@@ -212,9 +217,19 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
       if #available(iOS 26.0, *) {
         // 2.1.a. Set video timescale if available. This avoids audio/video sync-drift in super long videos.
         recorder.setTimescale(self.output.recommendedMediaTimeScaleForAssetWriter)
-        let codec = self.getCurrentVideoCodec()
-        if let metadata = self.output.recommendedMovieMetadata(
-          forVideoCodecType: codec, assetWriterOutputFileType: self.fileType.toAVFileType())
+        if let selectedCodec {
+          guard availableCodecs.contains(selectedCodec) else {
+            throw RecordingError.metadataCodecUnavailable
+          }
+          if selectedCodec == .proResRAW || selectedCodec == .proResRAWHQ {
+            guard self.output.connection(with: .video)?.deviceInput?.device.whiteBalanceMode == .locked else {
+              throw RecordingError.rawRequiresLockedWhiteBalance
+            }
+          }
+        }
+        if let selectedCodec,
+          let metadata = self.output.recommendedMovieMetadata(
+            forVideoCodecType: selectedCodec, assetWriterOutputFileType: self.fileType.toAVFileType())
         {
           // 2.2. Set metadata if available
           try recorder.setMetadata(metadata, settings: settings)
@@ -256,10 +271,6 @@ public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDe
       self.activeRecorderCount -= 1
       if self.activeRecorderCount == 0 { self.audioSession?.stop() }
     }
-  }
-
-  private func getCurrentVideoCodec() -> AVVideoCodecType {
-    return videoCodec ?? .hevc
   }
 
   private func getMasterClock() throws -> CMClock {

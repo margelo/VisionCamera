@@ -25,11 +25,6 @@ public final class FrameRecorder: Recorder {
   private let delegate: RecorderDelegate
   private let settings: RecorderSettings
 
-  /// Sum of all appended sample sizes. Accumulated rather than stat'd because
-  /// `AVAssetWriter` buffers writes, so on-disk size lags significantly behind
-  /// the actual recorded data until `finishWriting` flushes.
-  private var accumulatedBytes: Int64 = 0
-
   private var onFinished: ((RecordingResult) -> Void)? = nil
   private var onError: ((any Error) -> Void)? = nil
   private var onPaused: (() -> Void)? = nil
@@ -302,7 +297,6 @@ public final class FrameRecorder: Recorder {
         do {
           let track = try self.getTrack(ofType: type)
           try track.append(buffer: buffer)
-          self.accumulatedBytes += Int64(CMSampleBufferGetTotalSampleSize(buffer))
         } catch {
           logger.error("Failed to append buffer to \(type.rawValue) track! \(error)")
           self.fail(self.assetWriter.error ?? error)
@@ -338,7 +332,9 @@ public final class FrameRecorder: Recorder {
   private func reachedFileSizeLimit() -> Bool {
     if let maxFileSize = settings.maxFileSize {
       // Check if video size >= max target file size
-      if accumulatedBytes >= maxFileSize {
+      if let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+        let bytes = attributes[.size] as? NSNumber, bytes.int64Value >= maxFileSize
+      {
         logger.info("Reached maxFileSize of \(maxFileSize) bytes - finishing recording.")
         return true
       }

@@ -7,9 +7,8 @@
 import AVFoundation
 import Foundation
 
-// TODO: A streaming output's (like a Frame Output) pixel format should participate
-//       in format negotiations - e.g. when it's configured to `'yuv'` we should prefer
-//       .yuv4208BiVideo formats. When it's `'native'`, we shouldn't care. Like .any
+// FrameOutput's exact output pixel format is validated after the output is connected. A
+// PixelFormatConstraint separately expresses a preference for the camera's native capture format.
 
 enum ConstraintResolver {
   static func resolveConstraints(
@@ -119,7 +118,7 @@ enum ConstraintResolver {
     var fps: Double?
     var videoStabilizationMode: TargetStabilizationMode?
     var previewStabilizationMode: TargetStabilizationMode?
-    var videoDynamicRange: TargetDynamicRange?
+    var videoDynamicRange: DynamicRange?
 
     for (index, constraint) in constraints.enumerated() {
       let weight = Double(constraints.count - index)

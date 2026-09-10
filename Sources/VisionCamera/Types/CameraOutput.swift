@@ -10,7 +10,9 @@ public protocol CameraOutput: AnyObject {
   /// The media type of the content being streamed
   /// by this ``CameraOutput``.
   var mediaType: MediaType { get }
-  /// Gets or sets the output orientation of this ``CameraOutput``.
+  /// The output orientation of this ``CameraOutput``.
+  ///
+  /// Photo, video, frame, and depth outputs expose a writable property. Previews follow the interface orientation, and metadata stays in capture-device coordinates.
   ///
   /// Individual implementations of ``CameraOutput``
   /// may choose different strategies for implementing
@@ -21,7 +23,7 @@ public protocol CameraOutput: AnyObject {
   /// - A Frame output might not apply orientation and only pass it as a
   /// property via the `Frame` object, unless explicitly configured to
   /// physically rotate buffers.
-  var outputOrientation: CameraOrientation { get set }
+  var outputOrientation: CameraOrientation { get }
   /// The resolution that the underlying capture pipeline has resolved
   /// this ``CameraOutput`` to, in sensor-native (un-rotated) pixels,
   /// or `nil` if the output has not yet been connected to a

@@ -53,6 +53,16 @@ Inspect `physicalDevices` to see a virtual Camera's constituent devices. Use the
 
 A ``CameraDevice`` exposes individually supported capabilities such as resolutions, dynamic ranges, FPS ranges, and video stabilization modes. These are not guaranteed to work in every combination.
 
+Use the same ``StreamType`` for resolution queries and output negotiation. Recording and frame delivery both use `.video`:
+
+```swift
+import VisionCamera
+
+func videoResolutions(device: CameraDevice) -> [CGSize] {
+	device.supportedResolutions(for: .video)
+}
+```
+
 VisionCamera uses ``Constraint`` values to combine features and find a best-matching Camera configuration. See <doc:Constraints>.
 
 ## External devices and device changes

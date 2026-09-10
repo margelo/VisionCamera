@@ -8,7 +8,7 @@
 /// FPSConstraint(fps: 60)
 /// ```
 struct FPSConstraint: Equatable, Sendable {
-  /// The target frame rate, in frames per second.
+  /// The target frame rate, including fractional values such as 29.97.
   let fps: Double
 
 }

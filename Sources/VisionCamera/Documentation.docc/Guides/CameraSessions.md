@@ -45,11 +45,21 @@ There's three levels of Camera configuration:
 
 > Note: Properties like zoom, exposure, or focus can be adjusted without session reconfiguration. See <doc:CameraControllerGuide>.
 
-## Handle errors
+## Mix audio with other apps
 
-Configuration failures throw ``ConfigurationError``, and permission setup failures throw ``PermissionError``. You can match individual cases when your app needs a specific response, then handle other errors with their `localizedDescription`.
+On iOS 18 and later, configure whether AVFoundation mixes recording audio with other apps:
 
-Photo capture uses ``CaptureError`` for capture-specific failures. Recording uses ``RecordingError``, and media conversion uses ``MediaError``. Underlying AVFoundation and file-system errors pass through unchanged.
+```swift
+import VisionCamera
+
+@available(iOS 18.0, *)
+func configureAudioMixing(session: CameraSession, connections: [CameraSessionConnection]) async throws {
+	let config = CameraSessionConfiguration(allowsBackgroundAudioPlayback: true)
+	_ = try await session.configure(connections, configuration: config)
+}
+```
+
+This setting applies when the capture session automatically configures the app's shared audio session. Leave it unspecified to preserve the current setting.
 
 ## Handle interruptions
 

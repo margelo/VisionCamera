@@ -102,18 +102,11 @@ public final class PreviewView: UIView {
   }
 
   /// Creates a metering point from a location in this view, accounting for orientation, scaling, and cropping.
-  /// - Parameters:
-  ///   - point: A location in this view's coordinate system, such as the location of a tap.
-  ///   - size: An optional radius in view points. When omitted, the normalized radius is `0.1`.
-  /// - Throws: If the output is not attached or the radius is negative or nonfinite.
-  public func meteringPoint(at point: CGPoint, size: CGFloat? = nil) throws(PreviewError) -> MeteringPoint {
+  /// - Parameter point: A location in this view's coordinate system, such as a tap.
+  /// - Throws: ``PreviewError/outputNotAttached`` if the view has no attached output.
+  public func meteringPoint(at point: CGPoint) throws(PreviewError) -> MeteringPoint {
     let layer = try requirePreviewLayer()
-    let location = layer.captureDevicePointConverted(fromLayerPoint: point)
-    guard let size else { return MeteringPoint(location: location) }
-    guard size.isFinite, size >= 0 else { throw .invalidMeteringRadius(size) }
-    let offset = layer.captureDevicePointConverted(fromLayerPoint: CGPoint(x: point.x + size, y: point.y))
-    let radius = hypot(offset.x - location.x, offset.y - location.y)
-    return MeteringPoint(location: location, size: radius)
+    return MeteringPoint(location: layer.captureDevicePointConverted(fromLayerPoint: point))
   }
 
   private func requirePreviewLayer() throws(PreviewError) -> AVCaptureVideoPreviewLayer {

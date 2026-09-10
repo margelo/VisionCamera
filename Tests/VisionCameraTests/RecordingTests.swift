@@ -120,7 +120,10 @@ final class RecordingTests: XCTestCase {
     existing.identifier = .quickTimeMetadataLocationISO6709
     existing.value = "+48.0+016.0/" as NSString
     output.output.metadata = [existing]
-    let recorder = try await output.makeRecorder(settings: RecorderSettings(location: CLLocation(latitude: 37, longitude: -122)))
+    let recorder = try VideoRecorder(
+      videoOutput: output.output, queue: DispatchQueue(label: "VisionCameraTests.metadata-preparation"),
+      coordinator: MovieFileRecordingCoordinator(), fileType: .mov,
+      settings: RecorderSettings(location: CLLocation(latitude: 37, longitude: -122)))
     XCTAssertEqual(output.output.metadata?.first?.stringValue, existing.stringValue)
     let status = await recorder.status()
     XCTAssertFalse(status.isRecording)

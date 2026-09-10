@@ -52,9 +52,59 @@ public enum ConfigurationError: Error, LocalizedError {
   /// The format does not provide a resolution for this stream type.
   case resolutionsUnavailable(streamType: StreamType)
 
+  /// The active capture format does not support the selected frame rate.
+  case frameRateUnsupported
+  /// The selected video stabilization mode is unavailable on this OS version.
+  case videoStabilizationUnavailable
+  /// The selected preview stabilization mode is unavailable on this OS version.
+  case previewStabilizationUnavailable
+  /// The selected color space is unavailable for the active capture format.
+  case colorSpaceUnsupported
+  /// Preview-sized FrameOutput buffers require iOS 17 or later.
+  case previewSizedBuffersRequireIOS17
+  /// The connected FrameOutput does not support camera intrinsic matrix delivery.
+  case intrinsicMatrixDeliveryUnsupported
+  /// Metadata uses unmirrored capture-device coordinates. Convert objects to preview coordinates when displaying them.
+  case metadataMirroringUnsupported
+  /// Frame rate must be a finite value greater than zero.
+  case invalidFrameRate
+  /// The capture format does not report a supported frame rate range.
+  case frameRateRangesUnavailable
+  /// The capture format does not report a supported color space that VisionCamera can configure.
+  case colorSpacesUnavailable
+  /// The requested metadata types are unavailable on the connected output.
+  case metadataTypesUnavailable
+  /// The requested Core Video pixel format is unavailable on the connected output.
+  case pixelFormatUnavailable
+
   /// A description of the unsupported session configuration.
   public var errorDescription: String? {
     switch self {
+    case .frameRateUnsupported:
+      return "The active capture format does not support the selected frame rate."
+    case .videoStabilizationUnavailable:
+      return "The selected video stabilization mode is unavailable on this OS version."
+    case .previewStabilizationUnavailable:
+      return "The selected preview stabilization mode is unavailable on this OS version."
+    case .colorSpaceUnsupported:
+      return "The selected color space is unavailable for the active capture format."
+    case .previewSizedBuffersRequireIOS17:
+      return "Preview-sized FrameOutput buffers require iOS 17 or later."
+    case .intrinsicMatrixDeliveryUnsupported:
+      return "The connected FrameOutput does not support camera intrinsic matrix delivery."
+    case .metadataMirroringUnsupported:
+      return "Metadata uses unmirrored capture-device coordinates. Convert objects to preview coordinates when displaying them."
+    case .invalidFrameRate:
+      return "Frame rate must be a finite value greater than zero."
+    case .frameRateRangesUnavailable:
+      return "The capture format does not report a supported frame rate range."
+    case .colorSpacesUnavailable:
+      return "The capture format does not report a supported color space that VisionCamera can configure."
+    case .metadataTypesUnavailable:
+      return "The requested metadata types are unavailable on the connected output."
+    case .pixelFormatUnavailable:
+      return "The requested Core Video pixel format is unavailable on the connected output."
+
     case .multiCamUnsupported:
       return "This device does not support multi-camera sessions."
     case .multipleInputsRequireMultiCam(let count):

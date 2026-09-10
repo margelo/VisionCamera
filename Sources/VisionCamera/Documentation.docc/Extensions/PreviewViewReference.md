@@ -24,7 +24,7 @@
 - ``point(fromCameraPoint:)``
 - ``cameraPoint(from:)``
 - ``convertedToViewCoordinates(_:)``
-- ``meteringPoint(at:size:)``
+- ``meteringPoint(at:)``
 
 ### Laying out the preview
 

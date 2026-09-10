@@ -17,7 +17,7 @@ final class AudioSession {
 
   init() throws {
     guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-      throw PermissionError.microphoneAccessDenied(status: PermissionStatus(avStatus: AVCaptureDevice.authorizationStatus(for: .audio)))
+      throw PermissionError.microphoneAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .audio))
     }
     logger.log("Initializing AudioSession...")
     // 1. Create AVCaptureSession

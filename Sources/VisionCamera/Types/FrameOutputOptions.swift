@@ -35,7 +35,7 @@ public struct FrameOutputOptions: Equatable, Sendable {
   ///
   /// Defaults to false.
   ///
-  /// This option is applied on iOS 17 and later.
+  /// Requires iOS 17 or later. Session configuration throws if this is enabled on an older OS.
   public var usesPreviewSizedBuffers: Bool
   /// Allow this output to start later in the capture pipeline startup process.
   ///
@@ -52,8 +52,8 @@ public struct FrameOutputOptions: Equatable, Sendable {
   /// Sets the pixel format of the ``FrameOutput``.
   ///
   /// The most efficient format is ``TargetVideoPixelFormat/native``, which uses the selected Camera format
-  /// without requesting conversion. Use ``TargetVideoPixelFormat/yuv`` for CPU access to YUV samples, or
-  /// ``TargetVideoPixelFormat/rgb`` when your processing requires BGRA.
+  /// without requesting conversion. Use `.pixelFormat(.yuv4208BitFull)` for 8-bit full-range YUV samples,
+  /// or `.pixelFormat(.rgbBgra8Bit)` when your processing requires BGRA.
   ///
   /// RGB uses about 2.6 times more bandwidth than 8-bit YUV 4:2:0 and may require additional conversion.
   /// Prefer the native format when your processing can use it.
@@ -81,8 +81,8 @@ public struct FrameOutputOptions: Equatable, Sendable {
   public var rotatesBuffers: Bool
   /// Whether the ``FrameOutput`` attaches a Camera Intrinsic Matrix to the Frames it produces.
   ///
-  /// The output enables delivery only when the capture connection supports it. Video stabilization can
-  /// prevent intrinsic-matrix delivery.
+  /// Session configuration throws if the capture connection does not support delivery. Video stabilization
+  /// can prevent intrinsic-matrix delivery.
   ///
   /// See ``Frame/intrinsicMatrix``. Defaults to `false`.
   public var isCameraIntrinsicMatrixDeliveryEnabled: Bool

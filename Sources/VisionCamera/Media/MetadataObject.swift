@@ -11,9 +11,9 @@ public struct MetadataObject: ScannedObject {
   /// Creates a value retaining a native metadata object.
   public init(object: AVMetadataObject) { self.object = object }
 
-  /// The type of object detected by the capture pipeline.
-  public var type: ScannedObjectType { ScannedObjectType(type: object.type) }
-  /// The object's bounds in its current coordinate system.
+  /// The native metadata type, including types introduced by newer Apple SDKs.
+  public var type: AVMetadataObject.ObjectType { object.type }
+  /// The bounding box coordinates of this ``ScannedObject``.
   ///
   /// ``ObjectOutput`` delivers normalized Camera coordinates. Values converted through ``PreviewView``
   /// use the preview view's coordinate system instead.

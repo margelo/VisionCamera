@@ -14,7 +14,7 @@ public struct ScannedFace: ScannedObject, Identifiable {
   public init(object: AVMetadataFaceObject) { self.face = object }
 
   /// The detected metadata object type.
-  public var type: ScannedObjectType { ScannedObjectType(type: face.type) }
+  public var type: AVMetadataObject.ObjectType { face.type }
   /// The face's bounds in its current coordinate system.
   ///
   /// ``ObjectOutput`` delivers normalized Camera coordinates. Values converted through ``PreviewView``

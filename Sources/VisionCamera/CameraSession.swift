@@ -125,7 +125,7 @@ public final class CameraSession {
   public func configure(_ connections: [CameraSessionConnection], configuration: CameraSessionConfiguration = .init()) async throws -> [CameraController] {
     return try await Self.queue.perform {
       guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-        throw PermissionError.cameraAccessDenied(status: PermissionStatus(avStatus: AVCaptureDevice.authorizationStatus(for: .video)))
+        throw PermissionError.cameraAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .video))
       }
 
       // A Multi-Cam session requires compatible formats even with one virtual Camera input.
@@ -157,14 +157,6 @@ public final class CameraSession {
       // Remove all unwanted connections and add all new connections
       try self.updateConnections(connections)
 
-      // Configure all individual inputs/outputs/connections (e.g. orientation/mirrorMode)
-      for connection in connections {
-        // connection:
-        try self.configureConnection(connection, isMultiCam: isMultiCam)
-        // outputs:
-        self.configureOutputs(connection)
-      }
-
       // If we have Dynamic Range Constraints, we disable automatic color space selection on the AVCaptureSession.
       let hasCustomDynamicRangeConstraint = connections.contains { connection in
         return connection.constraints.contains { constraint in
@@ -175,17 +167,25 @@ public final class CameraSession {
       }
       self.session.automaticallyConfiguresCaptureDeviceForWideColor = !hasCustomDynamicRangeConstraint
 
+      // Configure all individual inputs/outputs/connections (e.g. orientation/mirrorMode)
+      for connection in connections {
+        // connection:
+        try self.configureConnection(connection, isMultiCam: isMultiCam)
+        // outputs:
+        try self.configureOutputs(connection)
+      }
+
       // Haptics and System Sounds Playback
-      if let allowHapticsAndSystemSoundsPlayback = configuration.allowsHapticsAndSystemSoundsPlayback {
+      if let allowsHapticsAndSystemSoundsPlayback = configuration.allowsHapticsAndSystemSoundsPlayback {
         let audioSession = AVAudioSession.sharedInstance()
-        if audioSession.allowHapticsAndSystemSoundsDuringRecording != allowHapticsAndSystemSoundsPlayback {
-          try audioSession.setAllowHapticsAndSystemSoundsDuringRecording(allowHapticsAndSystemSoundsPlayback)
+        if audioSession.allowHapticsAndSystemSoundsDuringRecording != allowsHapticsAndSystemSoundsPlayback {
+          try audioSession.setAllowHapticsAndSystemSoundsDuringRecording(allowsHapticsAndSystemSoundsPlayback)
         }
       }
       // Background Audio Playback
       if #available(iOS 18.0, *) {
-        if let allowBackgroundAudioPlayback = configuration.allowsBackgroundAudioPlayback {
-          self.session.configuresApplicationAudioSessionToMixWithOthers = allowBackgroundAudioPlayback
+        if let allowsBackgroundAudioPlayback = configuration.allowsBackgroundAudioPlayback {
+          self.session.configuresApplicationAudioSessionToMixWithOthers = allowsBackgroundAudioPlayback
         }
       }
 
@@ -244,51 +244,61 @@ public final class CameraSession {
     // TODO: We could add a `allowFpsThrottling` flag in the future to run at variable frame rate.
     // FPS
     if let fps = resolved.enabledConstraints.selectedFPS {
-      device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: Int32(fps))
-      device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: Int32(fps))
+      guard let range = device.activeFormat.videoSupportedFrameRateRanges.first(where: { $0.contains(fps: fps) }) else {
+        throw ConfigurationError.frameRateUnsupported
+      }
+      let duration = try FPSConstraint(fps: fps).frameDuration(minimum: range.minFrameDuration, maximum: range.maxFrameDuration)
+      if #available(iOS 18.0, *), device.isAutoVideoFrameRateEnabled {
+        device.isAutoVideoFrameRateEnabled = false
+      }
+      device.activeVideoMaxFrameDuration = duration
+      device.activeVideoMinFrameDuration = duration
     }
 
     // Video Stabilization
     if let videoStabilizationMode = resolved.enabledConstraints.selectedVideoStabilizationMode {
       for connection in self.session.connections where !connection.isConnectedToPreview {
+        guard connection.inputPorts.contains(where: { ($0.input as? AVCaptureDeviceInput)?.device == device }) else { continue }
         guard connection.isVideoStabilizationSupported else { continue }
-        connection.preferredVideoStabilizationMode = videoStabilizationMode.toAVCaptureVideoStabilizationMode()
+        guard let nativeMode = videoStabilizationMode.toAVCaptureVideoStabilizationMode() else {
+          throw ConfigurationError.videoStabilizationUnavailable
+        }
+        connection.preferredVideoStabilizationMode = nativeMode
       }
     }
     // Preview Stabilization
     if let previewStabilizationMode = resolved.enabledConstraints.selectedPreviewStabilizationMode {
       for connection in self.session.connections where connection.isConnectedToPreview {
+        guard connection.inputPorts.contains(where: { ($0.input as? AVCaptureDeviceInput)?.device == device }) else { continue }
         guard connection.isVideoStabilizationSupported else { continue }
-        connection.preferredVideoStabilizationMode = previewStabilizationMode.toAVCaptureVideoStabilizationMode()
+        guard let nativeMode = previewStabilizationMode.toAVCaptureVideoStabilizationMode() else {
+          throw ConfigurationError.previewStabilizationUnavailable
+        }
+        connection.preferredVideoStabilizationMode = nativeMode
       }
     }
 
     // Dynamic Range
     if let dynamicRange = resolved.enabledConstraints.selectedVideoDynamicRange {
-      device.activeColorSpace = dynamicRange.colorSpace.toAVCaptureColorSpace()
-      // Bit-Depth + ColorRange is implicitly set via `activeFormat`'s pixel format
-      if device.activeFormat.isVideoHDRSupported {
-        if dynamicRange.isHDR {
-          // TODO: If we refactor `TargetDynamicRange` to an enum, `EDR` (which `isVideoHDREnabled` effectively is) could be a separate value.
-          // Effectively allow auto-switching to EDR
-          device.automaticallyAdjustsVideoHDREnabled = true
-        } else {
-          // Effectively disable EDR entirely.
-          device.automaticallyAdjustsVideoHDREnabled = false
-          device.isVideoHDREnabled = false
-        }
+      guard let nativeColorSpace = dynamicRange.colorSpace.toAVCaptureColorSpace(),
+        device.activeFormat.supportedColorSpaces.contains(nativeColorSpace)
+      else {
+        throw ConfigurationError.colorSpaceUnsupported
       }
+      device.activeColorSpace = nativeColorSpace
+      // Bit depth and component range follow activeFormat. Let AVFoundation manage its separate
+      // exposure-fusion HDR processing; a 10-bit format or Log transfer function does not select it.
     }
   }
 
-  private func configureOutputs(_ connection: ResolvedCameraSessionConnection) {
+  private func configureOutputs(_ connection: ResolvedCameraSessionConnection) throws {
     for outputConfiguration in connection.outputs {
       let outputConfig = OutputConfiguration(mirrorMode: outputConfiguration.mirrorMode)
       switch outputConfiguration.output {
       case .output(let output):
-        output.configure(outputConfig)
+        try output.configure(outputConfig)
       case .preview(let preview):
-        preview.configure(outputConfig)
+        try preview.configure(outputConfig)
       }
     }
   }
@@ -397,7 +407,7 @@ public final class CameraSession {
       let containsAudioInput = self.session.inputs.contains { $0.isMicrophone }
       if !containsAudioInput {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-          throw PermissionError.microphoneAccessDenied(status: PermissionStatus(avStatus: AVCaptureDevice.authorizationStatus(for: .audio)))
+          throw PermissionError.microphoneAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .audio))
         }
         try self.session.addAudioInput()
       }

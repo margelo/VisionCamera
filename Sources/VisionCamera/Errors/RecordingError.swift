@@ -14,9 +14,9 @@ public enum RecordingError: Error, LocalizedError {
   /// The connected Camera input does not supply a master clock.
   case masterClockUnavailable
   /// The requested codec is unavailable on this output or OS version.
-  case unsupportedCodec(VideoCodec)
+  case unsupportedCodec(AVVideoCodecType)
   /// The requested codec does not support a custom bit rate.
-  case bitRateUnsupported(VideoCodec)
+  case bitRateUnsupported(AVVideoCodecType)
   /// AVFoundation cannot recommend encoding settings for the connected video output.
   case videoSettingsUnavailable
   /// The asset writer cannot apply the supplied settings to this media type.
@@ -54,9 +54,31 @@ public enum RecordingError: Error, LocalizedError {
   /// The recording cannot finish before receiving its first video frame.
   case noVideoFrames
 
+  /// The selected video codec is unavailable for movie metadata.
+  case metadataCodecUnavailable
+  /// ProRes RAW recording requires locked white balance before preparing the recorder.
+  case rawRequiresLockedWhiteBalance
+  /// This movie output does not support a custom bit rate.
+  case customBitRateUnsupported
+  /// The target video bit rate must be positive.
+  case invalidBitRate
+  /// ProRes codecs control their own bit rate. Choose a ProRes variant instead.
+  case proResBitRateUnsupported
+
   /// A description of the recording failure suitable for display to the user.
   public var errorDescription: String? {
     switch self {
+    case .metadataCodecUnavailable:
+      return "The selected video codec is unavailable for movie metadata."
+    case .rawRequiresLockedWhiteBalance:
+      return "ProRes RAW recording requires locked white balance before preparing the recorder."
+    case .customBitRateUnsupported:
+      return "This movie output does not support a custom bit rate."
+    case .invalidBitRate:
+      return "The target video bit rate must be positive."
+    case .proResBitRateUnsupported:
+      return "ProRes codecs control their own bit rate. Choose a ProRes variant instead."
+
     case .outputNotConnected:
       return "The video output is not connected to a Camera session."
     case .inputNotConnected:

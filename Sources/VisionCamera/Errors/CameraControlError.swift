@@ -61,9 +61,23 @@ public enum CameraControlError: Error, LocalizedError {
     case blueGain
   }
 
+  /// Metering coordinates must be finite values within 0...1.
+  case invalidMeteringPoint
+  /// The torch level must be greater than 0 and no greater than 1, or AVCaptureDevice.maxAvailableTorchLevel.
+  case invalidTorchLevel
+  /// The focus reset delay must be finite and nonnegative.
+  case invalidFocusResetDelay
+
   /// A description of the unsupported control or invalid value.
   public var errorDescription: String? {
     switch self {
+    case .invalidMeteringPoint:
+      return "Metering coordinates must be finite values within 0...1."
+    case .invalidTorchLevel:
+      return "The torch level must be greater than 0 and no greater than 1, or AVCaptureDevice.maxAvailableTorchLevel."
+    case .invalidFocusResetDelay:
+      return "The focus reset delay must be finite and nonnegative."
+
     case .unsupportedFeature(let feature):
       return "This Camera does not support \(feature)."
     case .valueOutOfRange(let parameter, let value, let allowed):

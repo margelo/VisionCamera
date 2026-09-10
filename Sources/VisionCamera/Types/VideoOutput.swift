@@ -1,5 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+import AVFoundation
+
 /// A Video output allows recording videos, possibly with audio, to a file.
 ///
 /// Create a ``MovieFileVideoOutput`` or ``VideoFrameOutput``, attach it to a session,
@@ -10,10 +12,13 @@
 ///   options: VideoOutputOptions(isAudioEnabled: true))
 /// ```
 public protocol VideoOutput: CameraOutput {
+  /// The requested orientation for recorded video, applied to the native connection or recording transform.
+  var outputOrientation: CameraOrientation { get set }
+
   /// The concrete recorder prepared by this output.
   associatedtype Recording: Recorder
 
-  /// Gets all supported ``VideoCodec`` values this
+  /// Gets all supported `AVVideoCodecType` values this
   /// ``VideoOutput`` currently can record in.
   ///
   /// This query runs on the output's serial queue and must be called after the ``VideoOutput``
@@ -21,15 +26,15 @@ public protocol VideoOutput: CameraOutput {
   ///
   /// - Throws: This method throws if you call it before this output
   /// is attached to a Camera Session (via ``CameraSession/configure(_:configuration:)``).
-  func supportedVideoCodecs() async throws -> [VideoCodec]
-  /// Set the output settings for this video output.
+  func supportedVideoCodecs() async throws -> [AVVideoCodecType]
+  /// Selects the native video codec for subsequent recordings.
   /// This method must be called after the output has been
   /// attached to the Camera Session, and before
   /// ``VideoOutput/makeRecorder(settings:)``.
   ///
-  /// - Parameter settings: The output settings to apply to subsequent recordings.
+  /// - Parameter codec: A codec returned by ``supportedVideoCodecs()``.
   /// - Throws: An error if the requested settings cannot be applied to the connected output.
-  func setOutputSettings(_ settings: VideoOutputSettings) async throws
+  func setVideoCodec(_ codec: AVVideoCodecType) async throws
   /// Creates and prepares a new ``Recorder``
   /// instance with the given ``RecorderSettings``.
   ///
@@ -40,9 +45,7 @@ public protocol VideoOutput: CameraOutput {
   /// If you want to create a second recording,
   /// you must create a new ``Recorder``.
   ///
-  /// Connect the output to a session before starting the Recorder.
-  /// ``VideoFrameOutput`` requires a connection when creating the Recorder;
-  /// ``MovieFileVideoOutput`` checks the connection when recording starts.
+  /// Connect the output to a session before creating the Recorder.
   ///
   /// - Parameter settings: The destination, location metadata, and optional recording limits.
   /// - Returns: A prepared Recorder that can be started once.

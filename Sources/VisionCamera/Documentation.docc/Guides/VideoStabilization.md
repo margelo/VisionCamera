@@ -27,7 +27,7 @@ func configureStabilizedVideo(
 }
 ```
 
-Modes have different device and OS requirements. Inspect `CameraSessionConfig.selectedVideoStabilizationMode` to see the result of negotiation.
+Modes have different device and OS requirements. Negotiation checks each native mode before falling back and reports the mode it can configure. If no stabilization mode is supported, it selects `.off`. Inspect `CameraSessionConfig.selectedVideoStabilizationMode` to see the result of negotiation.
 
 Use a ``Constraint/previewStabilization(_:)`` to express a preview stabilization preference. See <doc:Constraints> for how preferences are negotiated together.
 

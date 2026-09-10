@@ -8,9 +8,8 @@ final class ModelTests: XCTestCase {
   func testPhotoDefaultsPreserveCaptureQuality() {
     let options = PhotoOutputOptions()
     XCTAssertEqual(options.targetResolution, CGSize(width: 3024, height: 4032))
-    XCTAssertEqual(options.containerFormat, .native)
-    XCTAssertEqual(options.quality, 0.9)
-    XCTAssertEqual(options.qualityPrioritization, .balanced)
+    XCTAssertEqual(options.containerFormat, .automatic(quality: 0.9))
+    XCTAssertNil(options.qualityPrioritization)
     XCTAssertNil(options.previewImageTargetSize)
   }
 
@@ -39,8 +38,6 @@ final class ModelTests: XCTestCase {
     XCTAssertEqual(options.targetResolution, CGSize(width: 1080, height: 1920))
     XCTAssertFalse(options.isAudioEnabled)
     XCTAssertNil(options.bitRate)
-    XCTAssertEqual(options.fileType, .mov)
-    XCTAssertNil(VideoOutputSettings().codec)
   }
 
   func testPublicCaptureSettingsAcceptNativeValues() {

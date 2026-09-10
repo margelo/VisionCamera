@@ -17,7 +17,7 @@ extension MediaType {
     case .metadataObject:
       self = .metadata
     default:
-      self = .other
+      self = .other(type)
     }
   }
 
@@ -29,8 +29,8 @@ extension MediaType {
       return .depthData
     case .metadata:
       return .metadataObject
-    case .other:
-      fatalError("Cannot convert 'other' to AVMediaType!")
+    case .other(let type):
+      return type
     }
   }
 }

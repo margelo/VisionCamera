@@ -43,5 +43,6 @@ public protocol NativeCameraOutput: AnyObject, ResolutionNegotiationParticipant 
   /// Called whenever the output configuration might change, in a `beginConfiguration()`/`commitConfiguration()` batch.
   ///
   /// The native output is expected to apply orientation and mirroring settings here. ``CameraSession`` calls this method on its serial configuration queue.
-  func configure(_ config: OutputConfiguration)
+  /// - Throws: If the connected input cannot support this output's requested configuration.
+  func configure(_ config: OutputConfiguration) throws
 }

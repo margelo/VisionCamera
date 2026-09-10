@@ -31,17 +31,12 @@ extension PhotoContainerFormat {
     }
   }
 
-  init(targetFormat: TargetPhotoContainerFormat) {
-    switch targetFormat {
-    case .native:
-      // Apple's default Photo Format is HEIC
-      self = .heic
-    case .jpeg:
-      self = .jpeg
-    case .heic:
-      self = .heic
-    case .dng:
-      self = .dng
+  init(settings: AVCapturePhotoSettings) {
+    let fileType = settings.rawPhotoPixelFormatType == 0 ? settings.processedFileType : settings.rawFileType
+    if let fileType {
+      self.init(avFileType: fileType)
+    } else {
+      self = .unknown
     }
   }
 
@@ -65,7 +60,7 @@ extension PhotoContainerFormat {
         if #available(iOS 18.0, *) {
           return .dng
         }
-        guard let type = UTType(filenameExtension: "dng", conformingTo: .image) else {
+        guard let type = UTType("com.adobe.raw-image") else {
           throw MediaError.unsupportedPhotoContainerFormat(self)
         }
         return type

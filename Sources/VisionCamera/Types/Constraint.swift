@@ -46,8 +46,6 @@ public enum Constraint {
   case resolution(any CameraOutput)
   /// Requests a dynamic range for video streams.
   case videoDynamicRange(TargetDynamicRange)
-  /// Expresses a preference for photo HDR. This preference has no effect in the iOS resolver.
-  case photoHDR(Bool)
   /// Prefers a streaming format with the requested pixel format.
   case pixelFormat(PixelFormat)
   /// Prefers a binned or non-binned sensor format.

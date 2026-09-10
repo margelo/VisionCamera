@@ -26,7 +26,7 @@ extension DepthPixelFormat {
   var cvPixelFormat: OSType {
     get throws(MediaError) {
       switch self {
-      case .unknown, .depthPointCloud32Bit:
+      case .unknown:
         throw .unsupportedDepthPixelFormat(self)
       case .depth16Bit:
         return kCVPixelFormatType_DepthFloat16
