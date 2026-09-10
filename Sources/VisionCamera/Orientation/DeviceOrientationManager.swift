@@ -3,8 +3,13 @@
 import CoreMotion
 import Foundation
 
+/// The ``DeviceOrientationManager`` allows listening to ``CameraOrientation`` changes from the device's accelerometer.
 public final class DeviceOrientationManager: OrientationManager {
+  /// Represents the ``OrientationSource`` this ``OrientationManager``
+  /// is tracking.
   public let source: OrientationSource = .device
+  /// Get the current ``CameraOrientation``, or `nil` if no
+  /// orientation is known.
   public var currentOrientation: CameraOrientation? { orientation.current }
   private let orientation = OrientationSnapshot()
   private let motionManager = CMMotionManager()
@@ -13,6 +18,7 @@ public final class DeviceOrientationManager: OrientationManager {
   private let isAvailable: Bool
   private var subscriptionID: UUID?
 
+  /// Creates a manager for physical device orientation using the accelerometer.
   public init() {
     isAvailable = motionManager.isAccelerometerAvailable
     motionManager.accelerometerUpdateInterval = 0.2
@@ -20,7 +26,9 @@ public final class DeviceOrientationManager: OrientationManager {
     operationQueue.underlyingQueue = queue
   }
 
-  /// Calls `onChanged` on the manager's serial orientation queue.
+  /// Starts listening to orientation changes.
+  ///
+  /// Starting updates replaces the previous callback. Callbacks run on this manager's serial orientation queue. Throws if the accelerometer is unavailable.
   public func startOrientationUpdates(onChanged: @escaping (CameraOrientation) -> Void) throws {
     guard isAvailable else {
       throw CameraError(message: "Cannot listen to device orientation changes: accelerometer is not available.")
@@ -41,6 +49,9 @@ public final class DeviceOrientationManager: OrientationManager {
       })
   }
 
+  /// Stops listening to orientation changes.
+  ///
+  /// Stops delivery on the manager's owning queue. A callback already in progress may finish before removal takes effect.
   public func stopOrientationUpdates() {
     queue.async(
       execute: DispatchWorkItem { [weak self] in

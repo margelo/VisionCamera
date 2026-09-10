@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.module_name = 'VisionCamera'
   s.ios.deployment_target = '15.1'
   s.swift_version = '5.0'
-  s.source_files = 'Sources/VisionCamera/**/*.swift'
+  s.source_files = 'Sources/VisionCamera/**/*.swift', 'Sources/VisionCamera/Documentation.docc/**/*'
   s.frameworks = 'AVFoundation', 'UIKit', 'CoreMedia', 'CoreVideo', 'CoreImage', 'CoreMotion', 'CoreLocation', 'ImageIO', 'CoreGraphics', 'UniformTypeIdentifiers'
 
   s.test_spec 'Tests' do |tests|

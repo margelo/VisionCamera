@@ -7,6 +7,9 @@
 import AVFoundation
 import Foundation
 
+/// Records video using `AVCaptureMovieFileOutput`.
+///
+/// A single recorder instance records to a single video file. To record multiple videos, create multiple recorder instances through ``CameraVideoOutput/createRecorder(settings:)``.
 public final class VideoRecorder: Recorder {
   private let videoOutput: AVCaptureMovieFileOutput
   private let queue: DispatchQueue
@@ -36,25 +39,41 @@ public final class VideoRecorder: Recorder {
     self.settings = settings
   }
 
+  /// Returns whether the output is currently recording.
   public var isRecording: Bool {
     return videoOutput.isRecording
   }
+  /// Returns whether the current recording is paused.
   public var isPaused: Bool {
     guard #available(iOS 18.0, *) else {
       return false
     }
     return videoOutput.isRecordingPaused
   }
+  /// Returns the currently recorded duration, in seconds.
   public var recordedDuration: Double {
     return videoOutput.recordedDuration.seconds
   }
+  /// Returns the currently recorded file size, in bytes.
   public var recordedFileSize: Double {
     return Double(videoOutput.recordedFileSize)
   }
+  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mp4`, not a `file://` URL.
   public var filePath: String {
     return fileURL.path
   }
 
+  /// Starts recording to the file selected when this recorder was created.
+  ///
+  /// Returns once recording has successfully started. Read `filePath` for the filesystem path being recorded to, or use the path delivered to `onRecordingFinished` after finalization. Neither path is a `file://` URL.
+  /// The recording continues after this method returns. Completion or failure is reported through the callbacks.
+  /// Callbacks run on the recorder's owning serial queue. Move UIKit work to the main actor.
+  ///
+  /// - Parameter onRecordingFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
+  /// - Parameter onRecordingError: Called when an unexpected error occurs while recording.
+  /// - Parameter onRecordingPaused: Called when recording pauses.
+  /// - Parameter onRecordingResumed: Called when recording resumes.
+  /// - Throws: If the output is disconnected, a recording is already active, or recording fails to start.
   public func startRecording(
     onRecordingFinished: @escaping (_ filePath: String, _ reason: RecordingFinishedReason) -> Void,
     onRecordingError: @escaping (_ error: Error) -> Void,
@@ -114,12 +133,21 @@ public final class VideoRecorder: Recorder {
     }
   }
 
+  /// Requests the Video recording to be stopped.
+  ///
+  /// Once the recording has actually stopped and the file is written, the `onRecordingFinished` callback passed to `startRecording` is called. Returning from this method does not mean the file is finalized. Stopping a recording that is already stopped has no effect.
   public func stopRecording() async {
     return await queue.perform {
       self.videoOutput.stopRecording()
     }
   }
 
+  /// Requests the Video recording to be paused.
+  /// Once the recording has actually been paused,
+  /// the `onRecordingPaused` callback passed to
+  /// ``VideoRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
+  ///
+  /// - Throws: On iOS versions earlier than iOS 18.
   public func pauseRecording() async throws {
     return try await queue.perform {
       guard #available(iOS 18.0, *) else {
@@ -130,6 +158,13 @@ public final class VideoRecorder: Recorder {
     }
   }
 
+  /// Requests the currently paused Video recording
+  /// to be resumed.
+  /// Once the recording has actually been resumed,
+  /// the `onRecordingResumed` callback passed to
+  /// ``VideoRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
+  ///
+  /// - Throws: On iOS versions earlier than iOS 18.
   public func resumeRecording() async throws {
     return try await queue.perform {
       guard #available(iOS 18.0, *) else {
@@ -140,6 +175,10 @@ public final class VideoRecorder: Recorder {
     }
   }
 
+  /// Cancels the current recording and deletes
+  /// the video file.
+  ///
+  /// Requests stopping, then deletes the file when AVFoundation finishes. Completion and error callbacks are suppressed for cancellation. Throws if no recording is active.
   public func cancelRecording() async throws {
     return try await queue.perform {
       guard self.videoOutput.isRecording else {

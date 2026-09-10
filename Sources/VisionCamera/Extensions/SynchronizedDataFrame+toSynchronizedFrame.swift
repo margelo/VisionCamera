@@ -1,6 +1,7 @@
 import AVFoundation
 
 extension SynchronizedDataFrame {
+  /// Wraps the retained video or depth sample and its metadata in a synchronized frame.
   public func toSynchronizedFrame() -> SynchronizedFrame {
     switch self.data {
     case .video(let buffer):

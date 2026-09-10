@@ -1,18 +1,39 @@
 import AVFoundation
 import UIKit
 
+/// A UIKit view that displays a Camera preview.
+///
+/// Connect a ``CameraPreviewOutput`` both to a ``CameraSession`` and to this view's ``PreviewView/previewOutput``. All view operations run on the main actor.
 @MainActor
 public final class PreviewView: UIView {
+  /// Sets the ``CameraPreviewOutput`` for the ``PreviewView``.
+  ///
+  /// The ``CameraPreviewOutput`` can be connected to a
+  /// ``CameraSession`` to start in parallel, possibly
+  /// even before the ``PreviewView`` is mounted/visible.
   public var previewOutput: CameraPreviewOutput? {
     didSet { updatePreviewLayer() }
   }
+  /// Fires when the ``PreviewView`` started.
+  ///
+  /// The callback runs on the main actor when the attached preview layer starts displaying Camera content.
   public var onPreviewStarted: (() -> Void)?
+  /// Fires when the ``PreviewView`` stopped.
+  ///
+  /// The callback runs on the main actor when the preview stops or its output is detached.
   public var onPreviewStopped: (() -> Void)?
+  /// Sets the ``PreviewResizeMode`` for the ``PreviewView``.
+  ///
+  /// The default is 'cover'
   public var resizeMode: PreviewResizeMode = .cover {
     didSet {
       if attachedLayer?.superlayer === layer { attachedLayer?.videoGravity = resizeMode.toAVLayerVideoGravity() }
     }
   }
+  /// Attaches the given ``GestureController``s on this ``PreviewView``.
+  ///
+  /// For example, a ``ZoomGestureController`` can be attached to
+  /// install a native pinch-to-zoom gesture.
   public var gestureControllers: [any GestureController] = [] {
     didSet {
       for controller in oldValue {
@@ -30,20 +51,24 @@ public final class PreviewView: UIView {
   private var isPreviewing = false
   private var observationID = UUID()
 
+  /// Creates a preview view attached to the given output, or an empty view when the output is `nil`.
   public init(previewOutput: CameraPreviewOutput? = nil) {
     self.previewOutput = previewOutput
     super.init(frame: .zero)
     updatePreviewLayer()
   }
 
+  /// Creates the view with the given frame rectangle.
   public override init(frame: CGRect) {
     super.init(frame: frame)
   }
 
+  /// Creates the view from an archived UIKit view configuration.
   public required init?(coder: NSCoder) {
     super.init(coder: coder)
   }
 
+  /// Sizes the attached preview layer to this view's bounds without implicit layer animations.
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard attachedLayer?.superlayer === layer else { return }
@@ -53,16 +78,40 @@ public final class PreviewView: UIView {
     CATransaction.commit()
   }
 
+  /// Converts the given `cameraPoint` in
+  /// camera sensor coordinates into a ``Point``
+  /// in view coordinates, relative to this ``PreviewView``.
+  ///
+  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// - Throws: If the ``PreviewView`` isn't ready yet.
+  ///
+  /// ```swift
+  /// let point = try previewView.convertCameraPointToViewPoint(cameraPoint: Point(x: 0.5, y: 0.5))
+  /// ```
   public func convertCameraPointToViewPoint(cameraPoint: Point) throws -> Point {
     let layer = try requirePreviewLayer()
     return Point(layer.layerPointConverted(fromCaptureDevicePoint: cameraPoint.toCGPoint()))
   }
 
+  /// Converts the given `viewPoint` in
+  /// view coordinates relative to this ``PreviewView``
+  /// into a ``Point`` in camera sensor coordinates.
+  ///
+  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
+  /// - Throws: If the ``PreviewView`` isn't ready yet.
+  ///
+  /// ```swift
+  /// let point = try previewView.convertViewPointToCameraPoint(viewPoint: Point(x: 196, y: 379.5))
+  /// ```
   public func convertViewPointToCameraPoint(viewPoint: Point) throws -> Point {
     let layer = try requirePreviewLayer()
     return Point(layer.captureDevicePointConverted(fromLayerPoint: viewPoint.toCGPoint()))
   }
 
+  /// Returns a new ``ScannedObject`` where all coordinates
+  /// in the given `scannedObject` are converted into
+  /// view coordinates.
+  /// - Parameter scannedObject: The scanned object in its original coordinates.
   public func convertScannedObjectCoordinatesToViewCoordinates(
     scannedObject: any ScannedObject
   ) throws -> any ScannedObject {
@@ -73,6 +122,20 @@ public final class PreviewView: UIView {
     return CameraObjectOutput.createScannedObject(from: transformed)
   }
 
+  /// Creates a ``MeteringPoint`` that can be used for
+  /// focusing AE/AF/AWB on the Camera via ``CameraController/focusTo(point:options:)``.
+  ///
+  /// The coordinates (`viewX`, `viewY`) are relative to this
+  /// ``PreviewView``, and take orientation, scaling and cropping
+  /// into account.
+  /// - Parameter viewX: The X coordinate within the View's coordinate system.
+  /// This can be the `x` value of a tap event on the ``PreviewView``.
+  /// - Parameter viewY: The Y coordinate within the View's coordinate system.
+  /// This can be the `y` value of a tap event on the ``PreviewView``.
+  /// - Parameter size: (Optional) The size of the ``MeteringPoint`` within
+  /// the View's coordinate system.
+  ///
+  /// - Throws: If the ``PreviewView`` isn't ready yet.
   public func createMeteringPoint(viewX: Double, viewY: Double, size: Double? = nil) throws -> MeteringPoint {
     let layer = try requirePreviewLayer()
     let point = layer.captureDevicePointConverted(fromLayerPoint: CGPoint(x: viewX, y: viewY))

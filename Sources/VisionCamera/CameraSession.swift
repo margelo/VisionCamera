@@ -7,7 +7,34 @@
 import AVFoundation
 import Foundation
 
+/// Represents a Camera Session.
+///
+/// A Camera Session can have ``CameraSessionConnection``s
+/// to stream from an input device (``CameraDevice``)
+/// to an output (``CameraOutput``).
+///
+/// It is recommended to configure the ``CameraSession``
+/// properly before starting it (``CameraSession/start()``) to
+/// avoid reconfiguration hiccups.
+///
+/// ```swift
+/// let camera = VisionCamera()
+/// let previewOutput = camera.createPreviewOutput()
+/// let photoOutput = camera.createPhotoOutput()
+/// let session = try camera.createCameraSession()
+/// let controllers = try await session.configure(connections: [
+///   CameraSessionConnection(
+///     input: .position(.back),
+///     outputs: [
+///       CameraOutputConfiguration(output: previewOutput),
+///       CameraOutputConfiguration(output: photoOutput)
+///     ]
+///   )
+/// ])
+/// await session.start()
+/// ```
 public final class CameraSession {
+  /// The underlying AVFoundation capture session. Session configuration, starting, and stopping are serialized by ``CameraSession``.
   public let session: AVCaptureSession
   private static let queue: DispatchQueue = DispatchQueue(
     label: "com.margelo.camera.session",
@@ -16,6 +43,10 @@ public final class CameraSession {
     autoreleaseFrequency: .inherit,
     target: nil)
 
+  /// Creates a Camera Session, optionally supporting multiple input devices.
+  ///
+  /// Use ``VisionCamera/createCameraSession(enableMultiCam:)`` to validate multi-camera support before construction.
+  /// - Parameter enableMultiCam: Whether to create an `AVCaptureMultiCamSession`.
   public init(enableMultiCam: Bool = false) {
     if enableMultiCam {
       self.session = AVCaptureMultiCamSession()
@@ -27,11 +58,59 @@ public final class CameraSession {
     self.session.sessionPreset = .inputPriority
   }
 
+  /// Gets whether this ``CameraSession`` is currently
+  /// running, or not.
   public var isRunning: Bool {
     return session.isRunning
   }
 
   // pragma MARK: Configuration
+  /// Configures the ``CameraSession`` with the given
+  /// `connections`, and returns one ``CameraController``
+  /// per ``CameraSessionConnection``.
+  ///
+  /// One ``CameraSessionConnection`` defines a connection
+  /// from one ``CameraDevice`` (the _input_) to multiple
+  /// ``CameraOutput``s (the _outputs_).
+  ///
+  /// - Note: In a Multi-Cam Camera Session, the given `connections`' input devices
+  /// must be supported to be used together in a Multi-Cam Camera Session, as not every
+  /// ``CameraDevice`` can be used with every other ``CameraDevice``
+  /// simultaneously. See ``CameraDeviceFactory/supportedMultiCamDeviceCombinations``
+  /// for a full list of supported combinations.
+  ///
+  /// - Note: Some supported combinations can contain a single virtual
+  /// ``CameraDevice``, such as an iOS Dual- or Triple-Camera. Pass the
+  /// returned devices directly to ``CameraSession/configure(connections:config:)`` instead
+  /// of expanding virtual devices via ``CameraDevice/physicalDevices``.
+  ///
+  /// - Parameter connections: The list of connections from one _input_ to
+  /// multiple _outputs_. If this ``CameraSession`` was created
+  /// as a multi-cam session (see ``VisionCamera/createCameraSession(enableMultiCam:)``),
+  /// you can add multiple ``CameraSessionConnection``s.
+  /// - Parameter config: Configures session-wide configuration,
+  /// such as ``CameraSessionConfiguration/allowBackgroundAudioPlayback``.
+  ///
+  /// - Returns: One ``CameraController`` per ``CameraSessionConnection``.
+  ///
+  /// - Throws: If Camera Permission has not been granted - see ``VisionCamera/cameraPermissionStatus``
+  /// - Throws: If multiple `connections` are added, but the
+  /// ``CameraSession`` was not created as a multi-cam session.
+  /// - Throws: If hardware resources are being exhausted by too large connection graphs.
+  /// - Throws: If this is a Multi-Cam session, but the connection inputs are not supported to
+  /// be used together - see ``CameraDeviceFactory/supportedMultiCamDeviceCombinations``
+  ///
+  /// ```swift
+  /// let controllers = try await session.configure(connections: [
+  ///   CameraSessionConnection(
+  ///     input: .device(device),
+  ///     outputs: [CameraOutputConfiguration(output: previewOutput)],
+  ///     constraints: [.fps(FPSConstraint(fps: 60))]
+  ///   )
+  /// ])
+  /// ```
+  ///
+  /// Configuration runs on the session's serial queue. Keep the returned Camera Controllers alive while using them, and replace them after reconfiguration.
   public func configure(connections: [CameraSessionConnection], config: CameraSessionConfiguration? = nil) async throws -> [CameraController] {
     return try await Self.queue.perform {
       guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
@@ -208,6 +287,13 @@ public final class CameraSession {
   }
 
   // pragma MARK: Start/Stop
+  /// Starts the ``CameraSession``.
+  ///
+  /// To avoid any runtime hiccups, it's good practice
+  /// to configure everything via ``CameraSession/configure(connections:config:)``
+  /// before starting the ``CameraSession``.
+  ///
+  /// Runs on the session's serial queue and returns after AVFoundation's synchronous start call completes. Session errors are delivered through ``CameraSession/addOnErrorListener(onError:)``.
   public func start() async {
     return await Self.queue.perform {
       if self.session.isRunning {
@@ -217,6 +303,9 @@ public final class CameraSession {
     }
   }
 
+  /// Stops the ``CameraSession``.
+  ///
+  /// Runs on the session's serial queue and returns after AVFoundation's synchronous stop call completes.
   public func stop() async {
     return await Self.queue.perform {
       if !self.session.isRunning {
@@ -398,12 +487,20 @@ public final class CameraSession {
   }
 
   // pragma MARK: On Started/Stopped Listeners
+  /// Adds a listener to when the ``CameraSession``
+  /// started running.
+  ///
+  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
   public func addOnStartedListener(onStarted: @escaping () -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.didStartRunningNotification) { _ in
       onStarted()
     }
   }
 
+  /// Adds a listener to when the ``CameraSession``
+  /// stopped running.
+  ///
+  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
   public func addOnStoppedListener(onStopped: @escaping () -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.didStopRunningNotification) { _ in
       onStopped()
@@ -411,6 +508,10 @@ public final class CameraSession {
   }
 
   // pragma MARK: On Error Listener
+  /// Adds a listener to when the ``CameraSession``
+  /// encountered an error.
+  ///
+  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
   public func addOnErrorListener(onError: @escaping (any Error) -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.runtimeErrorNotification) {
       notification in
@@ -429,6 +530,11 @@ public final class CameraSession {
   }
 
   // pragma MARK: On Interrupted Listeners
+  /// Adds a listener to when the ``CameraSession``
+  /// was interrupted, for example when the phone overheated,
+  /// or the user received a FaceTime call.
+  ///
+  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
   public func addOnInterruptionStartedListener(
     onInterruptionStarted: @escaping (InterruptionReason) -> Void
   ) -> ListenerSubscription {
@@ -446,6 +552,11 @@ public final class CameraSession {
     }
   }
 
+  /// Adds a listener to when a ``CameraSession``
+  /// interruption has ended and the Camera continues
+  /// to run again.
+  ///
+  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
   public func addOnInterruptionEndedListener(onInterruptionEnded: @escaping () -> Void)
     -> ListenerSubscription
   {

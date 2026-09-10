@@ -1,8 +1,29 @@
-# VisionCamera
+<a href="./Sources/VisionCamera/Documentation.docc/VisionCamera.md">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/banner-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="./images/banner-light.svg" />
+    <img alt="VisionCamera - a native Swift camera framework" src="./images/banner-light.svg" />
+  </picture>
+</a>
 
-A native Swift camera framework for iOS with UIKit previews, photo capture, video recording, frame and depth outputs, and camera controls built on AVFoundation.
+<br />
 
-## Install with Swift Package Manager
+VisionCamera is a powerful, high-performance Camera framework for Swift, built on AVFoundation.
+It brings the camera engine from [react-native-vision-camera](https://github.com/margelo/react-native-vision-camera) to native iOS apps. It features:
+
+* Photo capture, RAW photos, and Video recording with audio
+* UIKit previews, smooth zooming, and tap-to-focus
+* Customizable devices, multi-cameras, resolutions, and FPS
+* Persistent recordings that keep going while you flip the Camera
+* Frame and depth outputs for image processing, computer vision, and realtime video
+* QR/Barcode and face detection through AVFoundation
+* Video HDR, stabilization, and manual Camera controls
+
+Requires iOS 15.1 or later. UIKit is supported today. Other Apple platforms and SwiftUI are planned.
+
+### Installation
+
+#### Swift Package Manager
 
 VisionCamera requires Xcode 26 or later and supports iOS 15.1 or later. The package uses Swift 5 language mode and has no external dependencies.
 
@@ -31,18 +52,62 @@ targets: [
 
 After the first SPM release, use a version requirement instead of `branch: "main"`. For a `0.1.1` release, use `.upToNextMinor(from: "0.1.1")` to receive compatible `0.1.x` updates. Use a released version containing `Package.swift` before publishing a package that depends on VisionCamera.
 
-Add `NSCameraUsageDescription` to your app's `Info.plist`. If your app records audio, also add `NSMicrophoneUsageDescription`.
+#### CocoaPods
 
-```swift
-import VisionCamera
+Add VisionCamera to your `Podfile`:
 
-let camera = VisionCamera()
-let authorized = try await camera.requestCameraPermission()
+```ruby
+pod 'VisionCamera',
+    :git => 'git@github.com:margelo/VisionCamera.git',
+    :branch => 'main'
 ```
 
-See [the example app](Example/Sources/CameraViewController.swift) for preview, photo, and recording setup.
+Run `pod install` and open your app's `.xcworkspace`.
+The repository is private, so your GitHub account needs access.
+These docs describe the current `main` branch. The `0.1.0` tag is the initial extraction and has an older API.
+Pin a release tag once a release containing these changes is available.
 
-## Build and test the package
+..and get started by [setting up permissions](./Sources/VisionCamera/Documentation.docc/Guides/GettingStarted.md)!
+
+### Example
+
+Add `NSCameraUsageDescription` to your app's `Info.plist`, then connect a Camera to a preview:
+
+```swift
+import UIKit
+import VisionCamera
+
+@MainActor
+func startCamera(in previewView: PreviewView) async throws -> CameraSession {
+	let camera = VisionCamera()
+	guard try await camera.requestCameraPermission() else {
+		throw CameraError(message: "Camera permission was denied.")
+	}
+
+	let preview = camera.createPreviewOutput()
+	previewView.previewOutput = preview
+
+	let session = try camera.createCameraSession()
+	_ = try await session.configure(connections: [
+		CameraSessionConnection(
+			input: .position(.back),
+			outputs: [CameraOutputConfiguration(output: preview)]
+		)
+	])
+	await session.start()
+	return session
+}
+```
+
+Keep the returned session alive, and call `await session.stop()` when the Camera is no longer active.
+See the [UIKit example app](./Example/) for a full camera screen with permissions, lifecycle handling, photos, and both video recorders.
+
+### Documentation
+
+The [guides](./Sources/VisionCamera/Documentation.docc/VisionCamera.md) and API reference are written with DocC, Apple's documentation compiler.
+You can read them in Xcode or build the documentation website locally. See [Building the documentation](./Documentation.md).
+
+### Build and test
 
 Open `Package.swift` in Xcode, select the **VisionCamera** scheme and an iOS simulator, then choose **Product > Test**.
 
@@ -65,3 +130,15 @@ xcodebuild -scheme VisionCamera \
 The framework imports UIKit and requires an iOS destination. `swift test` on the macOS host cannot build it.
 
 For release instructions, see [Publishing](PUBLISHING.md).
+
+### Adopting at scale
+
+VisionCamera is built by [Margelo](https://margelo.com).
+We make apps better and faster.
+
+### Links
+
+* [Community Discord](https://margelo.com/discord)
+* [Follow me on Twitter](https://twitter.com/mrousavy) for updates
+* [Check out my blog](https://mrousavy.com/blog) for examples and experiments
+* [MIT License](./LICENSE)

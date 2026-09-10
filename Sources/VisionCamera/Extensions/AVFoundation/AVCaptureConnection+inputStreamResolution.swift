@@ -8,6 +8,7 @@
 import AVFoundation
 import CoreMedia
 
+/// Capture connection helpers for reading the active input stream's dimensions.
 extension AVCaptureConnection {
   /// Returns the resolution of the stream currently flowing through this
   /// connection's first input port, in sensor-native (un-rotated) pixels.

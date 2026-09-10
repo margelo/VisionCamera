@@ -1,11 +1,44 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+/// Options for a focus metering operation via
+/// ``CameraController/focusTo(point:options:)``
 public struct FocusOptions: Equatable, Sendable {
+  /// The responsiveness of the metering operation.
+  /// See ``FocusResponsiveness``
+  /// When `nil`, uses ``FocusResponsiveness/snappy``.
   public var responsiveness: FocusResponsiveness?
+  /// The adaptiveness to changes in the scene.
+  /// See ``SceneAdaptiveness``
+  /// When `nil`, uses ``SceneAdaptiveness/continuous``.
   public var adaptiveness: SceneAdaptiveness?
+  /// The metering modes to run this focus operation on.
+  ///
+  /// By default, all ``MeteringMode``s that are supported
+  /// on the device will be enabled - so ideally 3A.
+  ///
+  /// When passing a custom value, you are responsible for ensuring
+  /// that the given modes are compatible - e.g. when passing `[.af]`
+  /// you must ensure that the ``CameraDevice`` supports focus
+  /// metering - see ``CameraDevice/supportsFocusMetering``.
+  ///
+  /// See ``MeteringMode``
+  /// When `nil`, all metering modes supported by the device are enabled.
   public var modes: [MeteringMode]?
+  /// Controls whether focus automatically returns to continuous focus after it has settled.
+  ///
+  /// Use ``FocusReset/after(_:)`` to specify a delay in seconds, or ``FocusReset/never`` to keep the
+  /// metering configuration until focus is reset manually or another metering operation starts.
+  ///
+  /// When `nil`, the delay is five seconds.
   public var autoResetAfter: FocusReset?
 
+  /// Creates the metering options for a focus operation.
+  ///
+  /// - Parameters:
+  ///   - responsiveness: The responsiveness of the metering operation. See ``FocusResponsiveness`` When `nil`, uses ``FocusResponsiveness/snappy``.
+  ///   - adaptiveness: The adaptiveness to changes in the scene. See ``SceneAdaptiveness`` When `nil`, uses ``SceneAdaptiveness/continuous``.
+  ///   - modes: The metering modes to run this focus operation on.
+  ///   - autoResetAfter: Controls whether focus automatically returns to continuous focus after it has settled.
   public init(
     responsiveness: FocusResponsiveness? = nil,
     adaptiveness: SceneAdaptiveness? = nil,

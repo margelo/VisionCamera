@@ -4,11 +4,20 @@ import AVFoundation
 import Foundation
 import UIKit
 
+/// The ``FrameConverter`` can convert ``Frame``s
+/// and ``Depth`` to `UIImage`s.
 public final class FrameConverter {
   private let queue = DispatchQueue(label: "com.margelo.camera.image-conversion", qos: .userInitiated)
 
+  /// Creates a converter with a serial queue for asynchronous image conversions.
   public init() {}
 
+  /// Converts the given ``Frame`` to an `UIImage`.
+  /// This renders the pixel buffer into a new image.
+  ///
+  /// - Throws: If the Frame is invalid (``Frame/isValid``).
+  ///
+  /// The returned `UIImage` includes the Frame's orientation and mirroring metadata. Throws if the Frame is disposed or conversion fails.
   public func convertFrameToImage(frame: Frame) throws -> UIImage {
     guard let sampleBuffer = frame.sampleBuffer else {
       throw CameraError(message: "This frame has been disposed.")
@@ -16,6 +25,13 @@ public final class FrameConverter {
     return try sampleBuffer.toUIImage(orientation: frame.metadata.uiImageOrientation)
   }
 
+  /// Asynchronously converts this ``Frame`` to an
+  /// `UIImage`.
+  /// This renders the pixel buffer into a new image.
+  ///
+  /// - Throws: If the Frame is invalid (``Frame/isValid``).
+  ///
+  /// Conversion runs on the converter's serial queue. The sample buffer is retained before that queue hop. The returned `UIImage` includes orientation and mirroring metadata.
   public func convertFrameToImageAsync(frame: Frame) async throws -> UIImage {
     guard let sampleBuffer = frame.sampleBuffer else {
       throw CameraError(message: "This frame has been disposed.")
@@ -24,11 +40,21 @@ public final class FrameConverter {
     return try await queue.perform { try sampleBuffer.toUIImage(orientation: orientation) }
   }
 
+  /// Converts the ``Depth`` frame to an `UIImage`.
+  ///
+  /// The resulting `UIImage` will be a grey-scale RGB image,
+  /// where black pixels are far away, and white pixels are close by.
+  ///
+  /// Returns a `UIImage` that visualizes the depth map and includes orientation and mirroring metadata. Throws if the Depth Frame is disposed or conversion fails.
   public func convertDepthToImage(depth: Depth) throws -> UIImage {
     let depthData = try depth.getDepthData()
     return try depthData.toUIImage(orientation: depth.metadata.uiImageOrientation)
   }
 
+  /// Asynchronously converts the ``Depth`` Frame to a `UIImage` that visualizes its depth map.
+  ///
+  /// Conversion runs on the converter's serial queue. The depth data is retained before that queue hop. The image includes orientation and mirroring metadata.
+  /// - Throws: If the Depth Frame is disposed or conversion fails.
   public func convertDepthToImageAsync(depth: Depth) async throws -> UIImage {
     let depthData = try depth.getDepthData()
     let orientation = depth.metadata.uiImageOrientation

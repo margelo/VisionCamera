@@ -8,15 +8,24 @@ import AVFoundation
 import Foundation
 import UIKit
 
+/// A ``ZoomGestureController`` is a ``GestureController``
+/// that can modify a ``CameraController``'s
+/// ``CameraController/zoom`` via a
+/// native pinch-to-zoom gesture.
 @MainActor
 public final class ZoomGestureController: NSObject, GestureController, NativeGestureController {
+  /// The UIKit gesture recognizer attached to a ``PreviewView``.
   public let gestureRecognizer = UIPinchGestureRecognizer()
+  /// The Camera controller used by this gesture, held weakly.
+  ///
+  /// Retain the ``CameraController`` returned by ``CameraSession/configure(connections:config:)`` elsewhere, and replace it when the session is reconfigured.
   public weak var controller: (CameraController)? = nil
 
   private let maximumZoomFactor = 15.0
   private var initialZoomFactor = 1.0
   private var onZoomChangedListeners: [UUID: (Double) -> Void] = [:]
 
+  /// Creates a native pinch-to-zoom gesture controller.
   public override init() {
     super.init()
     gestureRecognizer.cancelsTouchesInView = false
@@ -56,6 +65,12 @@ public final class ZoomGestureController: NSObject, GestureController, NativeGes
     }
   }
 
+  /// Adds a listener that is called whenever this native pinch gesture
+  /// changes the target zoom factor.
+  ///
+  /// The listener can be called many times during one pinch gesture.
+  /// Call ``ListenerSubscription/remove`` on the returned
+  /// subscription to stop receiving updates.
   public func addOnZoomChangedListener(onZoomChanged: @escaping (Double) -> Void)
     -> ListenerSubscription
   {

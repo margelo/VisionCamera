@@ -1,0 +1,64 @@
+# Camera outputs
+
+Connect capture, streaming, scanning, and preview outputs to a Camera session.
+
+``CameraOutput`` is the common protocol for outputs a ``CameraDevice`` can stream to using a ``CameraSession``.
+
+VisionCamera provides six core output kinds:
+
+- ``CameraPhotoOutput``: <doc:PhotoOutput>.
+- ``CameraVideoOutput``: <doc:VideoOutput>.
+- ``CameraFrameOutput``: <doc:FrameOutput>.
+- ``CameraDepthFrameOutput``: <doc:DepthOutput>.
+- ``CameraObjectOutput``: <doc:ObjectOutput>.
+- ``CameraPreviewOutput``: <doc:PreviewOutput>.
+
+## Connect outputs to a session
+
+Add each output to the connection's outputs array:
+
+```swift
+import VisionCamera
+
+func connectOutputs(session: CameraSession) async throws {
+	let camera = VisionCamera()
+	let photo = camera.createPhotoOutput()
+	let video = camera.createVideoOutput()
+	_ = try await session.configure(connections: [
+		CameraSessionConnection(
+			input: .position(.back),
+			outputs: [.init(output: photo), .init(output: video)])
+	])
+}
+```
+
+Retain the output objects you intend to capture from or reconfigure later.
+
+## Resolutions
+
+Camera hardware provides a stream configured at a specific resolution. Each output specifies its own target resolution, either specified by the user or internally configured by VisionCamera.
+
+When multiple outputs are connected, resolution-bias constraints express which target resolutions should influence the selected Camera stream format. Add these constraints explicitly. A target resolution is a preference, not a guarantee that every output receives those exact dimensions.
+
+```swift
+import VisionCamera
+
+func make4KOutputs() -> (CameraPhotoOutput, any CameraVideoOutput) {
+	let camera = VisionCamera()
+	let resolution = Size(width: 3840, height: 2160)
+	return (
+		camera.createPhotoOutput(options: .init(targetResolution: resolution)),
+		camera.createVideoOutput(options: .init(targetResolution: resolution))
+	)
+}
+```
+
+See <doc:Constraints> to choose which output takes priority during negotiation.
+
+## Output readiness
+
+Often an output only becomes usable after it has been connected to the session. Await `configure(connections:config:)` before querying connection-dependent capabilities or creating a recorder. Start the session before capturing live content.
+
+Read `currentResolution` after configuration to inspect the result. Keep a ``CameraSessionConfig`` from the connection's `onSessionConfigSelected` callback to inspect selected constraints.
+
+<!-- Adapted from react-native-vision-camera/docs/content/docs: camera-outputs. -->

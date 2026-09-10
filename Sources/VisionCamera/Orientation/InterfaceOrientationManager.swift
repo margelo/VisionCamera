@@ -3,13 +3,19 @@
 import Foundation
 import UIKit
 
+/// The ``InterfaceOrientationManager`` allows listening to ``CameraOrientation`` changes from the foreground window scene.
 public final class InterfaceOrientationManager: OrientationManager {
+  /// Represents the ``OrientationSource`` this ``OrientationManager``
+  /// is tracking.
   public let source: OrientationSource = .interface
+  /// Get the current ``CameraOrientation``, or `nil` if no
+  /// orientation is known.
   public var currentOrientation: CameraOrientation? { orientation.current }
   private let orientation = OrientationSnapshot()
   private var observer: NSObjectProtocol?
   private var subscriptionID: UUID?
 
+  /// Creates a manager for the foreground window scene's interface orientation.
   public init() {
     DispatchQueue.main.async { [weak self] in
       let interfaceOrientation = UIApplication.shared.interfaceOrientation
@@ -18,7 +24,9 @@ public final class InterfaceOrientationManager: OrientationManager {
     }
   }
 
-  /// Calls `onChanged` on the main queue.
+  /// Starts listening to orientation changes.
+  ///
+  /// Starting updates replaces the previous callback. Callbacks run on the main queue.
   public func startOrientationUpdates(onChanged: @escaping (CameraOrientation) -> Void) {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
@@ -49,6 +57,9 @@ public final class InterfaceOrientationManager: OrientationManager {
     }
   }
 
+  /// Stops listening to orientation changes.
+  ///
+  /// Stops delivery on the manager's owning queue. A callback already in progress may finish before removal takes effect.
   public func stopOrientationUpdates() {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }

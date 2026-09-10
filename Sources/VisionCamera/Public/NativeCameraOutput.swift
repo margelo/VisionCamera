@@ -21,41 +21,27 @@ import Foundation
 
 // TODO: Not every output should require conformace to `ResolutionNegotiationParticipant`, should it? e.g. metadata/output.
 
+/// The native extension point for Camera outputs backed by `AVCaptureOutput`.
+///
+/// A custom output also conforms to ``CameraOutput``. ``CameraSession`` connects its native output to the selected input and negotiates its ``ResolutionNegotiationParticipant`` requirements.
 public protocol NativeCameraOutput: AnyObject, ResolutionNegotiationParticipant {
+  /// The concrete AVFoundation output type used by this Camera output.
   associatedtype Output: AVCaptureOutput
 
-  /// Represents the actual `AVCaptureOutput`
-
-  /// that should be added to the `AVCaptureSession`.
-
+  /// Represents the actual `AVCaptureOutput` that should be added to the `AVCaptureSession`.
   ///
-
-  /// It will be manually connected to whatever input
-
-  /// it is connected to in `CameraSession.configure(..)`.
+  /// It will be manually connected to the selected input in ``CameraSession/configure(connections:config:)``.
   var output: Output { get }
-  /// Whether this `NativeCameraOutput` requires
-  /// an audio input attached to its `AVCaptureOutput`.
+  /// Whether this native output requires an audio input attached to its `AVCaptureOutput`.
   ///
-  /// If true, both the camera input and an audio input will
-  /// be connected to the `AVCaptureOutput`.
+  /// If `true`, both the Camera input and an audio input will be connected to the output.
   var requiresAudioInput: Bool { get }
 
-  /// Whether this `NativeCameraOutput` requires
-
-  /// a depth-`AVCaptureDevice.Format` to be enabled
-
-  /// via `AVCaptureDevice.activeDepthFormat`.
+  /// Whether this native output requires a depth format to be enabled via `AVCaptureDevice.activeDepthFormat`.
   var requiresDepthFormat: Bool { get }
 
-  /// Called whenever the `CameraOutputConfiguration` might
-
-  /// change, in a `beginConfiguration()`/`commitConfiguration()`
-
-  /// batch.
-
-  /// The `NativeCameraOutput` is expected to apply all configs
-
-  /// such as orientation or mirroring settings in here.
+  /// Called whenever the output configuration might change, in a `beginConfiguration()`/`commitConfiguration()` batch.
+  ///
+  /// The native output is expected to apply orientation and mirroring settings here. ``CameraSession`` calls this method on its serial configuration queue.
   func configure(config: OutputConfiguration)
 }

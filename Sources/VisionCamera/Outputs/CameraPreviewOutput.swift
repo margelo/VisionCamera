@@ -8,10 +8,34 @@ import AVFoundation
 import Foundation
 import UIKit
 
+/// Represents the ``CameraOutput`` for preview.
+///
+/// The ``CameraPreviewOutput`` needs to be connected
+/// to the ``CameraSession`` as an output, as well
+/// as to a ``PreviewView`` as a target.
+///
+/// ```swift
+/// let previewOutput = VisionCamera().createPreviewOutput()
+/// let previewView = PreviewView(previewOutput: previewOutput)
+/// ```
 public final class CameraPreviewOutput: CameraOutput, NativePreviewViewOutput {
+  /// The media type of the content being streamed
+  /// by this ``CameraOutput``.
   public let mediaType: MediaType = .video
+  /// The underlying `AVCaptureVideoPreviewLayer` connected to the Camera Session and displayed by ``PreviewView``.
   public let previewLayer: AVCaptureVideoPreviewLayer
   private let orientationManager = InterfaceOrientationManager()
+  /// Gets or sets the output orientation of this ``CameraOutput``.
+  ///
+  /// Individual implementations of ``CameraOutput``
+  /// may choose different strategies for implementing
+  /// output orientation, for example:
+  /// - A Photo output might apply orientation via EXIF flags.
+  /// - A Video output might apply orientation via track transform metadata.
+  /// - A Preview output might apply orientation via view transforms.
+  /// - A Frame output might not apply orientation and only pass it as a
+  /// property via the `Frame` object, unless explicitly configured to
+  /// physically rotate buffers.
   public var outputOrientation: CameraOrientation {
     get {
       return previewLayer.connection?.orientation ?? .up
@@ -21,24 +45,31 @@ public final class CameraPreviewOutput: CameraOutput, NativePreviewViewOutput {
       // as its orientation is always driven by the `orientationManager`.
     }
   }
+  /// The resolution that the underlying capture pipeline has resolved
+  /// this ``CameraOutput`` to, in sensor-native (un-rotated) pixels,
+  /// or `nil` if the output has not yet been connected to a
+  /// ``CameraSession``.
+  ///
+  /// The selected ``Size`` may differ from the requested
+  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// as the ``CameraSession`` negotiates resolutions across
+  /// attached ``CameraOutput``s, connected ``CameraDevice``
+  /// capabilities, and enabled ``Constraint``s.
+  ///
+  /// For outputs that are not pixel-based (e.g. metadata-only outputs),
+  /// this reports the resolution of the upstream video stream feeding
+  /// the output, or `nil` if no video input is attached.
   public var currentResolution: Size? {
     guard let connection = previewLayer.connection else { return nil }
     return connection.inputStreamResolution
   }
 
+  /// The stream type used when negotiating this output's target resolution.
   public var streamType: StreamType = .video
-  /// The Preview can never display more pixels than the screen has,
-  /// so Format at least as large as the screen (`>=`) is a perfect
-  /// match - hence `.min`. This is only a _bias_; a slightly smaller
-  /// Format only gets a small penalty (it is upscaled on-screen), so
-  /// other outputs (e.g. a video recording with an explicit
-  /// `targetResolution`) can still win the resolution negotiation.
-  ///
-  /// We use the screen size instead of the actual view size here
-  /// because the view might not even be laid out yet at the time
-  /// the resolution negotiation runs.
+  /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public let targetResolution: ResolutionRule
 
+  /// Creates a preview output using the main screen's resolution as its target.
   @MainActor
   public init() {
     let screen = UIScreen.main
@@ -57,6 +88,9 @@ public final class CameraPreviewOutput: CameraOutput, NativePreviewViewOutput {
     orientationManager.stopOrientationUpdates()
   }
 
+  /// Applies mirroring and orientation settings to this output's current connection.
+  ///
+  /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
   public func configure(config: OutputConfiguration) {
     guard let connection = previewLayer.connection else {
       return

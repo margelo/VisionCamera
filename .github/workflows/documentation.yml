@@ -1,0 +1,67 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Publish the documentation to the configured GitHub Pages site
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.9'
+          bundler-cache: true
+      - name: Read Pages configuration
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy
+        id: pages
+        uses: actions/configure-pages@v6
+      - name: Build and check documentation
+        env:
+          HOSTING_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: scripts/build-documentation.sh "$HOSTING_BASE_PATH"
+      - name: Upload Xcode documentation archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: VisionCamera.doccarchive
+          path: build/documentation/Build/Products/Release-iphoneos/VisionCamera/VisionCamera.doccarchive
+          if-no-files-found: error
+      - name: Upload Pages website
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/site
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy documentation
+        id: deployment
+        uses: actions/deploy-pages@v5

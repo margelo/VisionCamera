@@ -8,6 +8,9 @@
 import AVFoundation
 import Foundation
 
+/// Records Camera frames with `AVAssetWriter`, supporting recordings that continue across Camera switching.
+///
+/// A single recorder instance records to a single video file. To record multiple videos, create multiple recorder instances through ``CameraVideoOutput/createRecorder(settings:)``.
 public final class FrameRecorder: Recorder {
   private let orientation: CameraOrientation
   private let masterClock: CMClock
@@ -69,18 +72,22 @@ public final class FrameRecorder: Recorder {
     }
   }
 
+  /// Returns whether the output is currently recording.
   public var isRecording: Bool {
     return assetWriter.status == .writing
   }
 
+  /// Returns whether the current recording is paused.
   public var isPaused: Bool {
     return videoTrack?.isPaused == true
   }
 
+  /// Returns the currently recorded duration, in seconds.
   public var recordedDuration: Double {
     return videoTrack?.duration.seconds ?? 0.0
   }
 
+  /// Returns the currently recorded file size, in bytes. Buffered writes can make the on-disk size lag behind recording; returns `0` if the file size is unavailable.
   public var recordedFileSize: Double {
     if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
       let sizeBytes = attrs[.size] as? NSNumber
@@ -90,6 +97,7 @@ public final class FrameRecorder: Recorder {
     return 0.0
   }
 
+  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mp4`, not a `file://` URL.
   public var filePath: String {
     return fileURL.path
   }
@@ -151,6 +159,17 @@ public final class FrameRecorder: Recorder {
     logger.info("Initialized Audio AssetWriter!")
   }
 
+  /// Starts recording to the file selected when this recorder was created.
+  ///
+  /// Returns once recording has successfully started. Read `filePath` for the filesystem path being recorded to, or use the path delivered to `onRecordingFinished` after finalization. Neither path is a `file://` URL.
+  /// The recording continues after this method returns. Completion or failure is reported through the callbacks.
+  /// Callbacks run on the recorder's owning serial queue. Move UIKit work to the main actor.
+  ///
+  /// - Parameter onRecordingFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
+  /// - Parameter onRecordingError: Called when an unexpected error occurs while recording.
+  /// - Parameter onRecordingPaused: Called when recording pauses.
+  /// - Parameter onRecordingResumed: Called when recording resumes.
+  /// - Throws: If this recorder has already been started or recording fails to start.
   public func startRecording(
     onRecordingFinished: @escaping (String, RecordingFinishedReason) -> Void,
     onRecordingError: @escaping (any Error) -> Void,
@@ -189,6 +208,9 @@ public final class FrameRecorder: Recorder {
     }
   }
 
+  /// Requests the Video recording to be stopped.
+  ///
+  /// Once the recording has actually stopped and the file is written, the `onRecordingFinished` callback passed to `startRecording` is called. Returning from this method does not mean the file is finalized.
   public func stopRecording() async {
     return await queue.perform {
       // Stop each track
@@ -213,6 +235,10 @@ public final class FrameRecorder: Recorder {
     }
   }
 
+  /// Requests the Video recording to be paused.
+  /// Once the recording has actually been paused,
+  /// the `onRecordingPaused` callback passed to
+  /// ``FrameRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
   public func pauseRecording() async {
     return await queue.perform {
       // Pause each track
@@ -224,6 +250,11 @@ public final class FrameRecorder: Recorder {
     }
   }
 
+  /// Requests the currently paused Video recording
+  /// to be resumed.
+  /// Once the recording has actually been resumed,
+  /// the `onRecordingResumed` callback passed to
+  /// ``FrameRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
   public func resumeRecording() async {
     return await queue.perform {
       // Resume each track
@@ -235,6 +266,10 @@ public final class FrameRecorder: Recorder {
     }
   }
 
+  /// Cancels the current recording and deletes
+  /// the video file.
+  ///
+  /// Cancels writing on the recorder queue and removes the file. Completion callbacks are suppressed; file removal errors propagate to the caller. Throws if no recording is active.
   public func cancelRecording() async throws {
     return try await queue.perform {
       guard self.assetWriter.status == .writing else {

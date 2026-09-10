@@ -8,23 +8,52 @@ import AVFoundation
 import Foundation
 import UIKit
 
+/// The ``CameraPhotoOutput`` allows capturing ``Photo``s
+/// in-memory, as well as directly to a file.
+///
+/// In-memory ``Photo``s can be converted to Images for immediate
+/// display, and/or saved to a file (or the media gallery) later on.
 public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
   private let queue = DispatchQueue(label: "com.margelo.camera.photo", qos: .userInitiated)
   private var captures: [Int64: CapturePhotoDelegate] = [:]
   private let options: PhotoOutputOptions
+  /// The media type of the content being streamed
+  /// by this ``CameraOutput``.
   public let mediaType: MediaType = .video
+  /// Whether the Camera Session must connect an audio input to this output.
   public let requiresAudioInput: Bool = false
   // TODO: If depth data delivery is configured, we probably should return `true` here
+  /// Whether the Camera Session must select an active depth format for this output.
   public let requiresDepthFormat: Bool = false
+  /// The underlying AVFoundation output connected to the Camera Session.
   public let output: AVCapturePhotoOutput
 
+  /// Get whether this ``CameraPhotoOutput`` supports
+  /// capturing depth data alongside with a normal ``Photo``,
+  /// e.g. for portrait effects matte.
+  /// See ``CapturePhotoSettings/enableDepthData``
   public var supportsDepthDataDelivery: Bool {
     return output.isDepthDataDeliverySupported
   }
 
+  /// get whether this ``CameraPhotoOutput`` supports
+  /// delivering camera calibration data, e.g. for reconstructing
+  /// lens-distortion or geometry.
+  /// See ``CapturePhotoSettings/enableCameraCalibrationDataDelivery``
   public var supportsCameraCalibrationDataDelivery: Bool {
     return output.isCameraCalibrationDataDeliverySupported
   }
+  /// Gets or sets the output orientation of this ``CameraOutput``.
+  ///
+  /// Individual implementations of ``CameraOutput``
+  /// may choose different strategies for implementing
+  /// output orientation, for example:
+  /// - A Photo output might apply orientation via EXIF flags.
+  /// - A Video output might apply orientation via track transform metadata.
+  /// - A Preview output might apply orientation via view transforms.
+  /// - A Frame output might not apply orientation and only pass it as a
+  /// property via the `Frame` object, unless explicitly configured to
+  /// physically rotate buffers.
   public var outputOrientation: CameraOrientation = .up {
     didSet {
       guard let connection = output.connection(with: .video) else { return }
@@ -32,6 +61,20 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
       try? connection.setOrientation(outputOrientation)
     }
   }
+  /// The resolution that the underlying capture pipeline has resolved
+  /// this ``CameraOutput`` to, in sensor-native (un-rotated) pixels,
+  /// or `nil` if the output has not yet been connected to a
+  /// ``CameraSession``.
+  ///
+  /// The selected ``Size`` may differ from the requested
+  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// as the ``CameraSession`` negotiates resolutions across
+  /// attached ``CameraOutput``s, connected ``CameraDevice``
+  /// capabilities, and enabled ``Constraint``s.
+  ///
+  /// For outputs that are not pixel-based (e.g. metadata-only outputs),
+  /// this reports the resolution of the upstream video stream feeding
+  /// the output, or `nil` if no video input is attached.
   public var currentResolution: Size? {
     // Reads back what `configure(config:)` pinned via
     // `output.maxPhotoDimensions = format.supportedMaxPhotoDimensions.nearest(...)`.
@@ -46,11 +89,14 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     return Size(width: Double(dims.width), height: Double(dims.height))
   }
 
+  /// The stream type used when negotiating this output's target resolution.
   public var streamType: StreamType = .photo
+  /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
     return .closestTo(options.targetResolution)
   }
 
+  /// Creates a Camera output with the given options.
   public init(options: PhotoOutputOptions) {
     self.output = AVCapturePhotoOutput()
     self.options = options
@@ -75,6 +121,9 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     try? prepareDefaultPhotoSettings()
   }
 
+  /// Applies mirroring and orientation settings to this output's current connection.
+  ///
+  /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
   public func configure(config: OutputConfiguration) {
     guard let connection = output.connection(with: .video) else {
       return
@@ -115,6 +164,19 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     self.output.setPreparedPhotoSettingsArray([avSettings])
   }
 
+  /// Captures a ``Photo`` using the given ``CapturePhotoSettings``.
+  ///
+  /// The returned Photo owns its native image data. Release references when the Photo is no longer needed.
+  /// Capture and callback delivery run on this output's serial capture queue. Move UIKit work to the main actor.
+  ///
+  /// - Parameter settings: Settings for this Photo capture.
+  /// - Parameter callbacks: Optional callbacks for capture progress and a preview image.
+  /// - Returns: The captured Photo, after processing succeeds.
+  /// - Throws: If settings cannot be applied or AVFoundation fails to capture or process the Photo.
+  ///
+  /// ```swift
+  /// let photo = try await photoOutput.capturePhoto(settings: CapturePhotoSettings(flashMode: .on))
+  /// ```
   public func capturePhoto(
     settings: CapturePhotoSettings = .init(),
     callbacks: CapturePhotoCallbacks = .init()
@@ -153,6 +215,14 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     }
   }
 
+  /// Captures a Photo and writes it to a temporary file
+  /// using the given ``CapturePhotoSettings``.
+  ///
+  /// ```swift
+  /// let file = try await photoOutput.capturePhotoToFile(settings: CapturePhotoSettings(flashMode: .on))
+  /// ```
+  ///
+  /// The returned ``PhotoFile`` contains a filesystem path. Capture callbacks run on this output's serial capture queue. File encoding and writing can throw.
   public func capturePhotoToFile(
     settings: CapturePhotoSettings = .init(),
     callbacks: CapturePhotoCallbacks = .init()
@@ -170,6 +240,26 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
       containerFormat: photo.containerFormat)
   }
 
+  /// Asynchronously prepares the ``CameraPhotoOutput``
+  /// with the given `settings` array to improve capture
+  /// responsiveness for subsequent ``CameraPhotoOutput/capturePhoto(settings:callbacks:)``
+  /// calls when called with any of the same ``CapturePhotoSettings``
+  /// that have been prepared via this method.
+  ///
+  /// It is recommended to always call this with a few common
+  /// settings you expect to be used for ``CameraPhotoOutput/capturePhoto(settings:callbacks:)``
+  /// later on.
+  ///
+  /// It is perfectly fine to not call ``CameraPhotoOutput/prepareSettings(settings:)``
+  /// when using Photo capture, but ``CameraPhotoOutput/capturePhoto(settings:callbacks:)`` may
+  /// allocate buffers that cause higher latency on initial calls when aiming for quality.
+  ///
+  /// ```swift
+  /// try await photoOutput.prepareSettings(settings: [
+  ///   CapturePhotoSettings(flashMode: .off, enableDistortionCorrection: true),
+  ///   CapturePhotoSettings(flashMode: .on, enableDistortionCorrection: false)
+  /// ])
+  /// ```
   public func prepareSettings(settings: [CapturePhotoSettings]) async throws {
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       queue.async(
