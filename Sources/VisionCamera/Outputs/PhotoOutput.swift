@@ -1,5 +1,5 @@
 ///
-/// CameraPhotoOutput.swift
+/// PhotoOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -8,12 +8,12 @@ import AVFoundation
 import Foundation
 import UIKit
 
-/// The ``CameraPhotoOutput`` allows capturing ``Photo``s
+/// The ``PhotoOutput`` allows capturing ``Photo``s
 /// in-memory, as well as directly to a file.
 ///
 /// In-memory ``Photo``s can be converted to Images for immediate
 /// display, and/or saved to a file (or the media gallery) later on.
-public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
+public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   private let queue = DispatchQueue(label: "com.margelo.camera.photo", qos: .userInitiated)
   private var captures: [Int64: CapturePhotoDelegate] = [:]
   private let options: PhotoOutputOptions
@@ -28,7 +28,7 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
   /// The underlying AVFoundation output connected to the Camera Session.
   public let output: AVCapturePhotoOutput
 
-  /// Get whether this ``CameraPhotoOutput`` supports
+  /// Get whether this ``PhotoOutput`` supports
   /// capturing depth data alongside with a normal ``Photo``,
   /// e.g. for portrait effects matte.
   /// See ``CapturePhotoSettings/enableDepthData``
@@ -36,7 +36,7 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     return output.isDepthDataDeliverySupported
   }
 
-  /// get whether this ``CameraPhotoOutput`` supports
+  /// get whether this ``PhotoOutput`` supports
   /// delivering camera calibration data, e.g. for reconstructing
   /// lens-distortion or geometry.
   /// See ``CapturePhotoSettings/enableCameraCalibrationDataDelivery``
@@ -97,7 +97,7 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// Creates a Camera output with the given options.
-  public init(options: PhotoOutputOptions) {
+  public init(options: PhotoOutputOptions = .init()) {
     self.output = AVCapturePhotoOutput()
     self.options = options
 
@@ -240,18 +240,18 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
       containerFormat: photo.containerFormat)
   }
 
-  /// Asynchronously prepares the ``CameraPhotoOutput``
+  /// Asynchronously prepares the ``PhotoOutput``
   /// with the given `settings` array to improve capture
-  /// responsiveness for subsequent ``CameraPhotoOutput/capturePhoto(settings:callbacks:)``
+  /// responsiveness for subsequent ``PhotoOutput/capturePhoto(settings:callbacks:)``
   /// calls when called with any of the same ``CapturePhotoSettings``
   /// that have been prepared via this method.
   ///
   /// It is recommended to always call this with a few common
-  /// settings you expect to be used for ``CameraPhotoOutput/capturePhoto(settings:callbacks:)``
+  /// settings you expect to be used for ``PhotoOutput/capturePhoto(settings:callbacks:)``
   /// later on.
   ///
-  /// It is perfectly fine to not call ``CameraPhotoOutput/prepareSettings(settings:)``
-  /// when using Photo capture, but ``CameraPhotoOutput/capturePhoto(settings:callbacks:)`` may
+  /// It is perfectly fine to not call ``PhotoOutput/prepareSettings(settings:)``
+  /// when using Photo capture, but ``PhotoOutput/capturePhoto(settings:callbacks:)`` may
   /// allocate buffers that cause higher latency on initial calls when aiming for quality.
   ///
   /// ```swift

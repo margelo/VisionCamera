@@ -14,7 +14,7 @@ import VisionCamera
 func configureHDR(
 	session: CameraSession,
 	device: CameraDevice,
-	output: any CameraVideoOutput
+	output: any VideoOutput
 ) async throws {
 	let dynamicRange = TargetDynamicRange(
 		bitDepth: .hdr10Bit,

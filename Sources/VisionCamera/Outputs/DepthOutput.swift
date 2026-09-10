@@ -1,5 +1,5 @@
 ///
-/// CameraDepthFrameOutput.swift
+/// DepthOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,20 +7,20 @@
 import AVFoundation
 import Foundation
 
-/// The ``CameraDepthFrameOutput`` allows synchronously streaming
+/// The ``DepthOutput`` allows synchronously streaming
 /// ``Depth`` Frames from the Camera, aka "Depth Frame Processing".
 ///
 /// ```swift
-/// let depthOutput = VisionCamera().createDepthFrameOutput()
+/// let depthOutput = DepthOutput()
 /// await depthOutput.setOnDepthFrameCallback { depth in
 ///   defer { depth.dispose() }
 ///   print(depth.width, depth.height)
 /// }
 /// ```
-public final class CameraDepthFrameOutput: CameraOutput, NativeCameraOutput {
+public final class DepthOutput: CameraOutput, NativeCameraOutput {
   private let delegate: DepthFrameDelegate
   private let queue: DispatchQueue
-  private let options: DepthFrameOutputOptions
+  private let options: DepthOutputOptions
   private var mirrorMode: MirrorMode = .auto
   private var metadataOrientation: CameraOrientation = .up
   /// The media type of the content being streamed
@@ -82,7 +82,7 @@ public final class CameraDepthFrameOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// Creates a Camera output with the given options.
-  public init(options: DepthFrameOutputOptions) {
+  public init(options: DepthOutputOptions = .init()) {
     self.output = AVCaptureDepthDataOutput()
     self.delegate = DepthFrameDelegate()
     self.options = options

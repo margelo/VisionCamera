@@ -1,5 +1,5 @@
 ///
-/// CameraPreviewOutput.swift
+/// PreviewOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -10,15 +10,15 @@ import UIKit
 
 /// Represents the ``CameraOutput`` for preview.
 ///
-/// The ``CameraPreviewOutput`` needs to be connected
+/// The ``PreviewOutput`` needs to be connected
 /// to the ``CameraSession`` as an output, as well
 /// as to a ``PreviewView`` as a target.
 ///
 /// ```swift
-/// let previewOutput = VisionCamera().createPreviewOutput()
+/// let previewOutput = PreviewOutput()
 /// let previewView = PreviewView(previewOutput: previewOutput)
 /// ```
-public final class CameraPreviewOutput: CameraOutput, NativePreviewViewOutput {
+public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   /// The media type of the content being streamed
   /// by this ``CameraOutput``.
   public let mediaType: MediaType = .video

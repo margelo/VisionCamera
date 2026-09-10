@@ -2,7 +2,7 @@
 
 Inspect detected codes and faces, and convert their coordinates to a preview.
 
-A ``ScannedObject`` is an object, such as a machine-readable code or a human face, scanned by a ``CameraObjectOutput``.
+A ``ScannedObject`` is an object, such as a machine-readable code or a human face, scanned by a ``ObjectOutput``.
 
 ## Object types
 

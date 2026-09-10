@@ -3,15 +3,15 @@ import UIKit
 
 /// A UIKit view that displays a Camera preview.
 ///
-/// Connect a ``CameraPreviewOutput`` both to a ``CameraSession`` and to this view's ``PreviewView/previewOutput``. All view operations run on the main actor.
+/// Connect a ``PreviewOutput`` both to a ``CameraSession`` and to this view's ``PreviewView/previewOutput``. All view operations run on the main actor.
 @MainActor
 public final class PreviewView: UIView {
-  /// Sets the ``CameraPreviewOutput`` for the ``PreviewView``.
+  /// Sets the ``PreviewOutput`` for the ``PreviewView``.
   ///
-  /// The ``CameraPreviewOutput`` can be connected to a
+  /// The ``PreviewOutput`` can be connected to a
   /// ``CameraSession`` to start in parallel, possibly
   /// even before the ``PreviewView`` is mounted/visible.
-  public var previewOutput: CameraPreviewOutput? {
+  public var previewOutput: PreviewOutput? {
     didSet { updatePreviewLayer() }
   }
   /// Fires when the ``PreviewView`` started.
@@ -52,7 +52,7 @@ public final class PreviewView: UIView {
   private var observationID = UUID()
 
   /// Creates a preview view attached to the given output, or an empty view when the output is `nil`.
-  public init(previewOutput: CameraPreviewOutput? = nil) {
+  public init(previewOutput: PreviewOutput? = nil) {
     self.previewOutput = previewOutput
     super.init(frame: .zero)
     updatePreviewLayer()
@@ -119,29 +119,26 @@ public final class PreviewView: UIView {
     guard let transformed = layer.transformedMetadataObject(for: scannedObject.object) else {
       throw CameraError(message: "Cannot transform scanned object coordinates into preview coordinates.")
     }
-    return CameraObjectOutput.createScannedObject(from: transformed)
+    return ObjectOutput.scannedObject(from: transformed)
   }
 
   /// Creates a ``MeteringPoint`` that can be used for
   /// focusing AE/AF/AWB on the Camera via ``CameraController/focusTo(point:options:)``.
   ///
-  /// The coordinates (`viewX`, `viewY`) are relative to this
-  /// ``PreviewView``, and take orientation, scaling and cropping
+  /// The point is relative to this
+  /// ``PreviewView``, and takes orientation, scaling and cropping
   /// into account.
-  /// - Parameter viewX: The X coordinate within the View's coordinate system.
-  /// This can be the `x` value of a tap event on the ``PreviewView``.
-  /// - Parameter viewY: The Y coordinate within the View's coordinate system.
-  /// This can be the `y` value of a tap event on the ``PreviewView``.
+  /// - Parameter point: A point in the View's coordinate system, such as the location of a tap.
   /// - Parameter size: (Optional) The size of the ``MeteringPoint`` within
   /// the View's coordinate system.
   ///
   /// - Throws: If the ``PreviewView`` isn't ready yet.
-  public func createMeteringPoint(viewX: Double, viewY: Double, size: Double? = nil) throws -> MeteringPoint {
+  public func meteringPoint(at point: CGPoint, size: Double? = nil) throws -> MeteringPoint {
     let layer = try requirePreviewLayer()
-    let point = layer.captureDevicePointConverted(fromLayerPoint: CGPoint(x: viewX, y: viewY))
+    let normalizedPoint = layer.captureDevicePointConverted(fromLayerPoint: point)
     return MeteringPoint(
-      relativeX: viewX, relativeY: viewY, relativeSize: size,
-      normalizedX: point.x, normalizedY: point.y)
+      relativeX: point.x, relativeY: point.y, relativeSize: size,
+      normalizedX: normalizedPoint.x, normalizedY: normalizedPoint.y)
   }
 
   private func requirePreviewLayer() throws -> AVCaptureVideoPreviewLayer {

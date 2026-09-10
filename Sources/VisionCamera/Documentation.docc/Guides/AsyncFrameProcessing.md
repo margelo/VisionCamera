@@ -13,7 +13,7 @@ import Foundation
 import VisionCamera
 
 func installAsyncProcessor(
-	on output: CameraFrameOutput,
+	on output: FrameOutput,
 	process: @escaping (Frame) throws -> Void
 ) async {
 	let worker = DispatchQueue(label: "com.example.camera.processing")

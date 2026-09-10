@@ -41,10 +41,7 @@ public final class TapToFocusGestureController: NSObject, GestureController,
 
     do {
       let viewPoint = gestureRecognizer.location(in: gestureRecognizer.view)
-      let meteringPoint = try previewView.createMeteringPoint(
-        viewX: viewPoint.x,
-        viewY: viewPoint.y,
-        size: nil)
+      let meteringPoint = try previewView.meteringPoint(at: viewPoint)
       let tapListeners = Array(onTapListeners.values)
       for listener in tapListeners { listener(meteringPoint) }
 

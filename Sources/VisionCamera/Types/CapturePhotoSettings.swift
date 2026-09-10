@@ -3,9 +3,9 @@
 import CoreLocation
 
 /// Configuration options for a
-/// ``CameraPhotoOutput/capturePhoto(settings:callbacks:)`` call.
+/// ``PhotoOutput/capturePhoto(settings:callbacks:)`` call.
 ///
-/// See ``CameraPhotoOutput``
+/// See ``PhotoOutput``
 public struct CapturePhotoSettings {
   /// Configures the ``FlashMode`` for this Photo capture.
   ///
@@ -29,8 +29,8 @@ public struct CapturePhotoSettings {
   /// via ``Photo/depth``.
   ///
   /// ``CapturePhotoSettings/enableDepthData`` can only be enabled if the
-  /// ``CameraPhotoOutput`` supports depth data - see
-  /// ``CameraPhotoOutput/supportsDepthDataDelivery``.
+  /// ``PhotoOutput`` supports depth data - see
+  /// ``PhotoOutput/supportsDepthDataDelivery``.
   ///
   /// When `nil`, the capture pipeline keeps its default setting.
   ///

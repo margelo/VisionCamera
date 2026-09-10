@@ -3,7 +3,6 @@ import VisionCamera
 
 @MainActor
 final class CameraViewController: UIViewController {
-  private let camera = VisionCamera()
   private let preview = PreviewView()
   private let status = UILabel()
   private let thumbnail = UIImageView()
@@ -12,9 +11,9 @@ final class CameraViewController: UIViewController {
   private let switchButton = UIButton(type: .system)
   private let recordingMode = UISegmentedControl(items: ["Standard", "Persistent"])
   private var session: CameraSession?
-  private var photoOutput: CameraPhotoOutput?
-  private var videoOutput: (any CameraVideoOutput)?
-  private var previewOutput: CameraPreviewOutput?
+  private var photoOutput: PhotoOutput?
+  private var videoOutput: (any VideoOutput)?
+  private var previewOutput: PreviewOutput?
   private var recorder: (any Recorder)?
   private var controller: CameraController?
   private var recordingID: UUID?
@@ -114,17 +113,17 @@ final class CameraViewController: UIViewController {
   }
 
   private func setup() async throws {
-    guard try await camera.requestCameraPermission() else {
+    guard try await VisionCamera.requestCameraPermission() else {
       status.text = "Camera access is denied. Enable it in Settings to use the example."
       return
     }
-    microphoneGranted = try await camera.requestMicrophonePermission()
-    let session = try camera.createCameraSession()
+    microphoneGranted = try await VisionCamera.requestMicrophonePermission()
+    let session = CameraSession()
     self.session = session
-    let previewOutput = camera.createPreviewOutput()
+    let previewOutput = PreviewOutput()
     self.previewOutput = previewOutput
     preview.previewOutput = previewOutput
-    photoOutput = camera.createPhotoOutput()
+    photoOutput = PhotoOutput()
     subscriptions = [
       session.addOnErrorListener { [weak self] error in
         DispatchQueue.main.async { self?.status.text = error.localizedDescription }
@@ -137,7 +136,7 @@ final class CameraViewController: UIViewController {
       },
     ]
     try await configureVideoOutput()
-    let manager = camera.createOrientationManager(orientationSource: .device)
+    let manager = DeviceOrientationManager()
     orientationManager = manager
     try manager.startOrientationUpdates { [weak self] orientation in
       DispatchQueue.main.async {
@@ -151,12 +150,13 @@ final class CameraViewController: UIViewController {
   }
 
   private func configureVideoOutput() async throws {
-    videoOutput = camera.createVideoOutput(
-      options: VideoOutputOptions(
-        enableAudio: microphoneGranted,
-        enablePersistentRecorder: recordingMode.selectedSegmentIndex == 1
-      ))
-    usesPersistentRecorder = videoOutput is CameraVideoFrameOutput
+    let options = VideoOutputOptions(enableAudio: microphoneGranted)
+    if recordingMode.selectedSegmentIndex == 1 {
+      videoOutput = VideoFrameOutput(options: options)
+    } else {
+      videoOutput = MovieFileVideoOutput(options: options)
+    }
+    usesPersistentRecorder = videoOutput is VideoFrameOutput
     if let orientation = orientationManager?.currentOrientation {
       videoOutput?.outputOrientation = orientation
     }
@@ -178,8 +178,8 @@ final class CameraViewController: UIViewController {
         constraints: constraints
       )
     ])
-    let focus = camera.createTapToFocusGestureController()
-    let zoom = camera.createZoomGestureController()
+    let focus = TapToFocusGestureController()
+    let zoom = ZoomGestureController()
     controller = controllers.first
     focus.controller = controller
     zoom.controller = controller
@@ -216,7 +216,7 @@ final class CameraViewController: UIViewController {
         return
       }
       guard let output = self.videoOutput else { return }
-      let recorder = try await output.createRecorder(settings: .init())
+      let recorder = try await output.makeRecorder()
       let id = UUID()
       self.recorder = recorder
       self.recordingID = id

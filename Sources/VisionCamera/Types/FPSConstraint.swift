@@ -1,8 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// A constraint to set a given frame rate for any Video,
-/// Frame or Preview Streams (e.g. ``CameraVideoOutput``,
-/// ``CameraFrameOutput``, or ``CameraPreviewOutput``)
+/// Frame or Preview Streams (e.g. ``VideoOutput``,
+/// ``FrameOutput``, or ``PreviewOutput``)
 ///
 /// ```swift
 /// FPSConstraint(fps: 60)

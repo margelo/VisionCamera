@@ -1,6 +1,6 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-/// Options for the ``CameraObjectOutput``.
+/// Options for the ``ObjectOutput``.
 public struct ObjectOutputOptions: Equatable, Sendable {
   /// The types of metadata objects to scan for. Only types supported by the connected output are enabled.
   public var enabledObjectTypes: [ScannedObjectType]

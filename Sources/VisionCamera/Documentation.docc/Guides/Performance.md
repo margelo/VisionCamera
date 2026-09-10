@@ -22,7 +22,7 @@ If your processing accepts orientation and mirroring metadata, keep physical buf
 
 ## Choose the native object output for scanning
 
-Use <doc:ObjectOutput> when AVFoundation's supported object types meet your needs. It avoids adding a separate frame processing algorithm for those objects.
+Use <doc:ObjectOutputGuide> when AVFoundation's supported object types meet your needs. It avoids adding a separate frame processing algorithm for those objects.
 
 Only enable the code formats you actually need to scan.
 
@@ -49,7 +49,7 @@ If you know which settings you will use, prepare them before capture:
 ```swift
 import VisionCamera
 
-func prepareAndCapture(output: CameraPhotoOutput) async throws -> Photo {
+func prepareAndCapture(output: PhotoOutput) async throws -> Photo {
 	let settings = CapturePhotoSettings(flashMode: .off)
 	try await output.prepareSettings(settings: [settings])
 	return try await output.capturePhoto(settings: settings)

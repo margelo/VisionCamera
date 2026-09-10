@@ -93,6 +93,21 @@ final class BufferTests: XCTestCase {
     XCTAssertThrowsError(try FramePlane(buffer: frame.getPixelBuffer(), planeIndex: 0))
   }
 
+  func testStaticFrameConverterRejectsDisposedFrames() async throws {
+    let frame = try makeFrame()
+    frame.dispose()
+
+    XCTAssertThrowsError(try FrameConverter.convertFrameToImage(frame: frame)) { error in
+      XCTAssertTrue(error is CameraError)
+    }
+    do {
+      _ = try await FrameConverter.convertFrameToImageAsync(frame: frame)
+      XCTFail("A disposed Frame cannot be converted to an image")
+    } catch {
+      XCTAssertTrue(error is CameraError)
+    }
+  }
+
   private func makeFrame(pixelFormat: OSType = kCVPixelFormatType_32BGRA) throws -> Frame {
     var pixelBuffer: CVPixelBuffer?
     let status = CVPixelBufferCreate(kCFAllocatorDefault, 8, 4, pixelFormat, nil, &pixelBuffer)

@@ -3,11 +3,11 @@
 import CoreLocation
 
 /// Video Recorder settings for a ``Recorder``
-/// created by a ``CameraVideoOutput``.
+/// created by a ``VideoOutput``.
 ///
-/// See ``CameraVideoOutput``
+/// See ``VideoOutput``
 /// See ``Recorder``
-/// See ``CameraVideoOutput/createRecorder(settings:)``
+/// See ``VideoOutput/makeRecorder(settings:)``
 public struct RecorderSettings {
   /// Sets the given `CLLocation` to be embedded
   /// into the video metadata using the ISO-6709 standard.

@@ -5,7 +5,7 @@ import Foundation
 
 /// Represents a single Frame the Camera "sees".
 ///
-/// Typically, a ``CameraOutput`` like ``CameraFrameOutput`` produces instances of this type.
+/// Typically, a ``CameraOutput`` like ``FrameOutput`` produces instances of this type.
 ///
 /// The Frame is either **planar** or **non-planar** (``Frame/isPlanar``).
 /// - A **planar** Frame's, often YUV, pixel data can be accessed on the CPU via ``Frame/getPlanes()``, where each ``FramePlane`` represents one plane of the pixel data. In YUV, this is often one **Y** Plane in full resolution and one **UV** Plane in half resolution.
@@ -149,7 +149,7 @@ public final class Frame {
   ///
   /// - Note: The ``Frame`` only has a Camera intrinsic matrix attached
   /// if ``FrameOutputOptions/enableCameraMatrixDelivery``
-  /// is set to true on the `CameraFrameOutput`.
+  /// is set to true on the `FrameOutput`.
   ///
   /// ```swift
   /// if let matrix = frame.cameraIntrinsicMatrix {

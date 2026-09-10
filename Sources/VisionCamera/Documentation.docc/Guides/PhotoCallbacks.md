@@ -17,7 +17,7 @@ Pass callbacks to `capturePhoto(settings:callbacks:)`:
 ```swift
 import VisionCamera
 
-func captureWithEvents(output: CameraPhotoOutput) async throws -> Photo {
+func captureWithEvents(output: PhotoOutput) async throws -> Photo {
 	return try await output.capturePhoto(callbacks: .init(
 		onWillBeginCapture: { print("Capture beginning") },
 		onWillCapturePhoto: { print("Capturing photo") },
@@ -30,15 +30,15 @@ These callbacks run on the photo output's queue. Dispatch UIKit changes to the m
 
 ## Preview images
 
-A ``CameraPhotoOutput`` can deliver a preview-sized image for a thumbnail, assuming the device and capture configuration support it.
+A ``PhotoOutput`` can deliver a preview-sized image for a thumbnail, assuming the device and capture configuration support it.
 
 First, specify `previewImageTargetSize` when creating the output:
 
 ```swift
 import VisionCamera
 
-func makePhotoOutput() -> CameraPhotoOutput {
-	return VisionCamera().createPhotoOutput(options: .init(
+func makePhotoOutput() -> PhotoOutput {
+	return PhotoOutput(options: .init(
 		previewImageTargetSize: .init(width: 320, height: 320)
 	))
 }
@@ -52,7 +52,7 @@ import VisionCamera
 
 @MainActor
 func captureWithThumbnail(
-	output: CameraPhotoOutput,
+	output: PhotoOutput,
 	imageView: UIImageView
 ) async throws -> Photo {
 	return try await output.capturePhoto(callbacks: .init(

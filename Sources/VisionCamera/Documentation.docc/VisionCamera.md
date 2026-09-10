@@ -21,7 +21,7 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 
 ### Preview and controls
 
-- <doc:PreviewOutput>
+- <doc:PreviewOutputGuide>
 - <doc:PreviewViewGuide>
 - <doc:CameraControllerGuide>
 - <doc:Zooming>
@@ -40,7 +40,7 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 
 ### Photo capture
 
-- <doc:PhotoOutput>
+- <doc:PhotoOutputGuide>
 - <doc:PhotoGuide>
 - <doc:PhotoCallbacks>
 - <doc:PhotoQuality>
@@ -50,16 +50,16 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 
 ### Video recording
 
-- <doc:VideoOutput>
+- <doc:VideoOutputGuide>
 - <doc:RecorderGuide>
 - <doc:VideoHDR>
 - <doc:VideoStabilization>
 
 ### Frames and depth
 
-- <doc:FrameOutput>
+- <doc:FrameOutputGuide>
 - <doc:FrameGuide>
-- <doc:DepthOutput>
+- <doc:DepthOutputGuide>
 - <doc:DepthFrame>
 - <doc:PixelFormats>
 - <doc:NativeBuffers>
@@ -70,7 +70,7 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 
 ### Object scanning
 
-- <doc:ObjectOutput>
+- <doc:ObjectOutputGuide>
 - <doc:ScannedObjects>
 
 ### Camera APIs
@@ -79,7 +79,6 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``CameraSession``
 - ``CameraSessionConnection``
 - ``CameraSessionConfiguration``
-- ``CameraDeviceFactory``
 - ``CameraDevice``
 - ``CameraController``
 - ``CameraControllerConfiguration``
@@ -90,13 +89,15 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 
 - ``CameraOutput``
 - ``CameraOutputConfiguration``
-- ``CameraPreviewOutput``
-- ``CameraPhotoOutput``
-- ``CameraVideoOutput``
-- ``CameraFrameOutput``
-- ``CameraDepthFrameOutput``
-- ``CameraObjectOutput``
-- ``CameraOutputSynchronizer``
+- ``PreviewOutput``
+- ``PhotoOutput``
+- ``VideoOutput``
+- ``MovieFileVideoOutput``
+- ``VideoFrameOutput``
+- ``FrameOutput``
+- ``DepthOutput``
+- ``ObjectOutput``
+- ``OutputSynchronizer``
 - ``NativeCameraOutput``
 
 ### Capture and media APIs
@@ -121,9 +122,12 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``PreviewView``
 - ``FrameRendererView``
 - ``FrameRenderer``
+- ``FrameConverter``
 - ``ZoomGestureController``
 - ``TapToFocusGestureController``
 - ``OrientationManager``
+- ``DeviceOrientationManager``
+- ``InterfaceOrientationManager``
 - ``CameraOrientation``
 - ``Constraint``
 - ``CameraSessionConfig``

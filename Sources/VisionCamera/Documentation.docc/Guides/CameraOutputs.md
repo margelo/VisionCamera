@@ -6,12 +6,12 @@ Connect capture, streaming, scanning, and preview outputs to a Camera session.
 
 VisionCamera provides six core output kinds:
 
-- ``CameraPhotoOutput``: <doc:PhotoOutput>.
-- ``CameraVideoOutput``: <doc:VideoOutput>.
-- ``CameraFrameOutput``: <doc:FrameOutput>.
-- ``CameraDepthFrameOutput``: <doc:DepthOutput>.
-- ``CameraObjectOutput``: <doc:ObjectOutput>.
-- ``CameraPreviewOutput``: <doc:PreviewOutput>.
+- ``PhotoOutput``: <doc:PhotoOutputGuide>.
+- ``VideoOutput``: <doc:VideoOutputGuide>.
+- ``FrameOutput``: <doc:FrameOutputGuide>.
+- ``DepthOutput``: <doc:DepthOutputGuide>.
+- ``ObjectOutput``: <doc:ObjectOutputGuide>.
+- ``PreviewOutput``: <doc:PreviewOutputGuide>.
 
 ## Connect outputs to a session
 
@@ -21,9 +21,8 @@ Add each output to the connection's outputs array:
 import VisionCamera
 
 func connectOutputs(session: CameraSession) async throws {
-	let camera = VisionCamera()
-	let photo = camera.createPhotoOutput()
-	let video = camera.createVideoOutput()
+	let photo = PhotoOutput()
+	let video = MovieFileVideoOutput()
 	_ = try await session.configure(connections: [
 		CameraSessionConnection(
 			input: .position(.back),
@@ -43,12 +42,11 @@ When multiple outputs are connected, resolution-bias constraints express which t
 ```swift
 import VisionCamera
 
-func make4KOutputs() -> (CameraPhotoOutput, any CameraVideoOutput) {
-	let camera = VisionCamera()
+func make4KOutputs() -> (PhotoOutput, any VideoOutput) {
 	let resolution = Size(width: 3840, height: 2160)
 	return (
-		camera.createPhotoOutput(options: .init(targetResolution: resolution)),
-		camera.createVideoOutput(options: .init(targetResolution: resolution))
+		PhotoOutput(options: .init(targetResolution: resolution)),
+		MovieFileVideoOutput(options: .init(targetResolution: resolution))
 	)
 }
 ```

@@ -64,7 +64,7 @@ Register the function with your frame output:
 import VisionCamera
 
 func installProcessor(
-	output: CameraFrameOutput,
+	output: FrameOutput,
 	process: @escaping (Frame) throws -> [String]
 ) async {
 	await output.setOnFrameCallback { frame in
@@ -77,7 +77,7 @@ func installProcessor(
 }
 ```
 
-Pass `scanBarcodes` as `process` when installing the processor. If QR scanning is all you need, the native <doc:ObjectOutput> can scan without a custom frame processing pipeline.
+Pass `scanBarcodes` as `process` when installing the processor. If QR scanning is all you need, the native <doc:ObjectOutputGuide> can scan without a custom frame processing pipeline.
 
 ## Processing budget
 

@@ -2,7 +2,7 @@
 
 Scan machine-readable codes and faces with the native Camera pipeline.
 
-The ``CameraObjectOutput`` scans objects using AVFoundation's native metadata output. It can detect supported codes and faces without a custom frame processing pipeline.
+The ``ObjectOutput`` scans objects using AVFoundation's native metadata output. It can detect supported codes and faces without a custom frame processing pipeline.
 
 ## Create an object output
 
@@ -11,10 +11,9 @@ Choose the types you need, then register a callback and connect the output:
 ```swift
 import VisionCamera
 
-func prepareScanner() async throws -> (CameraSession, CameraObjectOutput) {
-	let camera = VisionCamera()
-	let session = try camera.createCameraSession()
-	let output = camera.createObjectOutput(options: .init(enabledObjectTypes: [.qr]))
+func prepareScanner() async throws -> (CameraSession, ObjectOutput) {
+	let session = CameraSession()
+	let output = ObjectOutput(options: .init(enabledObjectTypes: [.qr]))
 	await output.setOnObjectsScannedCallback { objects in
 		for case let code as ScannedCode in objects {
 			print("QR code:", code.value ?? "")
@@ -28,7 +27,7 @@ func prepareScanner() async throws -> (CameraSession, CameraObjectOutput) {
 }
 ```
 
-Request Camera permission first. Retain the session and output while scanning. Add a <doc:PreviewOutput> to the same connection if you want a live preview.
+Request Camera permission first. Retain the session and output while scanning. Add a <doc:PreviewOutputGuide> to the same connection if you want a live preview.
 
 The output enables the requested types that AVFoundation supports in the active configuration. Enable only the types you need. See ``ObjectOutputOptions`` and ``ScannedObjectType``.
 

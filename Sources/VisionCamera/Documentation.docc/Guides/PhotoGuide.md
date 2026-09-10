@@ -2,7 +2,7 @@
 
 Display, save, and inspect an in-memory photo.
 
-A ``Photo`` is a RAW or processed in-memory capture from a ``CameraPhotoOutput``. See <doc:PhotoOutput> for capturing photos.
+A ``Photo`` is a RAW or processed in-memory capture from a ``PhotoOutput``. See <doc:PhotoOutputGuide> for capturing photos.
 
 ## Display a photo
 

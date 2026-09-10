@@ -1,7 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// A constraint to set a ``TargetStabilizationMode`` for Video
-/// Streams (e.g. ``CameraVideoOutput``).
+/// Streams (e.g. ``VideoOutput``).
 ///
 /// ```swift
 /// VideoStabilizationModeConstraint(videoStabilizationMode: .cinematic)

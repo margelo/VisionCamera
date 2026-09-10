@@ -1,5 +1,5 @@
 ///
-/// CameraFrameOutput.swift
+/// FrameOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,17 +7,17 @@
 import AVFoundation
 import Foundation
 
-/// The ``CameraFrameOutput`` allows synchronously streaming
+/// The ``FrameOutput`` allows synchronously streaming
 /// ``Frame``s from the Camera, aka "Frame Processing".
 ///
 /// ```swift
-/// let frameOutput = VisionCamera().createFrameOutput()
+/// let frameOutput = FrameOutput()
 /// await frameOutput.setOnFrameCallback { frame in
 ///   defer { frame.dispose() }
 ///   print(frame.width, frame.height)
 /// }
 /// ```
-public final class CameraFrameOutput: CameraOutput, NativeCameraOutput {
+public final class FrameOutput: CameraOutput, NativeCameraOutput {
   private let delegate: FrameDelegate
   private let queue: DispatchQueue
   private var mirrorMode: MirrorMode = .auto
@@ -81,7 +81,7 @@ public final class CameraFrameOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// Creates a Camera output with the given options.
-  public init(options: FrameOutputOptions) {
+  public init(options: FrameOutputOptions = .init()) {
     self.output = AVCaptureVideoDataOutput()
     self.delegate = FrameDelegate()
     self.options = options

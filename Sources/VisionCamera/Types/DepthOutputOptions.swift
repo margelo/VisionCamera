@@ -1,9 +1,9 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-/// Configuration options for a ``CameraDepthFrameOutput``.
+/// Configuration options for a ``DepthOutput``.
 ///
-/// See ``CameraDepthFrameOutput``
-public struct DepthFrameOutputOptions: Equatable, Sendable {
+/// See ``DepthOutput``
+public struct DepthOutputOptions: Equatable, Sendable {
   /// Enables or disables depth data filtering to
   /// smoothen out uneven spots in the depth map.
   ///
@@ -11,7 +11,7 @@ public struct DepthFrameOutputOptions: Equatable, Sendable {
   public var enableFiltering: Bool
   /// The target Depth Resolution to use.
   ///
-  /// To include this output's ``DepthFrameOutputOptions/targetResolution`` in
+  /// To include this output's ``DepthOutputOptions/targetResolution`` in
   /// ``CameraSession`` format negotiation, add a ``ResolutionBiasConstraint``
   /// for this output. The session will negotiate it with constraints (such
   /// as HDR, FPS, etc) in a ``CameraSessionConfig`` to
@@ -20,7 +20,7 @@ public struct DepthFrameOutputOptions: Equatable, Sendable {
   /// This is therefore merely a resolution _target_, and may
   /// not be exactly met.
   ///
-  /// If the given ``DepthFrameOutputOptions/targetResolution`` cannot be met
+  /// If the given ``DepthOutputOptions/targetResolution`` cannot be met
   /// exactly, its aspect ratio (computed by
   /// ``Size/width`` / ``Size/height``) will
   /// be prioritized over pixel count.
@@ -29,32 +29,32 @@ public struct DepthFrameOutputOptions: Equatable, Sendable {
   public var targetResolution: Size
   /// Enable (or disable) physical buffer rotation.
   ///
-  /// - When ``DepthFrameOutputOptions/enablePhysicalBufferRotation`` is set to `true`, and
-  /// the ``CameraDepthFrameOutput``'s ``CameraDepthFrameOutput/outputOrientation``
+  /// - When ``DepthOutputOptions/enablePhysicalBufferRotation`` is set to `true`, and
+  /// the ``DepthOutput``'s ``DepthOutput/outputOrientation``
   /// is set to any value different than the Camera sensor's native orientation, the Camera pipeline
   /// will physically rotate the buffers to apply the orientation.
   /// The resulting ``Depth``'s ``Depth/orientation``
   /// will then always be ``CameraOrientation/up``, meaning it no longer needs to be rotated by the consumer.
-  /// - When ``DepthFrameOutputOptions/enablePhysicalBufferRotation`` is set to `false`, the Camera
+  /// - When ``DepthOutputOptions/enablePhysicalBufferRotation`` is set to `false`, the Camera
   /// pipeline will not physically rotate buffers, but instead only provide the ``Depth``'s
-  /// orientation relative to the ``CameraDepthFrameOutput``'s target
-  /// ``CameraDepthFrameOutput/outputOrientation``
+  /// orientation relative to the ``DepthOutput``'s target
+  /// ``DepthOutput/outputOrientation``
   /// as metadata (see ``Depth/orientation``), meaning the consumers have to
   /// handle orientation themselves - e.g. by reading pixels in a different order, or
   /// applying orientation in a GPU rendering pass, depending on the use-case.
   ///
-  /// Setting ``DepthFrameOutputOptions/enablePhysicalBufferRotation`` to `true` introduces
+  /// Setting ``DepthOutputOptions/enablePhysicalBufferRotation`` to `true` introduces
   /// processing overhead.
   /// Defaults to false.
   public var enablePhysicalBufferRotation: Bool
   /// Whether to drop new depth frames when they arrive while the
   /// frame callback is still executing.
   ///
-  /// - If set to `true`, the ``CameraDepthFrameOutput`` will
+  /// - If set to `true`, the ``DepthOutput`` will
   /// automatically drop any depth frames that arrive while your frame callback is still executing to avoid
   /// exhausting resources,
   /// at the risk of losing information since depth frames may be dropped.
-  /// - If set to `false`, the ``CameraDepthFrameOutput`` will
+  /// - If set to `false`, the ``DepthOutput`` will
   /// queue up any depth frames that arrive while your frame callback
   /// is still executing and immediately call it once it is free
   /// again, at the risk of exhausting resources and growing RAM.
@@ -64,7 +64,7 @@ public struct DepthFrameOutputOptions: Equatable, Sendable {
   /// Allow this output to start later in the capture pipeline startup process.
   ///
   /// Enabling this lets the camera prioritize outputs needed for preview first,
-  /// then start the ``CameraDepthFrameOutput`` shortly afterwards.
+  /// then start the ``DepthOutput`` shortly afterwards.
   ///
   /// This can improve startup behavior when preview responsiveness is more
   /// important than receiving frames immediately.

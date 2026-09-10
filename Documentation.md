@@ -41,7 +41,7 @@ xcodebuild docbuild -scheme VisionCamera -configuration Release \
 
 Use `///` comments above declarations. Start with a short summary, then explain behavior that the declaration alone doesn't describe. Include parameters, return values, thrown errors, callback queues, and buffer lifetimes where they apply.
 
-Link to a symbol with double backticks, such as ``CameraSession`` or ``CameraSession/configure(connections:config:)``. Use `<doc:PhotoOutput>` for a guide and ordinary Markdown links for external Apple documentation.
+Link to a symbol with double backticks, such as ``CameraSession`` or ``CameraSession/configure(connections:config:)``. Use `<doc:PhotoOutputGuide>` for a guide and ordinary Markdown links for external Apple documentation.
 
 Keep the author's existing explanations when adapting documentation from react-native-vision-camera. Change platform details, API names, examples, and links to match this framework. The native framework uses Swift callbacks, `async`/`await`, `UIImage`, and retained media buffers.
 

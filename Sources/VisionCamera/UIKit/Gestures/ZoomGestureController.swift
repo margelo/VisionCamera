@@ -1,5 +1,5 @@
 ///
-/// CameraPhotoOutput.swift
+/// PhotoOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///

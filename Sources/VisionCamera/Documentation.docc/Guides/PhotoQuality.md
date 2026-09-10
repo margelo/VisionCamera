@@ -2,7 +2,7 @@
 
 Balance photo quality, compression, and capture speed.
 
-While the ``CameraSession`` negotiates photo resolution based on your constraints and connected outputs, the ``CameraPhotoOutput`` can still adjust compression quality and balance photo quality against capture speed.
+While the ``CameraSession`` negotiates photo resolution based on your constraints and connected outputs, the ``PhotoOutput`` can still adjust compression quality and balance photo quality against capture speed.
 
 ## Adjust quality prioritization
 
@@ -11,8 +11,8 @@ Use `qualityPrioritization` to configure the capture mode. `.speed` prioritizes 
 ```swift
 import VisionCamera
 
-func makeQualityPhotoOutput() -> CameraPhotoOutput {
-	return VisionCamera().createPhotoOutput(options: .init(
+func makeQualityPhotoOutput() -> PhotoOutput {
+	return PhotoOutput(options: .init(
 		qualityPrioritization: .quality
 	))
 }
@@ -27,8 +27,8 @@ Processed formats such as JPEG and HEIC compress captured photos. The default qu
 ```swift
 import VisionCamera
 
-func makeJPEGOutput() -> CameraPhotoOutput {
-	return VisionCamera().createPhotoOutput(options: .init(
+func makeJPEGOutput() -> PhotoOutput {
+	return PhotoOutput(options: .init(
 		containerFormat: .jpeg,
 		quality: 1,
 		qualityPrioritization: .balanced

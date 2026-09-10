@@ -30,7 +30,7 @@ Use `convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)` to conver
 
 ### Metering points
 
-A ``MeteringPoint`` provides a convenient way to convert tap coordinates to Camera coordinates. Create one with `PreviewView.createMeteringPoint(viewX:viewY:size:)`, then pass it to the controller's focus method. See <doc:TapToFocus>.
+A ``MeteringPoint`` provides a convenient way to convert tap coordinates to Camera coordinates. Create one with `PreviewView.meteringPoint(at:size:)`, then pass it to the controller's focus method. See <doc:TapToFocus>.
 
 ## Frame coordinates
 

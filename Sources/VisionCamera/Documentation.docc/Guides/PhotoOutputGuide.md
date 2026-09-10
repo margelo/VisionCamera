@@ -2,7 +2,7 @@
 
 Capture processed and RAW photos using a photo output.
 
-The ``CameraPhotoOutput`` allows capturing processed and RAW ``Photo`` objects.
+The ``PhotoOutput`` allows capturing processed and RAW ``Photo`` objects.
 
 ## Create a photo output
 
@@ -11,10 +11,9 @@ Create an output, connect it to a ``CameraSession``, and start the session befor
 ```swift
 import VisionCamera
 
-func preparePhotoCamera() async throws -> (CameraSession, CameraPhotoOutput) {
-	let camera = VisionCamera()
-	let session = try camera.createCameraSession()
-	let output = camera.createPhotoOutput()
+func preparePhotoCamera() async throws -> (CameraSession, PhotoOutput) {
+	let session = CameraSession()
+	let output = PhotoOutput()
 	_ = try await session.configure(connections: [
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
@@ -32,7 +31,7 @@ Use `capturePhoto(settings:callbacks:)` to capture an in-memory ``Photo``:
 ```swift
 import VisionCamera
 
-func takePhoto(output: CameraPhotoOutput) async throws -> Photo {
+func takePhoto(output: PhotoOutput) async throws -> Photo {
 	return try await output.capturePhoto(settings: .init(flashMode: .off))
 }
 ```
@@ -47,7 +46,7 @@ Use `capturePhotoToFile(settings:callbacks:)` to capture a photo and save it to 
 import Foundation
 import VisionCamera
 
-func takePhotoFile(output: CameraPhotoOutput) async throws -> URL {
+func takePhotoFile(output: PhotoOutput) async throws -> URL {
 	let photo = try await output.capturePhotoToFile()
 	return URL(fileURLWithPath: photo.filePath)
 }

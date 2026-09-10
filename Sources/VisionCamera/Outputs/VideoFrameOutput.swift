@@ -1,5 +1,5 @@
 ///
-/// MovieFileCameraVideoOutput.swift
+/// MovieFileVideoOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,10 +7,10 @@
 import AVFoundation
 import Foundation
 
-/// The ``CameraVideoFrameOutput`` records Camera frames with `AVAssetWriter`.
+/// The ``VideoFrameOutput`` records Camera frames with `AVAssetWriter`.
 ///
-/// It implements ``CameraVideoOutput`` and supports persistent recordings that continue across Camera switching. Enable ``VideoOutputOptions/enablePersistentRecorder`` when creating the output through ``VisionCamera``.
-public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput, RecorderDelegate {
+/// It implements ``VideoOutput`` and supports persistent recordings that continue across Camera switching.
+public final class VideoFrameOutput: VideoOutput, NativeCameraOutput, RecorderDelegate {
   private let delegate: FrameDelegate
   private let options: VideoOutputOptions
   private let queue: DispatchQueue
@@ -74,7 +74,7 @@ public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput
 
   private var videoCodec: AVVideoCodecType?
   /// Creates a Camera output with the given options.
-  public init(options: VideoOutputOptions) {
+  public init(options: VideoOutputOptions = .init()) {
     self.output = AVCaptureVideoDataOutput()
     self.delegate = FrameDelegate()
     self.options = options
@@ -127,9 +127,9 @@ public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput
   }
 
   /// Get all supported ``VideoCodec``s this
-  /// ``CameraVideoOutput`` currently can record in.
+  /// ``VideoOutput`` currently can record in.
   ///
-  /// This method must be called after the ``CameraVideoOutput``
+  /// This method must be called after the ``VideoOutput``
   /// has been attached to a Camera Session.
   ///
   /// - Throws: This method throws if you call it before this output
@@ -150,7 +150,7 @@ public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput
   /// Set the output settings for this video output.
   /// This method must be called after the output has been
   /// attached to the Camera Session, and before
-  /// ``CameraVideoFrameOutput/createRecorder(settings:)``.
+  /// ``VideoFrameOutput/makeRecorder(settings:)``.
   ///
   /// Settings are applied on the output's serial queue. Unsupported codecs and incompatible codec/bit-rate settings throw.
   public func setOutputSettings(settings: VideoOutputSettings) async throws {
@@ -182,7 +182,7 @@ public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput
   /// you must create a new ``Recorder``.
   ///
   /// Create the recorder after connecting this output to a configured Camera Session. Creation runs on the output's serial queue and can throw if a video connection, encoding settings, or audio input is unavailable.
-  public func createRecorder(settings: RecorderSettings) async throws -> any Recorder {
+  public func makeRecorder(settings: RecorderSettings) async throws -> any Recorder {
     return try await queue.perform {
       // 1. Create AVAssetWriter Recorder
       let clock = try self.getMasterClock()

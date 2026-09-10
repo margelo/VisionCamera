@@ -18,7 +18,7 @@ func focusAtTap(
 	preview: PreviewView,
 	controller: CameraController
 ) async throws {
-	let point = try preview.createMeteringPoint(viewX: x, viewY: y)
+	let point = try preview.meteringPoint(at: .init(x: x, y: y))
 	try await controller.focusTo(point: point, options: .init())
 }
 ```
@@ -29,7 +29,7 @@ You can also create a metering point directly from normalized Camera coordinates
 import VisionCamera
 
 func focusAtCenter(controller: CameraController) async throws {
-	let point = VisionCamera().createNormalizedMeteringPoint(x: 0.5, y: 0.5)
+	let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
 	try await controller.focusTo(point: point, options: .init())
 }
 ```

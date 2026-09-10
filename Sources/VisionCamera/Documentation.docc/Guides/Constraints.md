@@ -13,7 +13,7 @@ A ``Constraint`` listed higher up in the array has higher priority than one list
 ```swift
 import VisionCamera
 
-func preferFrameRate(video: any CameraVideoOutput) -> [Constraint] {
+func preferFrameRate(video: any VideoOutput) -> [Constraint] {
 	[
 		.fps(.init(fps: 60)),
 		.resolutionBias(.init(resolutionBias: video))
@@ -72,8 +72,8 @@ The explicit constraints keep higher priority. Order the output preferences acco
 ```swift
 import VisionCamera
 
-func resolveVideoConfiguration(device: CameraDevice, video: any CameraVideoOutput) async throws -> CameraSessionConfig {
-	try await VisionCamera().resolveConstraints(
+func resolveVideoConfiguration(device: CameraDevice, video: any VideoOutput) async throws -> CameraSessionConfig {
+	try await VisionCamera.resolveConstraints(
 		device: device,
 		outputConfigurations: [.init(output: video)],
 		constraints: [
@@ -90,7 +90,7 @@ If photo capture is more important than video capture, list its resolution bias 
 ```swift
 import VisionCamera
 
-func preferPhotos(photo: CameraPhotoOutput, video: any CameraVideoOutput) -> [Constraint] {
+func preferPhotos(photo: PhotoOutput, video: any VideoOutput) -> [Constraint] {
 	[
 		.resolutionBias(.init(resolutionBias: photo)),
 		.resolutionBias(.init(resolutionBias: video)),

@@ -13,11 +13,11 @@
 /// good "middle-ground" will be chosen.
 ///
 /// For outputs with an explicit target resolution (e.g.
-/// ``CameraVideoOutput`` or ``CameraPhotoOutput``),
+/// ``VideoOutput`` or ``PhotoOutput``),
 /// resolution negotiation prefers aspect ratio matches
 /// over raw pixel count differences first, then uses a
 /// logarithmic scale to compare resolution differences.
-/// A ``CameraPreviewOutput`` instead only prefers
+/// A ``PreviewOutput`` instead only prefers
 /// Formats at least as large as the screen, ignoring
 /// aspect ratio (it fills the screen either way).
 ///

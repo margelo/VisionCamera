@@ -3,7 +3,7 @@
 import AVFoundation
 import Foundation
 
-/// A ``Depth`` Frame is a frame captured from a ``CameraDepthFrameOutput``.
+/// A ``Depth`` Frame is a frame captured from a ``DepthOutput``.
 ///
 /// It contains depth data that can be accessed through ``Depth/getDepthData()`` as `AVDepthData`, or through ``Depth/getPixelBuffer()`` as a `CVPixelBuffer`. The depth's format (``Depth/pixelFormat``) specifies the depth map's pixel format.
 ///
@@ -47,7 +47,7 @@ public final class Depth {
   /// Gets the presentation timestamp this Depth Frame was timed at, in seconds. The timestamp remains available after disposal.
   public var timestamp: Double { metadata.timestamp.seconds }
   /// The rotation of this ``Depth`` relative to the
-  /// associated ``CameraDepthFrameOutput``'s target output orientation.
+  /// associated ``DepthOutput``'s target output orientation.
   ///
   /// Depth data is not automatically rotated to ``CameraOrientation/up`` because physically
   /// rotating buffers is expensive. The Camera streams depth frames in the

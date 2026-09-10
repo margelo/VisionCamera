@@ -13,7 +13,7 @@ import VisionCamera
 
 func configureStabilizedVideo(
 	session: CameraSession,
-	output: any CameraVideoOutput
+	output: any VideoOutput
 ) async throws {
 	_ = try await session.configure(connections: [
 		.init(

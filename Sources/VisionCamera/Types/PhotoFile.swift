@@ -1,7 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// Represents a Photo captured by
-/// ``CameraPhotoOutput/capturePhotoToFile(settings:callbacks:)``
+/// ``PhotoOutput/capturePhotoToFile(settings:callbacks:)``
 /// and written to a File.
 public struct PhotoFile: Equatable, Sendable {
   /// The path of the file.

@@ -54,7 +54,7 @@ public final class CameraDevice {
   /// See ``VideoOutputOptions/targetResolution``
   /// See ``PhotoOutputOptions/targetResolution``
   /// See ``FrameOutputOptions/targetResolution``
-  /// See ``DepthFrameOutputOptions/targetResolution``
+  /// See ``DepthOutputOptions/targetResolution``
   /// See ``ResolutionBiasConstraint``
   ///
   /// ```swift
@@ -135,7 +135,7 @@ public final class CameraDevice {
   /// method with your desired outputs and constraints applied.
   ///
   /// See ``PhotoHDRConstraint/photoHDR``
-  /// See ``CameraPhotoOutput``
+  /// See ``PhotoOutput``
   public let supportsPhotoHDR: Bool = false
 
   /// Get a list of all ``DynamicRange``s this
@@ -167,7 +167,7 @@ public final class CameraDevice {
   /// method with your desired outputs and constraints applied.
   ///
   /// See ``VideoDynamicRangeConstraint/videoDynamicRange``
-  /// See ``CameraVideoOutput``
+  /// See ``VideoOutput``
   public lazy var supportedVideoDynamicRanges: [DynamicRange] = {
     return device.formats
       .flatMap { format in
@@ -187,7 +187,7 @@ public final class CameraDevice {
   /// Usually, a ``CameraDevice`` can stream to all
   /// ``CameraOutput``s, with very rare exceptions.
   ///
-  /// For example, Depth Frame Outputs (``CameraDepthFrameOutput``)
+  /// For example, Depth Frame Outputs (``DepthOutput``)
   /// may not be supported on all ``CameraDevice``s - see
   /// ``CameraDevice/mediaTypes``.
   public func supportsOutput(output: any CameraOutput) -> Bool {
@@ -224,7 +224,7 @@ public final class CameraDevice {
 
   /// Returns whether this ``CameraDevice`` supports
   /// the given `StabilizationMode` for video streams
-  /// (e.g. ``CameraVideoOutput``).
+  /// (e.g. ``VideoOutput``).
   ///
   /// While a device may support a given `StabilizationMode`
   /// individually, it is not guaranteed to be supported with all
@@ -247,7 +247,7 @@ public final class CameraDevice {
 
   /// Returns whether this ``CameraDevice`` supports
   /// the given `StabilizationMode` for preview streams
-  /// (e.g. ``CameraPreviewOutput``).
+  /// (e.g. ``PreviewOutput``).
   ///
   /// While a device may support a given `StabilizationMode`
   /// individually, it is not guaranteed to be supported with all

@@ -24,7 +24,7 @@
 - ``convertCameraPointToViewPoint(cameraPoint:)``
 - ``convertViewPointToCameraPoint(viewPoint:)``
 - ``convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)``
-- ``createMeteringPoint(viewX:viewY:size:)``
+- ``meteringPoint(at:size:)``
 
 ### Laying out the preview
 

@@ -2,9 +2,9 @@
 
 Understand frame metadata, pixel layouts, and buffer lifetime.
 
-A ``Frame`` is an in-memory buffer that allows GPU and CPU access to individual pixels. It is typically streamed in real time by a ``CameraFrameOutput``.
+A ``Frame`` is an in-memory buffer that allows GPU and CPU access to individual pixels. It is typically streamed in real time by a ``FrameOutput``.
 
-See <doc:FrameOutput> for streaming frames, and <doc:NativeProcessing> for passing them to native image processing APIs.
+See <doc:FrameOutputGuide> for streaming frames, and <doc:NativeProcessing> for passing them to native image processing APIs.
 
 ## Orientation and mirroring
 

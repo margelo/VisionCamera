@@ -2,7 +2,7 @@
 
 /// Represents the bounding box around a ``ScannedObject``.
 ///
-/// For objects delivered by ``CameraObjectOutput``, coordinates are in camera-space (`0.0` ... `1.0`). After
+/// For objects delivered by ``ObjectOutput``, coordinates are in camera-space (`0.0` ... `1.0`). After
 /// conversion with ``PreviewView/convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)``,
 /// coordinates are in the preview view's coordinate system.
 public struct BoundingBox: Equatable, Sendable {

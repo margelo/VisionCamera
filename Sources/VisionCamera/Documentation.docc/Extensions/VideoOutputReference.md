@@ -1,4 +1,4 @@
-# ``CameraVideoOutput``
+# ``VideoOutput``
 
 ## Topics
 
@@ -9,4 +9,4 @@
 
 ### Creating a recording
 
-- ``createRecorder(settings:)``
+- ``makeRecorder(settings:)``

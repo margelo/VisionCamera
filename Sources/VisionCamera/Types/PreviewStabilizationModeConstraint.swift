@@ -1,7 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// A constraint to set a ``TargetStabilizationMode`` for Preview
-/// Streams (e.g. ``CameraPreviewOutput``).
+/// Streams (e.g. ``PreviewOutput``).
 ///
 /// ```swift
 /// PreviewStabilizationModeConstraint(previewStabilizationMode: .previewOptimized)

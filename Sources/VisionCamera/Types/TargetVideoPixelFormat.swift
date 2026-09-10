@@ -3,7 +3,7 @@
 /// Represents a desired pixel format for a video
 /// pipeline.
 ///
-/// Used to configure the format a ``CameraFrameOutput``
+/// Used to configure the format a ``FrameOutput``
 /// streams ``Frame``s in.
 ///
 /// - ``TargetVideoPixelFormat/native``: Choose whatever the ``CameraSessionConfig``'s

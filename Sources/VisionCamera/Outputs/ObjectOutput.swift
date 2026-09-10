@@ -1,5 +1,5 @@
 ///
-/// CameraObjectOutput.swift
+/// ObjectOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,13 +7,13 @@
 import AVFoundation
 import Foundation
 
-/// The ``CameraObjectOutput`` allows scanning various
+/// The ``ObjectOutput`` allows scanning various
 /// objects (``ScannedObject``), faces (``ScannedFace``),
 /// or machine-readable codes (``ScannedCode``) in the Camera, using
 /// a platform-native detection algorithm.
 ///
 /// ```swift
-/// let objectOutput = VisionCamera().createObjectOutput(
+/// let objectOutput = ObjectOutput(
 ///   options: ObjectOutputOptions(enabledObjectTypes: [.qr])
 /// )
 /// await objectOutput.setOnObjectsScannedCallback { objects in
@@ -22,7 +22,7 @@ import Foundation
 ///   }
 /// }
 /// ```
-public final class CameraObjectOutput: CameraOutput, NativeCameraOutput {
+public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   private let queue = DispatchQueue(label: "com.margelo.camera.object-scanner")
   private let delegate: MetadataDelegate
   private let options: ObjectOutputOptions
@@ -110,7 +110,7 @@ public final class CameraObjectOutput: CameraOutput, NativeCameraOutput {
     await queue.perform {
       if let onObjectsScanned {
         self.delegate.onMetadataObjects = { objects in
-          onObjectsScanned(objects.map { Self.createScannedObject(from: $0) })
+          onObjectsScanned(objects.map { Self.scannedObject(from: $0) })
         }
       } else {
         self.delegate.onMetadataObjects = nil
@@ -119,7 +119,7 @@ public final class CameraObjectOutput: CameraOutput, NativeCameraOutput {
   }
 
   /// Wraps an AVFoundation metadata object as a ``ScannedCode``, ``ScannedFace``, or ``MetadataObject`` according to its native type.
-  public static func createScannedObject(from object: AVMetadataObject)
+  public static func scannedObject(from object: AVMetadataObject)
     -> any ScannedObject
   {
     switch object {

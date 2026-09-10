@@ -2,7 +2,7 @@
 
 Stream a Camera feed into a native preview.
 
-The ``CameraPreviewOutput`` allows streaming a Camera feed into a preview, which may be connected to a ``PreviewView`` to display the Camera feed to the user.
+The ``PreviewOutput`` allows streaming a Camera feed into a preview, which may be connected to a ``PreviewView`` to display the Camera feed to the user.
 
 ## Create a preview output
 
@@ -11,7 +11,7 @@ import VisionCamera
 
 @MainActor
 func addPreview(session: CameraSession) async throws -> PreviewView {
-	let output = VisionCamera().createPreviewOutput()
+	let output = PreviewOutput()
 	let view = PreviewView(previewOutput: output)
 	_ = try await session.configure(connections: [
 		.init(input: .position(.back), outputs: [.init(output: output)])
@@ -25,14 +25,14 @@ Add the returned view to your UIKit hierarchy and size it with Auto Layout or a 
 
 ## Preview resolution
 
-A ``CameraPreviewOutput`` does not have a configurable target resolution. Since it can never display more pixels than the screen has, it prefers a Camera format at least as large as the screen.
+A ``PreviewOutput`` does not have a configurable target resolution. Since it can never display more pixels than the screen has, it prefers a Camera format at least as large as the screen.
 
 This preference is only a small bias in resolution negotiation. A preview can be upscaled cheaply, whereas a recording's resolution cannot be recovered after capture. A resolution-bias constraint for a recording output takes priority over the preview's preference:
 
 ```swift
 import VisionCamera
 
-func preferRecordingResolution(video: any CameraVideoOutput) -> [Constraint] {
+func preferRecordingResolution(video: any VideoOutput) -> [Constraint] {
 	[.resolutionBias(.init(resolutionBias: video))]
 }
 ```

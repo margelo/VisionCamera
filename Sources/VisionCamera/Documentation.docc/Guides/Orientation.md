@@ -11,15 +11,15 @@ In most cases, output orientation follows either the app's interface orientation
 - Interface orientation changes only when the UI rotates. If the UI is locked to portrait and the phone is held sideways, the output stays upright for the portrait interface.
 - Device orientation changes when the phone physically rotates, even if the UI remains locked to portrait. This suits photography apps whose capture orientation follows the phone.
 
-Create an ``OrientationManager`` and apply its updates to your capture outputs:
+Create a ``DeviceOrientationManager`` or ``InterfaceOrientationManager`` and apply its updates to your capture outputs:
 
 ```swift
 import Foundation
 import VisionCamera
 
 @MainActor
-func followDeviceOrientation(photoOutput: CameraPhotoOutput) throws -> any OrientationManager {
-	let manager = VisionCamera().createOrientationManager(orientationSource: .device)
+func followDeviceOrientation(photoOutput: PhotoOutput) throws -> any OrientationManager {
+	let manager = DeviceOrientationManager()
 	if let orientation = manager.currentOrientation {
 		photoOutput.outputOrientation = orientation
 	}
@@ -40,7 +40,7 @@ Apply changes from one owner in your app. Avoid changing output properties concu
 
 For manual control, assign an output's `outputOrientation` directly. ``CameraOrientation`` has `.up`, `.right`, `.down`, and `.left` values.
 
-The preview follows the interface orientation automatically. Assigning `CameraPreviewOutput.outputOrientation` does not override that behavior.
+The preview follows the interface orientation automatically. Assigning `PreviewOutput.outputOrientation` does not override that behavior.
 
 ## Rotate UI controls
 
@@ -58,7 +58,7 @@ For streamed frames and depth, orientation and mirroring are metadata by default
 
 ### Physical buffer rotation
 
-Set `enablePhysicalBufferRotation` in ``FrameOutputOptions`` or ``DepthFrameOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
+Set `enablePhysicalBufferRotation` in ``FrameOutputOptions`` or ``DepthOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
 
 Physical transformation adds processing. If your processing library accepts orientation and mirroring flags, passing metadata can avoid that work. See <doc:NativeProcessing> for a Vision example.
 

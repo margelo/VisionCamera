@@ -355,14 +355,14 @@ public final class CameraController {
   /// not support metering white-balance (see ``CameraDevice/supportsWhiteBalanceMetering``)
   ///
   /// ```swift
-  /// let point = VisionCamera().createNormalizedMeteringPoint(x: 0.5, y: 0.5)
+  /// let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
   /// try await controller.focusTo(
   ///   point: point,
   ///   options: FocusOptions(responsiveness: .steady)
   /// )
   ///
   /// // Lock focus at a tap until it is reset.
-  /// let tapPoint = try previewView.createMeteringPoint(viewX: tapX, viewY: tapY)
+  /// let tapPoint = try previewView.meteringPoint(at: CGPoint(x: tapX, y: tapY))
   /// try await controller.focusTo(
   ///   point: tapPoint,
   ///   options: FocusOptions(

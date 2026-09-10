@@ -1,7 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// Represents a Dynamic Range, often used for recording
-/// HDR videos using a ``CameraVideoOutput``.
+/// HDR videos using a ``VideoOutput``.
 ///
 /// To get all available ``DynamicRange``s on a
 /// device, use ``CameraDevice/supportedVideoDynamicRanges``.

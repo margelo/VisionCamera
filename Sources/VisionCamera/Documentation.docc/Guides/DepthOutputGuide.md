@@ -2,7 +2,7 @@
 
 Stream depth frames from a supported Camera device.
 
-The ``CameraDepthFrameOutput`` streams ``Depth`` frames in real time to a Swift callback.
+The ``DepthOutput`` streams ``Depth`` frames in real time to a Swift callback.
 
 ## Create a depth output
 
@@ -11,10 +11,9 @@ Depth requires a device and active format that support depth delivery. Create an
 ```swift
 import VisionCamera
 
-func prepareDepthCamera(device: CameraDevice) async throws -> (CameraSession, CameraDepthFrameOutput) {
-	let camera = VisionCamera()
-	let session = try camera.createCameraSession()
-	let output = camera.createDepthFrameOutput(options: .init(enableFiltering: true))
+func prepareDepthCamera(device: CameraDevice) async throws -> (CameraSession, DepthOutput) {
+	let session = CameraSession()
+	let output = DepthOutput(options: .init(enableFiltering: true))
 	await output.setOnDepthFrameCallback { depth in
 		print("Depth:", depth.width, depth.height, depth.pixelFormat)
 	}
@@ -26,7 +25,7 @@ func prepareDepthCamera(device: CameraDevice) async throws -> (CameraSession, Ca
 }
 ```
 
-Configuration throws if no compatible device format is available. See ``DepthFrameOutputOptions`` for target resolution, filtering, and buffer rotation settings.
+Configuration throws if no compatible device format is available. See ``DepthOutputOptions`` for target resolution, filtering, and buffer rotation settings.
 
 The callback runs on the depth output's queue. Clear it with `await output.setOnDepthFrameCallback(nil)` when you no longer need depth delivery.
 

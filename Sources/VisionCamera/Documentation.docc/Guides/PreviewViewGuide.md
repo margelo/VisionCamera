@@ -1,15 +1,15 @@
 # Display a preview view
 
-Use UIKit to display a CameraPreviewOutput and convert view coordinates.
+Use UIKit to display a PreviewOutput and convert view coordinates.
 
-``PreviewView`` is a UIKit view that renders the contents of a ``CameraPreviewOutput``. See <doc:PreviewOutput>.
+``PreviewView`` is a UIKit view that renders the contents of a ``PreviewOutput``. See <doc:PreviewOutputGuide>.
 
 ```swift
 import UIKit
 import VisionCamera
 
 @MainActor
-func makePreview(output: CameraPreviewOutput, in container: UIView) -> PreviewView {
+func makePreview(output: PreviewOutput, in container: UIView) -> PreviewView {
 	let preview = PreviewView(previewOutput: output)
 	preview.resizeMode = .cover
 	preview.frame = container.bounds

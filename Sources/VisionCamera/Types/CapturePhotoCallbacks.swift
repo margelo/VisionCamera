@@ -2,10 +2,10 @@
 
 import UIKit
 
-/// Callbacks for a ``CameraPhotoOutput/capturePhoto(settings:callbacks:)``
+/// Callbacks for a ``PhotoOutput/capturePhoto(settings:callbacks:)``
 /// call.
 ///
-/// See ``CameraPhotoOutput``
+/// See ``PhotoOutput``
 ///
 /// All callbacks run on the photo output's serial queue. Dispatch UIKit updates to the main actor.
 public struct CapturePhotoCallbacks {

@@ -2,7 +2,7 @@
 
 Start, pause, resume, and stop a video recording.
 
-A ``Recorder`` records video and audio data to a file. It is usually created by a ``CameraVideoOutput``. See <doc:VideoOutput> for preparing that output.
+A ``Recorder`` records video and audio data to a file. It is usually created by a ``VideoOutput``. See <doc:VideoOutputGuide> for preparing that output.
 
 ## Set a maximum duration or file size
 
@@ -11,8 +11,8 @@ To stop automatically when a duration or file size is reached, use `maxDuration`
 ```swift
 import VisionCamera
 
-func prepareLimitedRecorder(output: any CameraVideoOutput) async throws -> any Recorder {
-	return try await output.createRecorder(settings: .init(
+func prepareLimitedRecorder(output: any VideoOutput) async throws -> any Recorder {
+	return try await output.makeRecorder(settings: .init(
 		maxDuration: 30,
 		maxFileSize: 50_000_000
 	))
@@ -100,7 +100,7 @@ func cancel(recorder: any Recorder) async throws {
 
 An incoming call, backgrounding the app, or a pipeline interruption can affect a recording. Observe the session's interruption listeners and the recorder's event callbacks. Do not assume recording can continue through every interruption.
 
-By default, changing the input device stops an active recording. To continue recording across a device change, use the persistent output described in <doc:VideoOutput>.
+By default, changing the input device stops an active recording. To continue recording across a device change, use the persistent output described in <doc:VideoOutputGuide>.
 
 ## Create a new recorder
 

@@ -9,8 +9,8 @@ A ``CameraSession`` connects inputs, see <doc:CameraDevices>, to outputs, see <d
 ```swift
 import VisionCamera
 
-func createSession() throws -> CameraSession {
-	try VisionCamera().createCameraSession()
+func createSession() -> CameraSession {
+	CameraSession()
 }
 ```
 
@@ -25,7 +25,7 @@ import VisionCamera
 
 func configurePhotoCapture(
 	session: CameraSession,
-	photoOutput: CameraPhotoOutput
+	photoOutput: PhotoOutput
 ) async throws -> [CameraController] {
 	let controllers = try await session.configure(connections: [
 		CameraSessionConnection(

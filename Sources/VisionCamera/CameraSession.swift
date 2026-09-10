@@ -18,10 +18,9 @@ import Foundation
 /// avoid reconfiguration hiccups.
 ///
 /// ```swift
-/// let camera = VisionCamera()
-/// let previewOutput = camera.createPreviewOutput()
-/// let photoOutput = camera.createPhotoOutput()
-/// let session = try camera.createCameraSession()
+/// let previewOutput = PreviewOutput()
+/// let photoOutput = PhotoOutput()
+/// let session = CameraSession()
 /// let controllers = try await session.configure(connections: [
 ///   CameraSessionConnection(
 ///     input: .position(.back),
@@ -43,16 +42,28 @@ public final class CameraSession {
     autoreleaseFrequency: .inherit,
     target: nil)
 
+  /// Creates a Camera Session that supports a single input device at a time.
+  public convenience init() {
+    self.init(session: AVCaptureSession())
+  }
+
   /// Creates a Camera Session, optionally supporting multiple input devices.
   ///
-  /// Use ``VisionCamera/createCameraSession(enableMultiCam:)`` to validate multi-camera support before construction.
+  /// A Multi-Cam Camera Session can stream from multiple ``CameraDevice`` inputs
+  /// at the same time. Check ``VisionCamera/supportedMultiCamDeviceCombinations``
+  /// for device combinations that can be used together.
+  ///
   /// - Parameter enableMultiCam: Whether to create an `AVCaptureMultiCamSession`.
-  public init(enableMultiCam: Bool = false) {
-    if enableMultiCam {
-      self.session = AVCaptureMultiCamSession()
-    } else {
-      self.session = AVCaptureSession()
+  /// - Throws: If `enableMultiCam` is `true`, but ``VisionCamera/supportsMultiCamSessions`` is `false`.
+  public convenience init(enableMultiCam: Bool) throws {
+    guard !enableMultiCam || VisionCamera.supportsMultiCamSessions else {
+      throw CameraError(message: "This device does not support multi-camera sessions.")
     }
+    self.init(session: enableMultiCam ? AVCaptureMultiCamSession() : AVCaptureSession())
+  }
+
+  private init(session: AVCaptureSession) {
+    self.session = session
     // We manage formats manually via `device.activeFormat`, so opt out of the
     // session's preset-based format selection upfront.
     self.session.sessionPreset = .inputPriority
@@ -76,7 +87,7 @@ public final class CameraSession {
   /// - Note: In a Multi-Cam Camera Session, the given `connections`' input devices
   /// must be supported to be used together in a Multi-Cam Camera Session, as not every
   /// ``CameraDevice`` can be used with every other ``CameraDevice``
-  /// simultaneously. See ``CameraDeviceFactory/supportedMultiCamDeviceCombinations``
+  /// simultaneously. See ``VisionCamera/supportedMultiCamDeviceCombinations``
   /// for a full list of supported combinations.
   ///
   /// - Note: Some supported combinations can contain a single virtual
@@ -86,7 +97,7 @@ public final class CameraSession {
   ///
   /// - Parameter connections: The list of connections from one _input_ to
   /// multiple _outputs_. If this ``CameraSession`` was created
-  /// as a multi-cam session (see ``VisionCamera/createCameraSession(enableMultiCam:)``),
+  /// as a multi-cam session (see ``CameraSession/init(enableMultiCam:)``),
   /// you can add multiple ``CameraSessionConnection``s.
   /// - Parameter config: Configures session-wide configuration,
   /// such as ``CameraSessionConfiguration/allowBackgroundAudioPlayback``.
@@ -98,7 +109,7 @@ public final class CameraSession {
   /// ``CameraSession`` was not created as a multi-cam session.
   /// - Throws: If hardware resources are being exhausted by too large connection graphs.
   /// - Throws: If this is a Multi-Cam session, but the connection inputs are not supported to
-  /// be used together - see ``CameraDeviceFactory/supportedMultiCamDeviceCombinations``
+  /// be used together - see ``VisionCamera/supportedMultiCamDeviceCombinations``
   ///
   /// ```swift
   /// let controllers = try await session.configure(connections: [
@@ -123,7 +134,7 @@ public final class CameraSession {
         guard self.session is AVCaptureMultiCamSession else {
           throw CameraError(
             message: "Cannot add multiple inputs (\(connections)) to a single-cam CameraSession! "
-              + "Create your CameraSession as a multi-cam session (`enableMultiCamSupport = true`) to add multiple camera inputs.")
+              + "Create your CameraSession as a multi-cam session (`CameraSession(enableMultiCam: true)`) to add multiple camera inputs.")
         }
       }
 

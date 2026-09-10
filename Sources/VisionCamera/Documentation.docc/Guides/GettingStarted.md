@@ -52,7 +52,7 @@ Add `NSCameraUsageDescription`, and optionally `NSMicrophoneUsageDescription`, t
 
 ## Render a Camera preview
 
-Create a ``CameraSession``, connect a ``CameraPreviewOutput``, and display it in a ``PreviewView``:
+Request permission with ``VisionCamera/requestCameraPermission()``. Create a ``CameraSession``, connect a ``PreviewOutput``, and display it in a ``PreviewView``:
 
 ```swift
 import UIKit
@@ -60,13 +60,12 @@ import VisionCamera
 
 @MainActor
 func startCamera(in container: UIView) async throws -> CameraSession {
-	let camera = VisionCamera()
-	guard try await camera.requestCameraPermission() else {
+	guard try await VisionCamera.requestCameraPermission() else {
 		throw CameraError(message: "Camera access was not granted.")
 	}
 
-	let session = try camera.createCameraSession()
-	let output = camera.createPreviewOutput()
+	let session = CameraSession()
+	let output = PreviewOutput()
 	let preview = PreviewView(previewOutput: output)
 	preview.frame = container.bounds
 	preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -88,7 +87,7 @@ Retain the returned session for as long as your Camera screen needs it. Stop the
 
 ## Add outputs
 
-The Camera can stream to a variety of outputs. To capture Photos, add a ``CameraPhotoOutput`` to the same connection. To record Videos, add a ``CameraVideoOutput``.
+The Camera can stream to a variety of outputs. To capture Photos, add a ``PhotoOutput`` to the same connection. To record Videos, add a ``MovieFileVideoOutput`` or ``VideoFrameOutput``.
 
 See <doc:CameraOutputs> to learn more about outputs.
 

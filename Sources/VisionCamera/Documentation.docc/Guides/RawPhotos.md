@@ -8,15 +8,14 @@ RAW capture preserves sensor image data for later processing. RAW photos are cap
 
 ## Prepare the pipeline for RAW
 
-Configure your ``CameraPhotoOutput`` with a `.dng` container format:
+Configure your ``PhotoOutput`` with a `.dng` container format:
 
 ```swift
 import VisionCamera
 
-func prepareRAWCamera(device: CameraDevice) async throws -> (CameraSession, CameraPhotoOutput) {
-	let camera = VisionCamera()
-	let session = try camera.createCameraSession()
-	let output = camera.createPhotoOutput(options: .init(
+func prepareRAWCamera(device: CameraDevice) async throws -> (CameraSession, PhotoOutput) {
+	let session = CameraSession()
+	let output = PhotoOutput(options: .init(
 		containerFormat: .dng,
 		previewImageTargetSize: .init(width: 320, height: 320)
 	))
@@ -40,7 +39,7 @@ Capture using the same method as a processed photo:
 import Foundation
 import VisionCamera
 
-func captureRAW(output: CameraPhotoOutput) async throws -> URL {
+func captureRAW(output: PhotoOutput) async throws -> URL {
 	let photo = try await output.capturePhoto()
 	let path = try await photo.saveToTemporaryFileAsync()
 	return URL(fileURLWithPath: path)

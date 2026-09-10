@@ -1,9 +1,9 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-/// Output settings for a ``CameraVideoOutput``.
+/// Output settings for a ``VideoOutput``.
 ///
-/// See ``CameraVideoOutput``
-/// See ``CameraVideoOutput/setOutputSettings(settings:)``
+/// See ``VideoOutput``
+/// See ``VideoOutput/setOutputSettings(settings:)``
 public struct VideoOutputSettings: Equatable, Sendable {
   /// Configures the ``VideoCodec`` to use for recording a video.
   ///

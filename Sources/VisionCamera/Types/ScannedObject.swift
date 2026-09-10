@@ -12,7 +12,7 @@ public protocol ScannedObject: AnyObject {
   var type: ScannedObjectType { get }
   /// The bounding box coordinates of this ``ScannedObject``.
   ///
-  /// Objects delivered by ``CameraObjectOutput`` use camera-space coordinates (`0.0` ... `1.0`). Objects
+  /// Objects delivered by ``ObjectOutput`` use camera-space coordinates (`0.0` ... `1.0`). Objects
   /// converted by ``PreviewView`` use the preview view's coordinate system.
   var boundingBox: BoundingBox { get }
 }

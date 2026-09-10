@@ -25,7 +25,7 @@ final class ModelTests: XCTestCase {
   }
 
   func testDepthDefaultsPreserveFilteringAndDeliveryPolicy() {
-    let options = DepthFrameOutputOptions()
+    let options = DepthOutputOptions()
     XCTAssertEqual(options.targetResolution, Size(width: 480, height: 854))
     XCTAssertTrue(options.enableFiltering)
     XCTAssertTrue(options.dropFramesWhileBusy)
@@ -37,8 +37,6 @@ final class ModelTests: XCTestCase {
     let options = VideoOutputOptions()
     XCTAssertEqual(options.targetResolution, Size(width: 1080, height: 1920))
     XCTAssertNil(options.enableAudio)
-    XCTAssertNil(options.enablePersistentRecorder)
-    XCTAssertNil(options.enableHigherResolutionCodecs)
     XCTAssertNil(options.targetBitRate)
     XCTAssertNil(options.fileType)
     XCTAssertNil(VideoOutputSettings().codec)

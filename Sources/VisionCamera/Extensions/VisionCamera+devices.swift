@@ -1,5 +1,5 @@
 ///
-/// CameraDeviceFactory.swift
+/// VisionCamera+devices.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,29 +7,24 @@
 import AVFoundation
 import Foundation
 
-/// The ``CameraDeviceFactory`` allows getting ``CameraDevice``s, listening to device changes, and querying preferred Cameras.
-public final class CameraDeviceFactory {
-  /// Creates a device discovery session for the available Camera device types.
-  public init() {
-    self.discoverySession = AVCaptureDevice.DiscoverySession(
-      deviceTypes: AVCaptureDevice.DeviceType.all,
-      mediaType: nil,
-      position: .unspecified)
-  }
+extension VisionCamera {
+  /// The shared AVFoundation discovery session, created when first accessed.
+  public static let discoverySession = AVCaptureDevice.DiscoverySession(
+    deviceTypes: AVCaptureDevice.DeviceType.all,
+    mediaType: nil,
+    position: .unspecified)
 
-  /// The underlying AVFoundation discovery session.
-  public let discoverySession: AVCaptureDevice.DiscoverySession
   /// Get a list of all ``CameraDevice``s on this platform.
   ///
   /// This list may change as Cameras get plugged in/out, for example external Cameras via USB/UVC, or become available/unavailable, for example Continuity Cameras.
-  public var cameraDevices: [CameraDevice] {
+  public static var cameraDevices: [CameraDevice] {
     return discoverySession.devices.map { CameraDevice(device: $0) }
   }
 
   /// A list of all ``CameraDevice`` combinations that are supported
   /// in Multi-Cam ``CameraSession``s.
   ///
-  /// This list always contains a subset of ``CameraDeviceFactory/cameraDevices``, often
+  /// This list always contains a subset of ``VisionCamera/cameraDevices``, often
   /// less.
   ///
   /// Each inner array contains one or more logical ``CameraDevice``s.
@@ -62,22 +57,20 @@ public final class CameraDeviceFactory {
   /// See ``VisionCamera/supportsMultiCamSessions``
   ///
   /// ```swift
-  /// let camera = VisionCamera()
-  /// let factory = camera.createDeviceFactory()
-  /// if camera.supportsMultiCamSessions,
-  ///    let devices = factory.supportedMultiCamDeviceCombinations.first {
+  /// if VisionCamera.supportsMultiCamSessions,
+  ///    let devices = VisionCamera.supportedMultiCamDeviceCombinations.first {
   ///   let connections = devices.map { device in
   ///     CameraSessionConnection(
   ///       input: .device(device),
-  ///       outputs: [CameraOutputConfiguration(output: camera.createPreviewOutput())]
+  ///       outputs: [CameraOutputConfiguration(output: PreviewOutput())]
   ///     )
   ///   }
-  ///   let session = try camera.createCameraSession(enableMultiCam: true)
+  ///   let session = try CameraSession(enableMultiCam: true)
   ///   let controllers = try await session.configure(connections: connections)
   ///   await session.start()
   /// }
   /// ```
-  public var supportedMultiCamDeviceCombinations: [[CameraDevice]] {
+  public static var supportedMultiCamDeviceCombinations: [[CameraDevice]] {
     return discoverySession.supportedMultiCamDeviceSets.map { devices in
       return devices.map { CameraDevice(device: $0) }
     }
@@ -87,7 +80,7 @@ public final class CameraDeviceFactory {
   /// Setting a device here will persist the preference between apps.
   ///
   /// Requires iOS 17 or later. On earlier versions, reading returns `nil` and setting has no effect.
-  public var userPreferredCamera: (CameraDevice)? {
+  public static var userPreferredCamera: CameraDevice? {
     get {
       guard #available(iOS 17.0, *) else {
         return nil
@@ -106,12 +99,12 @@ public final class CameraDeviceFactory {
   }
 
   /// Add a listener to be called whenever the
-  /// available ``CameraDeviceFactory/cameraDevices`` change,
+  /// available ``VisionCamera/cameraDevices`` change,
   /// for example when an external USB Camera
   /// gets plugged in- or out- of the Device.
   ///
   /// The callback runs on AVFoundation's observation delivery thread. Call ``ListenerSubscription/remove`` to stop receiving updates; move UIKit work to the main actor.
-  public func addOnCameraDevicesChangedListener(listener: @escaping ([CameraDevice]) -> Void)
+  public static func addOnCameraDevicesChangedListener(listener: @escaping ([CameraDevice]) -> Void)
     -> ListenerSubscription
   {
     // 1. Attach a listener using KVO
@@ -133,7 +126,7 @@ public final class CameraDeviceFactory {
   ///
   /// If no device with the given `id` is found,
   /// this method returns `nil`.
-  public func getCameraForId(id: String) -> (CameraDevice)? {
+  public static func getCameraForId(id: String) -> CameraDevice? {
     guard let device = AVCaptureDevice(uniqueID: id) else {
       return nil
     }
@@ -142,7 +135,7 @@ public final class CameraDeviceFactory {
 
   /// Get the platform's default ``CameraDevice``
   /// at the given ``TargetCameraPosition``.
-  public func getDefaultCamera(position: TargetCameraPosition) -> (CameraDevice)? {
+  public static func getDefaultCamera(position: TargetCameraPosition) -> CameraDevice? {
     guard let device = AVCaptureDevice.default(for: position) else {
       return nil
     }

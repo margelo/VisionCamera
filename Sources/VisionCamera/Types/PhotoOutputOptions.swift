@@ -1,8 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-/// Configuration options for a ``CameraPhotoOutput``.
+/// Configuration options for a ``PhotoOutput``.
 ///
-/// See ``CameraPhotoOutput``
+/// See ``PhotoOutput``
 public struct PhotoOutputOptions: Equatable, Sendable {
   /// The target Photo Resolution to use.
   ///

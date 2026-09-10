@@ -2,19 +2,18 @@
 
 /// A Video output allows recording videos, possibly with audio, to a file.
 ///
-/// Create an output with ``VisionCamera/createVideoOutput(options:)``, attach it to a session, and create a
-/// ``Recorder`` for each recording.
+/// Create a ``MovieFileVideoOutput`` or ``VideoFrameOutput``, attach it to a session,
+/// and prepare a ``Recorder`` for each recording with ``makeRecorder(settings:)``.
 ///
 /// ```swift
-/// let camera = VisionCamera()
-/// let videoOutput = camera.createVideoOutput(
+/// let videoOutput = MovieFileVideoOutput(
 ///   options: VideoOutputOptions(enableAudio: true))
 /// ```
-public protocol CameraVideoOutput: CameraOutput {
+public protocol VideoOutput: CameraOutput {
   /// Gets all supported ``VideoCodec`` values this
-  /// ``CameraVideoOutput`` currently can record in.
+  /// ``VideoOutput`` currently can record in.
   ///
-  /// This method must be called after the ``CameraVideoOutput``
+  /// This method must be called after the ``VideoOutput``
   /// has been attached to a Camera Session.
   ///
   /// - Throws: This method throws if you call it before this output
@@ -23,7 +22,7 @@ public protocol CameraVideoOutput: CameraOutput {
   /// Set the output settings for this video output.
   /// This method must be called after the output has been
   /// attached to the Camera Session, and before
-  /// ``CameraVideoOutput/createRecorder(settings:)``.
+  /// ``VideoOutput/makeRecorder(settings:)``.
   ///
   /// - Parameter settings: The output settings to apply to subsequent recordings.
   /// - Throws: An error if the requested settings cannot be applied to the connected output.
@@ -41,11 +40,11 @@ public protocol CameraVideoOutput: CameraOutput {
   /// you must create a new ``Recorder``.
   ///
   /// Connect the output to a session before starting the Recorder.
-  /// ``CameraVideoFrameOutput`` requires a connection when creating the Recorder;
-  /// ``MovieFileCameraVideoOutput`` checks the connection when recording starts.
+  /// ``VideoFrameOutput`` requires a connection when creating the Recorder;
+  /// ``MovieFileVideoOutput`` checks the connection when recording starts.
   ///
   /// - Parameter settings: The destination, location metadata, and optional recording limits.
   /// - Returns: A prepared Recorder that can be started once.
   /// - Throws: An error if the recording pipeline cannot be prepared.
-  func createRecorder(settings: RecorderSettings) async throws -> any Recorder
+  func makeRecorder(settings: RecorderSettings) async throws -> any Recorder
 }

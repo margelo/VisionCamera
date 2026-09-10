@@ -1,8 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-/// Configuration options for a ``CameraVideoOutput``.
+/// Configuration options for a ``VideoOutput``.
 ///
-/// See ``CameraVideoOutput``
+/// See ``VideoOutput``
 public struct VideoOutputOptions: Equatable, Sendable {
   /// The target Video Resolution to use.
   ///
@@ -30,20 +30,8 @@ public struct VideoOutputOptions: Equatable, Sendable {
   ///
   /// Defaults to false.
   public var enableAudio: Bool?
-  /// If set to `true`, the Video output can continue recording while switching Cameras.
-  ///
-  /// This uses a custom `AVCaptureVideoDataOutput` and `AVAssetWriter` pipeline instead of
-  /// `AVCaptureMovieFileOutput`. It may require additional processing power, so it is disabled by default.
-  ///
-  /// When `nil` or `false`, the factory creates a ``MovieFileCameraVideoOutput``. When `true`, it creates a
-  /// ``CameraVideoFrameOutput``.
-  public var enablePersistentRecorder: Bool?
-  /// A reserved codec-capability option. This iOS implementation does not use this value.
-  ///
-  /// Select an available recording codec through ``CameraVideoOutput/setOutputSettings(settings:)``.
-  public var enableHigherResolutionCodecs: Bool?
   /// Specifies the target bit-rate for the
-  /// ``CameraVideoOutput``, in bits per second.
+  /// ``VideoOutput``, in bits per second.
   ///
   /// The encoder may or may not encode with exactly this bit-rate,
   /// depending on system pressure, moving pixels, and file size
@@ -61,22 +49,16 @@ public struct VideoOutputOptions: Equatable, Sendable {
   /// - Parameters:
   ///   - targetResolution: The target Video Resolution to use.
   ///   - enableAudio: Whether to enable, or disable audio in video recordings. By default, no audio is recorded.
-  ///   - enablePersistentRecorder: If set to `true`, the Video output can continue recording while switching Cameras.
-  ///   - enableHigherResolutionCodecs: A reserved codec-capability option. This iOS implementation does not use this value.
-  ///   - targetBitRate: Specifies the target bit-rate for the ``CameraVideoOutput``, in bits per second.
+  ///   - targetBitRate: Specifies the target bit-rate for the ``VideoOutput``, in bits per second.
   ///   - fileType: The container file type for recordings produced by this output.
   public init(
     targetResolution: Size = Size(width: 1080, height: 1920),
     enableAudio: Bool? = nil,
-    enablePersistentRecorder: Bool? = nil,
-    enableHigherResolutionCodecs: Bool? = nil,
     targetBitRate: Double? = nil,
     fileType: RecorderFileType? = nil
   ) {
     self.targetResolution = targetResolution
     self.enableAudio = enableAudio
-    self.enablePersistentRecorder = enablePersistentRecorder
-    self.enableHigherResolutionCodecs = enableHigherResolutionCodecs
     self.targetBitRate = targetBitRate
     self.fileType = fileType
   }

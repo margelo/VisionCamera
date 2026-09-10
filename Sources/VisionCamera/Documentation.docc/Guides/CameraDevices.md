@@ -10,7 +10,7 @@ In most cases, the default back Camera is the most fitting:
 import VisionCamera
 
 func defaultBackCamera() -> CameraDevice? {
-	VisionCamera().createDeviceFactory().getDefaultCamera(position: .back)
+	VisionCamera.getDefaultCamera(position: .back)
 }
 ```
 
@@ -40,8 +40,8 @@ For simple Camera use-cases, it's often a good idea to select a single physical 
 import AVFoundation
 import VisionCamera
 
-func tripleCamera(factory: CameraDeviceFactory) -> CameraDevice? {
-	factory.cameraDevices.first {
+func tripleCamera() -> CameraDevice? {
+	VisionCamera.cameraDevices.first {
 		$0.device.position == .back && $0.device.deviceType == .builtInTripleCamera
 	}
 }
@@ -62,8 +62,8 @@ VisionCamera can use external Cameras that AVFoundation exposes, including suppo
 ```swift
 import VisionCamera
 
-func observeDevices(factory: CameraDeviceFactory) -> ListenerSubscription {
-	factory.addOnCameraDevicesChangedListener { devices in
+func observeDevices() -> ListenerSubscription {
+	VisionCamera.addOnCameraDevicesChangedListener { devices in
 		for device in devices {
 			print(device.id, device.localizedName)
 		}
@@ -71,7 +71,7 @@ func observeDevices(factory: CameraDeviceFactory) -> ListenerSubscription {
 }
 ```
 
-When a Camera is plugged in or unplugged, query the factory again and avoid using a removed device. Keep the factory and subscription alive while listening.
+When a Camera is plugged in or unplugged, query ``VisionCamera/cameraDevices`` again and avoid using a removed device. Retain the subscription while listening and call `remove()` when finished.
 
 ## Use the Camera device
 

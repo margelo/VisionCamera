@@ -30,14 +30,14 @@ public final class CameraSessionConfig {
 
   /// Gets the currently selected stabilization mode for video streams, or `nil` if no specific mode has been configured.
   ///
-  /// This applies to outputs such as ``CameraVideoOutput``.
+  /// This applies to outputs such as ``VideoOutput``.
   public var selectedVideoStabilizationMode: TargetStabilizationMode? {
     return enabledConstraints.selectedVideoStabilizationMode
   }
 
   /// Gets the currently selected stabilization mode for preview streams, or `nil` if no specific mode has been configured.
   ///
-  /// This applies to ``CameraPreviewOutput``.
+  /// This applies to ``PreviewOutput``.
   public var selectedPreviewStabilizationMode: TargetStabilizationMode? {
     return enabledConstraints.selectedPreviewStabilizationMode
   }
@@ -59,7 +59,7 @@ public final class CameraSessionConfig {
   /// Gets the pixel format this configuration is natively streaming in.
   ///
   /// If this is the same ``PixelFormat`` as the requested pixel format of your streaming output, such as
-  /// a ``CameraFrameOutput``, no conversion has to take place to stream frames, which provides better performance and lower latency.
+  /// a ``FrameOutput``, no conversion has to take place to stream frames, which provides better performance and lower latency.
   ///
   /// If these pixel formats differ, pixel format conversions take place, causing higher latency which ultimately
   /// causes lower throughput and higher battery usage.

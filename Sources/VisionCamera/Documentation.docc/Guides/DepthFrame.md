@@ -2,13 +2,13 @@
 
 Interpret, convert, and access depth or disparity data.
 
-A ``Depth`` frame is an in-memory buffer that allows GPU and CPU access to individual depth points. It is typically streamed by a ``CameraDepthFrameOutput``, or attached to a ``Photo`` when depth delivery is enabled for that capture.
+A ``Depth`` frame is an in-memory buffer that allows GPU and CPU access to individual depth points. It is typically streamed by a ``DepthOutput``, or attached to a ``Photo`` when depth delivery is enabled for that capture.
 
-See <doc:DepthOutput> for streaming depth frames.
+See <doc:DepthOutputGuide> for streaming depth frames.
 
 ## Orientation and mirroring
 
-`orientation` and `isMirrored` describe the transform needed to present the depth frame. By default, these values are metadata. Set `DepthFrameOutputOptions.enablePhysicalBufferRotation` when you need physically transformed buffers instead.
+`orientation` and `isMirrored` describe the transform needed to present the depth frame. By default, these values are metadata. Set `DepthOutputOptions.enablePhysicalBufferRotation` when you need physically transformed buffers instead.
 
 The same orientation rules apply to video frames and depth frames. See <doc:Orientation>.
 

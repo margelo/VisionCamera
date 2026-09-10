@@ -6,7 +6,7 @@ import UIKit
 
 /// Represents a captured ``Photo`` in memory.
 ///
-/// Photos can be captured with a ``CameraPhotoOutput``, and can be saved to a file using ``Photo/saveToTemporaryFileAsync()``.
+/// Photos can be captured with a ``PhotoOutput``, and can be saved to a file using ``Photo/saveToTemporaryFileAsync()``.
 ///
 /// To display the photo to the user, use ``Photo/toImageAsync()`` and display the returned `UIImage` in a `UIImageView`.
 ///

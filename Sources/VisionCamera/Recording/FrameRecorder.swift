@@ -10,7 +10,7 @@ import Foundation
 
 /// Records Camera frames with `AVAssetWriter`, supporting recordings that continue across Camera switching.
 ///
-/// A single recorder instance records to a single video file. To record multiple videos, create multiple recorder instances through ``CameraVideoOutput/createRecorder(settings:)``.
+/// A single recorder instance records to a single video file. To record multiple videos, create multiple recorder instances through ``VideoOutput/makeRecorder(settings:)``.
 public final class FrameRecorder: Recorder {
   private let orientation: CameraOrientation
   private let masterClock: CMClock

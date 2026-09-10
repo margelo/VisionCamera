@@ -4,6 +4,7 @@
 
 ### Creating and configuring a session
 
+- ``init()``
 - ``init(enableMultiCam:)``
 - ``configure(connections:config:)``
 

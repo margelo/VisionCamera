@@ -12,21 +12,20 @@ Check `supportsMultiCamSessions` before creating a multi-camera session:
 import VisionCamera
 
 func makeMultiCameraSession() throws -> CameraSession? {
-	let camera = VisionCamera()
-	guard camera.supportsMultiCamSessions else { return nil }
-	return try camera.createCameraSession(enableMultiCam: true)
+	guard VisionCamera.supportsMultiCamSessions else { return nil }
+	return try CameraSession(enableMultiCam: true)
 }
 ```
 
 ## Find compatible devices
 
-Due to hardware constraints, not every Camera can be paired with every other Camera. ``CameraDeviceFactory`` exposes supported device combinations upfront:
+Due to hardware constraints, not every Camera can be paired with every other Camera. ``VisionCamera/supportedMultiCamDeviceCombinations`` exposes supported device combinations upfront:
 
 ```swift
 import VisionCamera
 
-func findCameraPair(factory: CameraDeviceFactory) -> [CameraDevice]? {
-	factory.supportedMultiCamDeviceCombinations.first { $0.count >= 2 }
+func findCameraPair() -> [CameraDevice]? {
+	VisionCamera.supportedMultiCamDeviceCombinations.first { $0.count >= 2 }
 }
 ```
 
@@ -45,9 +44,8 @@ func configurePair(
 	first: CameraDevice,
 	second: CameraDevice
 ) async throws -> (PreviewView, PreviewView) {
-	let camera = VisionCamera()
-	let firstOutput = camera.createPreviewOutput()
-	let secondOutput = camera.createPreviewOutput()
+	let firstOutput = PreviewOutput()
+	let secondOutput = PreviewOutput()
 	_ = try await session.configure(connections: [
 		.init(input: .device(first), outputs: [.init(output: firstOutput)]),
 		.init(input: .device(second), outputs: [.init(output: secondOutput)])

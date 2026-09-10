@@ -2,7 +2,7 @@
 
 Stream camera frames to a Swift callback in real time.
 
-The ``CameraFrameOutput`` streams ``Frame`` objects in real time, making their native buffers available to your processing code.
+The ``FrameOutput`` streams ``Frame`` objects in real time, making their native buffers available to your processing code.
 
 ## Create a frame output
 
@@ -11,10 +11,9 @@ Create an output, register its callback, and connect it to a session:
 ```swift
 import VisionCamera
 
-func prepareFrameCamera() async throws -> (CameraSession, CameraFrameOutput) {
-	let camera = VisionCamera()
-	let session = try camera.createCameraSession()
-	let output = camera.createFrameOutput(options: .init(pixelFormat: .yuv))
+func prepareFrameCamera() async throws -> (CameraSession, FrameOutput) {
+	let session = CameraSession()
+	let output = FrameOutput(options: .init(pixelFormat: .yuv))
 	await output.setOnFrameCallback { frame in
 		print("Frame:", frame.width, frame.height, frame.timestamp)
 	}

@@ -25,7 +25,7 @@ import CoreLocation
 import VisionCamera
 
 func captureWithLocation(
-	output: CameraPhotoOutput,
+	output: PhotoOutput,
 	location: CLLocation
 ) async throws -> Photo {
 	return try await output.capturePhoto(settings: .init(location: location))
@@ -41,13 +41,13 @@ import CoreLocation
 import VisionCamera
 
 func recorderWithLocation(
-	output: any CameraVideoOutput,
+	output: any VideoOutput,
 	location: CLLocation
 ) async throws -> any Recorder {
-	return try await output.createRecorder(settings: .init(location: location))
+	return try await output.makeRecorder(settings: .init(location: location))
 }
 ```
 
-See <doc:PhotoOutput> and <doc:RecorderGuide> for capture and recording.
+See <doc:PhotoOutputGuide> and <doc:RecorderGuide> for capture and recording.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: location. -->

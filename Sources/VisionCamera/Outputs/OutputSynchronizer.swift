@@ -1,5 +1,5 @@
 ///
-/// CameraDepthFrameOutput.swift
+/// DepthOutput.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,18 +7,18 @@
 import AVFoundation
 import Foundation
 
-/// A ``CameraOutputSynchronizer`` synchronizes 2 or more
+/// A ``OutputSynchronizer`` synchronizes 2 or more
 /// ``CameraOutput``s to align their timestamps.
 ///
 /// The most common use-case is to synchronize a
-/// ``CameraFrameOutput`` and a ``CameraDepthFrameOutput``
+/// ``FrameOutput`` and a ``DepthOutput``
 /// to ensure the delivered ``Frame`` and ``Depth``
 /// are synchronized.
 ///
-/// When an output is connected to the ``CameraOutputSynchronizer``
+/// When an output is connected to the ``OutputSynchronizer``
 /// you should no longer use its own frame callback, but instead
-/// use the ``CameraOutputSynchronizer/setOnFramesCallback(onFrames:)`` provided here.
-public final class CameraOutputSynchronizer {
+/// use the ``OutputSynchronizer/setOnFramesCallback(onFrames:)`` provided here.
+public final class OutputSynchronizer {
   private let delegate: SynchronizedOutputDelegate
   private let queue: DispatchQueue
   private let synchronizer: AVCaptureDataOutputSynchronizer
@@ -47,13 +47,13 @@ public final class CameraOutputSynchronizer {
     }
     guard avOutputs.count >= 2 else {
       throw CameraError(
-        message: "Cannot create CameraOutputSynchronizer with less than 2 outputs!")
+        message: "Cannot create OutputSynchronizer with less than 2 outputs!")
     }
     let allConnected = avOutputs.allSatisfy { !$0.connections.isEmpty }
     guard allConnected else {
       throw CameraError(
         message:
-          "Cannot create CameraOutputSynchronizer when not all of the given outputs are connected to the Camera!"
+          "Cannot create OutputSynchronizer when not all of the given outputs are connected to the Camera!"
       )
     }
     self.synchronizer = AVCaptureDataOutputSynchronizer(dataOutputs: avOutputs)
