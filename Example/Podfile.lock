@@ -1,0 +1,16 @@
+PODS:
+  - VisionCamera (0.1.0)
+
+DEPENDENCIES:
+  - VisionCamera (from `..`)
+
+EXTERNAL SOURCES:
+  VisionCamera:
+    :path: ".."
+
+SPEC CHECKSUMS:
+  VisionCamera: d14a9409f7b18eae228452801033c919288dae4e
+
+PODFILE CHECKSUM: 82089221c7853fc03d4f401acf45dca76a256458
+
+COCOAPODS: 1.16.2

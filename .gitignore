@@ -1,0 +1,11 @@
+# Xcode and CocoaPods build products
+.DS_Store
+DerivedData/
+build/
+Pods/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.xcresult/
+.bundle/
+vendor/bundle/

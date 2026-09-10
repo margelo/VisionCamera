@@ -1,0 +1,32 @@
+name: Swift and CocoaPods
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.9'
+          bundler-cache: true
+      - name: Check Swift formatting
+        run: xcrun swift-format lint --strict --recursive Sources Tests Example/Sources
+      - name: Lint pod and run tests
+        run: bundle exec pod lib lint VisionCamera.podspec --platforms=ios --verbose
+      - name: Install example dependencies
+        working-directory: Example
+        run: bundle exec pod install
+      - name: Build simulator example
+        run: xcodebuild -workspace Example/VisionCameraExample.xcworkspace -scheme VisionCameraExample -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build
+      - name: Build device example
+        run: xcodebuild -workspace Example/VisionCameraExample.xcworkspace -scheme VisionCameraExample -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO build
