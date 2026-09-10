@@ -19,7 +19,7 @@ func focusAtTap(
 	controller: CameraController
 ) async throws {
 	let point = try preview.meteringPoint(at: .init(x: x, y: y))
-	try await controller.focusTo(point: point, options: .init())
+	try await controller.focus(at: point, options: .init())
 }
 ```
 
@@ -29,8 +29,8 @@ You can also create a metering point directly from normalized Camera coordinates
 import VisionCamera
 
 func focusAtCenter(controller: CameraController) async throws {
-	let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
-	try await controller.focusTo(point: point, options: .init())
+	let point = MeteringPoint(location: .init(x: 0.5, y: 0.5))
+	try await controller.focus(at: point, options: .init())
 }
 ```
 
@@ -51,7 +51,7 @@ import VisionCamera
 
 func meterExposure(controller: CameraController, point: MeteringPoint) async throws {
 	guard controller.device.supportsExposureMetering else { return }
-	try await controller.focusTo(point: point, options: .init(modes: [.ae]))
+	try await controller.focus(at: point, options: .init(modes: [.ae]))
 }
 ```
 
@@ -77,12 +77,12 @@ Use `.locked` to keep the metered values after the initial adjustment:
 import VisionCamera
 
 func lockOnSubject(controller: CameraController, point: MeteringPoint) async throws {
-	try await controller.focusTo(
-		point: point,
+	try await controller.focus(
+		at: point,
 		options: .init(
 			responsiveness: .steady,
 			adaptiveness: .locked,
-			autoResetAfter: .never
+			reset: .never
 		)
 	)
 }
@@ -90,7 +90,7 @@ func lockOnSubject(controller: CameraController, point: MeteringPoint) async thr
 
 ### Auto reset
 
-Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. Leaving `autoResetAfter` as `nil` uses the default 5 seconds.
+Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. The default is `.after(5)`.
 
 ## Reset focus
 

@@ -14,7 +14,7 @@ import VisionCamera
 func prepareVideoCamera() async throws -> (CameraSession, any VideoOutput) {
 	let session = CameraSession()
 	let output = MovieFileVideoOutput()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -26,13 +26,13 @@ Request Camera permission first, and retain the returned session and output. See
 
 ### Enable audio
 
-By default, audio is disabled. To record audio from the microphone, set `enableAudio` to `true`:
+By default, audio is disabled. To record audio from the microphone, set `isAudioEnabled` to `true`:
 
 ```swift
 import VisionCamera
 
 func makeVideoOutputWithAudio() -> any VideoOutput {
-	return MovieFileVideoOutput(options: .init(enableAudio: true))
+	return MovieFileVideoOutput(options: .init(isAudioEnabled: true))
 }
 ```
 
@@ -46,11 +46,11 @@ With ``MovieFileVideoOutput``, an active recording stops when the input Camera d
 import VisionCamera
 
 func makePersistentVideoOutput() -> any VideoOutput {
-	return VideoFrameOutput(options: .init(enableAudio: true))
+	return VideoFrameOutput(options: .init(isAudioEnabled: true))
 }
 ```
 
-Retain and reconnect the same output when switching devices. ``VideoFrameOutput`` uses an `AVCaptureVideoDataOutput` and `AVAssetWriter` pipeline, which introduces additional processing. Use ``MovieFileVideoOutput`` when your app does not need recording across device changes. Both implement ``VideoOutput``.
+Retain and reconnect the same output when switching devices. ``VideoFrameOutput`` uses an `AVCaptureVideoDataOutput` and `AVAssetWriter` pipeline, which introduces additional processing. Use ``MovieFileVideoOutput`` when your app does not need recording across device changes. Both implement ``VideoOutput``. Their `makeRecorder()` methods return the concrete ``VideoRecorder`` and ``FrameRecorder`` types. Use `any VideoOutput` when the backend is chosen at runtime.
 
 ### File container format
 

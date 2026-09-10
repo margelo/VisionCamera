@@ -15,8 +15,8 @@ import VisionCamera
 
 func preferFrameRate(video: any VideoOutput) -> [Constraint] {
 	[
-		.fps(.init(fps: 60)),
-		.resolutionBias(.init(resolutionBias: video))
+		.frameRate(60),
+		.resolution(video)
 	]
 }
 ```
@@ -40,7 +40,7 @@ func makeConnection(output: any CameraOutput) -> CameraSessionConnection {
 	CameraSessionConnection(
 		input: .position(.back),
 		outputs: [.init(output: output)],
-		constraints: [.fps(.init(fps: 60))],
+		constraints: [.frameRate(60)],
 		onSessionConfigSelected: { config in
 			print(config.selectedFPS as Any, config.nativePixelFormat, config.isBinned)
 		})
@@ -57,9 +57,9 @@ The resolver does not automatically add a resolution-bias constraint for every o
 import VisionCamera
 
 func constraintsForOutputs(_ outputs: [any CameraOutput]) -> [Constraint] {
-	let explicitConstraints: [Constraint] = [.fps(.init(fps: 30))]
+	let explicitConstraints: [Constraint] = [.frameRate(30)]
 	let resolutionPreferences = outputs.map { output in
-		Constraint.resolutionBias(.init(resolutionBias: output))
+		Constraint.resolution(output)
 	}
 	return explicitConstraints + resolutionPreferences
 }
@@ -73,13 +73,10 @@ The explicit constraints keep higher priority. Order the output preferences acco
 import VisionCamera
 
 func resolveVideoConfiguration(device: CameraDevice, video: any VideoOutput) async throws -> CameraSessionConfig {
-	try await VisionCamera.resolveConstraints(
-		device: device,
-		outputConfigurations: [.init(output: video)],
-		constraints: [
-			.fps(.init(fps: 30)),
-			.resolutionBias(.init(resolutionBias: video))
-		])
+	try await VisionCamera.resolve(
+		[.frameRate(30), .resolution(video)],
+		for: device,
+		outputs: [.init(output: video)])
 }
 ```
 
@@ -92,14 +89,14 @@ import VisionCamera
 
 func preferPhotos(photo: PhotoOutput, video: any VideoOutput) -> [Constraint] {
 	[
-		.resolutionBias(.init(resolutionBias: photo)),
-		.resolutionBias(.init(resolutionBias: video)),
-		.fps(.init(fps: 30))
+		.resolution(photo),
+		.resolution(video),
+		.frameRate(30)
 	]
 }
 ```
 
-To stream frames at a lower resolution, set the frame output's target resolution to a lower ``Size`` and give it a resolution-bias constraint. Closest-match negotiation goes both ways.
+To stream frames at a lower resolution, set the frame output's target resolution to a lower `CGSize` and give it a resolution-bias constraint. Closest-match negotiation goes both ways.
 
 For dynamic range and stabilization, see <doc:VideoHDR> and <doc:VideoStabilization>.
 
@@ -107,8 +104,8 @@ For dynamic range and stabilization, see <doc:VideoHDR> and <doc:VideoStabilizat
 
 Binned formats combine multiple neighboring sensor pixels into one larger effective pixel. This usually improves low-light sensitivity and reduces noise, but can trade away fine detail compared to a full-resolution non-binned readout. Binned formats also use less bandwidth.
 
-Use `.binned(.init(binned: true))` to prefer a binned format, or `false` to prefer a non-binned format. Omitting the constraint means no preference.
+Use `.binned(true)` to prefer a binned format, or `false` to prefer a non-binned format. Omitting the constraint means no preference.
 
-> Note: ``PhotoHDRConstraint`` is retained in the type model, but it does not enable or disable Photo HDR on iOS. See <doc:PhotoHDR>.
+> Note: ``Constraint/photoHDR(_:)`` is retained in the type model, but it does not enable or disable Photo HDR on iOS. See <doc:PhotoHDR>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: constraints. -->

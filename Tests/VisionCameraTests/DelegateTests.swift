@@ -108,7 +108,9 @@ final class DelegateTests: XCTestCase {
     delegate?.finishCapture(error: nil)
     await drain(queue)
     XCTAssertEqual(errors.count, 1)
-    XCTAssertTrue(errors.first is CameraError)
+    guard case .missingPhoto? = errors.first as? CaptureError else {
+      return XCTFail("Expected a missing-photo capture error")
+    }
     XCTAssertEqual(finishedCount, 1)
     delegate = nil
     XCTAssertTrue(isDelegateReleased())

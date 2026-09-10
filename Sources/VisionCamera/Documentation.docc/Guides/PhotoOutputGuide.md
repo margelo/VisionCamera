@@ -14,7 +14,7 @@ import VisionCamera
 func preparePhotoCamera() async throws -> (CameraSession, PhotoOutput) {
 	let session = CameraSession()
 	let output = PhotoOutput()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -48,11 +48,11 @@ import VisionCamera
 
 func takePhotoFile(output: PhotoOutput) async throws -> URL {
 	let photo = try await output.capturePhotoToFile()
-	return URL(fileURLWithPath: photo.filePath)
+	return photo.fileURL
 }
 ```
 
-`filePath` is a plain filesystem path. Use `URL(fileURLWithPath:)` when an API expects a URL.
+``PhotoFile/fileURL`` is a native `URL`, ready to pass to other file and image APIs.
 
 See ``CapturePhotoSettings`` for capture options and <doc:PhotoCallbacks> for capture events.
 

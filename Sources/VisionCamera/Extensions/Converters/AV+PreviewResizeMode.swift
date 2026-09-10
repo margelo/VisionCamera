@@ -10,9 +10,9 @@ import AVFoundation
 extension PreviewResizeMode {
   func toAVLayerVideoGravity() -> AVLayerVideoGravity {
     switch self {
-    case .cover:
+    case .aspectFill:
       return .resizeAspectFill
-    case .contain:
+    case .aspectFit:
       return .resizeAspect
     }
   }

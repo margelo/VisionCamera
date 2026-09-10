@@ -15,13 +15,13 @@ func inspect(objects: [any ScannedObject]) {
 	for object in objects {
 		switch object {
 		case let code as ScannedCode:
-			print("Code:", code.value ?? "", code.cornerPoints)
+			print("Code:", code.value ?? "", code.corners)
 		case let face as ScannedFace:
-			print("Face:", face.faceID)
-			if face.hasRollAngle { print("Roll:", face.rollAngle) }
-			if face.hasYawAngle { print("Yaw:", face.yawAngle) }
+			print("Face:", face.id)
+			if let rollAngle = face.rollAngle { print("Roll:", rollAngle) }
+			if let yawAngle = face.yawAngle { print("Yaw:", yawAngle) }
 		default:
-			print("Object:", object.type, object.boundingBox)
+			print("Object:", object.type, object.bounds)
 		}
 	}
 }
@@ -31,7 +31,7 @@ Each object also exposes its native `AVMetadataObject` through `object`.
 
 ## Coordinate conversions
 
-A scanned object's `boundingBox` describes its location in normalized Camera coordinates between `0` and `1`. A scanned code also exposes `cornerPoints`, and a scanned face can expose roll and yaw angles.
+A scanned object's `bounds` describes its location in normalized Camera coordinates between `0` and `1`. A scanned code also exposes `corners`, and a scanned face can expose roll and yaw angles.
 
 Convert the whole result to preview coordinates using ``PreviewView``:
 
@@ -43,7 +43,7 @@ func convertObject(
 	_ object: any ScannedObject,
 	to preview: PreviewView
 ) throws -> any ScannedObject {
-	return try preview.convertScannedObjectCoordinatesToViewCoordinates(scannedObject: object)
+	return try preview.convertedToViewCoordinates( object)
 }
 ```
 

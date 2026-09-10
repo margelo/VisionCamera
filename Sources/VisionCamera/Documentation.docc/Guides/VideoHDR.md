@@ -6,7 +6,7 @@ Video HDR captures frames in a higher dynamic range, preserving more detail in h
 
 ## Enable video HDR
 
-Pass a ``VideoDynamicRangeConstraint`` in your connection's constraints. For example, request 10-bit HLG with BT.2020 color primaries:
+Pass a ``Constraint/videoDynamicRange(_:)`` in your connection's constraints. For example, request 10-bit HLG with BT.2020 color primaries:
 
 ```swift
 import VisionCamera
@@ -21,11 +21,11 @@ func configureHDR(
 		colorSpace: .hlgBt2020,
 		colorRange: .video
 	)
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(
 			input: .device(device),
 			outputs: [.init(output: output)],
-			constraints: [.videoDynamicRange(.init(videoDynamicRange: dynamicRange))],
+			constraints: [.videoDynamicRange(dynamicRange)],
 			onSessionConfigSelected: { config in
 				print("Selected dynamic range:", config.selectedVideoDynamicRange as Any)
 			}

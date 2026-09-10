@@ -9,19 +9,18 @@ extension CVPixelBuffer {
     _ body: (UnsafeRawBufferPointer) throws -> Result
   ) throws -> Result {
     if let planeIndex {
-      guard CVPixelBufferIsPlanar(self),
-        planeIndex >= 0,
-        planeIndex < CVPixelBufferGetPlaneCount(self)
-      else {
-        throw CameraError(message: "Pixel buffer plane index \(planeIndex) is out of bounds.")
+      guard CVPixelBufferIsPlanar(self) else { throw MediaError.planeAccessRequiresPlanarBuffer }
+      let planeCount = CVPixelBufferGetPlaneCount(self)
+      guard (0..<planeCount).contains(planeIndex) else {
+        throw MediaError.invalidPlaneIndex(index: planeIndex, planeCount: planeCount)
       }
     } else if CVPixelBufferIsPlanar(self) {
-      throw CameraError(message: "Use individual planes to access a planar pixel buffer's bytes.")
+      throw MediaError.nonPlanarPixelBufferRequired
     }
 
     let status = CVPixelBufferLockBaseAddress(self, .readOnly)
     guard status == kCVReturnSuccess else {
-      throw CameraError(message: "Could not lock pixel buffer for reading (status \(status)).")
+      throw MediaError.pixelBufferLockFailed(status: status)
     }
     defer { CVPixelBufferUnlockBaseAddress(self, .readOnly) }
 
@@ -37,7 +36,7 @@ extension CVPixelBuffer {
       count = CVPixelBufferGetBytesPerRow(self) * CVPixelBufferGetHeight(self)
     }
     guard let address else {
-      throw CameraError(message: "Pixel buffer does not have a CPU-accessible base address.")
+      throw MediaError.pixelBufferBaseAddressUnavailable
     }
     return try withExtendedLifetime(self) {
       try body(UnsafeRawBufferPointer(start: address, count: count))

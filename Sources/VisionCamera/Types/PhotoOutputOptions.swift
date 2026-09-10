@@ -1,5 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+import CoreGraphics
+
 /// Configuration options for a ``PhotoOutput``.
 ///
 /// See ``PhotoOutput``
@@ -7,7 +9,7 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   /// The target Photo Resolution to use.
   ///
   /// To include this output's ``PhotoOutputOptions/targetResolution`` in
-  /// ``CameraSession`` format negotiation, add a ``ResolutionBiasConstraint``
+  /// ``CameraSession`` format negotiation, add a ``Constraint/resolution(_:)``
   /// for this output. The session will negotiate it with constraints (such
   /// as HDR, FPS, etc) in a ``CameraSessionConfig`` to
   /// finalize the Resolution used for the Output.
@@ -17,11 +19,11 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   ///
   /// If the given ``PhotoOutputOptions/targetResolution`` cannot be met
   /// exactly, its aspect ratio (computed by
-  /// ``Size/width`` / ``Size/height``) will
+  /// `CGSize.width` / `CGSize.height`) will
   /// be prioritized over pixel count.
   ///
   /// Defaults to 3024 by 4032 pixels.
-  public var targetResolution: Size
+  public var targetResolution: CGSize
   /// Specifies the ``TargetPhotoContainerFormat`` to
   /// shoot the ``Photo`` in.
   ///
@@ -44,7 +46,7 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   ///
   /// Defaults to ``QualityPrioritization/balanced``.
   public var qualityPrioritization: QualityPrioritization
-  /// When this is set to a specific ``Size``,
+  /// When this is set to a specific `CGSize`,
   /// a ready to display `UIImage` is delivered with the processed Photo when the capture pipeline supplies a
   /// preview image.
   ///
@@ -54,12 +56,12 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   /// If this is `nil` (the default), no preview Image
   /// will be supplied.
   ///
-  /// It is recommended to set this to a ``Size``
+  /// It is recommended to set this to a `CGSize`
   /// that is as low as possible to avoid unnecessary overhead.
   ///
-  /// See ``CapturePhotoCallbacks/onPreviewImageAvailable``
+  /// See ``CapturePhotoCallbacks/didReceivePreviewImage``
   /// Defaults to `nil`.
-  public var previewImageTargetSize: Size?
+  public var previewImageTargetSize: CGSize?
 
   /// Creates photo-output options with balanced quality prioritization and 0.9 compression quality.
   ///
@@ -68,13 +70,13 @@ public struct PhotoOutputOptions: Equatable, Sendable {
   ///   - containerFormat: Specifies the ``TargetPhotoContainerFormat`` to shoot the ``Photo`` in.
   ///   - quality: Defines the compression quality for processed photo formats.
   ///   - qualityPrioritization: Specifies the balance between speed and image quality for the photo capture pipeline.
-  ///   - previewImageTargetSize: When this is set to a specific ``Size``, a ready to display `UIImage` is delivered with the processed Photo when the capture pipeline supplies a preview image.
+  ///   - previewImageTargetSize: When this is set to a specific `CGSize`, a ready to display `UIImage` is delivered with the processed Photo when the capture pipeline supplies a preview image.
   public init(
-    targetResolution: Size = Size(width: 3024, height: 4032),
+    targetResolution: CGSize = CGSize(width: 3024, height: 4032),
     containerFormat: TargetPhotoContainerFormat = .native,
     quality: Double = 0.9,
     qualityPrioritization: QualityPrioritization = .balanced,
-    previewImageTargetSize: Size? = nil
+    previewImageTargetSize: CGSize? = nil
   ) {
     self.targetResolution = targetResolution
     self.containerFormat = containerFormat

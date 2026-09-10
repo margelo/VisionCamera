@@ -29,9 +29,9 @@ public final class DeviceOrientationManager: OrientationManager {
   /// Starts listening to orientation changes.
   ///
   /// Starting updates replaces the previous callback. Callbacks run on this manager's serial orientation queue. Throws if the accelerometer is unavailable.
-  public func startOrientationUpdates(onChanged: @escaping (CameraOrientation) -> Void) throws {
+  public func startUpdates(_ onChanged: @escaping (CameraOrientation) -> Void) throws(OrientationError) {
     guard isAvailable else {
-      throw CameraError(message: "Cannot listen to device orientation changes: accelerometer is not available.")
+      throw OrientationError.accelerometerUnavailable
     }
     queue.async(
       execute: DispatchWorkItem { [weak self] in
@@ -52,7 +52,7 @@ public final class DeviceOrientationManager: OrientationManager {
   /// Stops listening to orientation changes.
   ///
   /// Stops delivery on the manager's owning queue. A callback already in progress may finish before removal takes effect.
-  public func stopOrientationUpdates() {
+  public func stopUpdates() {
     queue.async(
       execute: DispatchWorkItem { [weak self] in
         guard let self else { return }

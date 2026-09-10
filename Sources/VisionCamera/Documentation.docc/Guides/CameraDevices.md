@@ -9,8 +9,8 @@ In most cases, the default back Camera is the most fitting:
 ```swift
 import VisionCamera
 
-func defaultBackCamera() -> CameraDevice? {
-	VisionCamera.getDefaultCamera(position: .back)
+var defaultBackCamera: CameraDevice? {
+	VisionCamera.defaultCamera(for: .back)
 }
 ```
 
@@ -62,8 +62,8 @@ VisionCamera can use external Cameras that AVFoundation exposes, including suppo
 ```swift
 import VisionCamera
 
-func observeDevices() -> ListenerSubscription {
-	VisionCamera.addOnCameraDevicesChangedListener { devices in
+func observeDevices() -> ObservationToken {
+	VisionCamera.observeCameraDevices { devices in
 		for device in devices {
 			print(device.id, device.localizedName)
 		}
@@ -71,7 +71,7 @@ func observeDevices() -> ListenerSubscription {
 }
 ```
 
-When a Camera is plugged in or unplugged, query ``VisionCamera/cameraDevices`` again and avoid using a removed device. Retain the subscription while listening and call `remove()` when finished.
+When a Camera is plugged in or unplugged, query ``VisionCamera/cameraDevices`` again and avoid using a removed device. Retain the observation token while listening, then call `cancel()` or release it when finished.
 
 ## Use the Camera device
 

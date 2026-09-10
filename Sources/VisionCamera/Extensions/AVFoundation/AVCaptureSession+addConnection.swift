@@ -17,8 +17,7 @@ extension AVCaptureSession {
 
     // 3. Add it!
     guard self.canAddConnection(connection) else {
-      throw CameraError(
-        message: "Connection \"\(connection)\" cannot be added to Camera Session!")
+      throw ConfigurationError.connectionRejected(mediaType: output.mediaType.toAVMediaType())
     }
     logger.info("Adding Connection \(connection)...")
     self.addConnection(connection)

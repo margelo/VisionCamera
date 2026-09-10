@@ -17,7 +17,7 @@ import Foundation
 ///
 /// When an output is connected to the ``OutputSynchronizer``
 /// you should no longer use its own frame callback, but instead
-/// use the ``OutputSynchronizer/setOnFramesCallback(onFrames:)`` provided here.
+/// use the ``OutputSynchronizer/setFrameHandler(_:)`` provided here.
 public final class OutputSynchronizer {
   private let delegate: SynchronizedOutputDelegate
   private let queue: DispatchQueue
@@ -38,23 +38,17 @@ public final class OutputSynchronizer {
       autoreleaseFrequency: .inherit,
       target: nil)
     self.outputs = outputs
-    let avOutputs = try outputs.map { output in
+    let avOutputs = try outputs.enumerated().map { index, output in
       guard let nativeOutput = output as? any NativeCameraOutput else {
-        throw CameraError(
-          message: "Output \(output) is not of type `NativeCameraOutput`!")
+        throw CaptureError.unsupportedSynchronizedOutput(index: index)
       }
       return nativeOutput.output
     }
     guard avOutputs.count >= 2 else {
-      throw CameraError(
-        message: "Cannot create OutputSynchronizer with less than 2 outputs!")
+      throw CaptureError.insufficientSynchronizedOutputs(count: avOutputs.count)
     }
-    let allConnected = avOutputs.allSatisfy { !$0.connections.isEmpty }
-    guard allConnected else {
-      throw CameraError(
-        message:
-          "Cannot create OutputSynchronizer when not all of the given outputs are connected to the Camera!"
-      )
+    if let index = avOutputs.firstIndex(where: { $0.connections.isEmpty }) {
+      throw CaptureError.synchronizedOutputNotConnected(index: index)
     }
     self.synchronizer = AVCaptureDataOutputSynchronizer(dataOutputs: avOutputs)
     self.delegate = SynchronizedOutputDelegate()
@@ -63,16 +57,16 @@ public final class OutputSynchronizer {
     self.synchronizer.setDelegate(self.delegate, queue: self.queue)
   }
 
-  ///
+  /// Sets the handler for each group of synchronized samples.
   ///
   /// Registration and callback delivery are serialized on this synchronizer's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFramesCallback(
-    onFrames: (([SynchronizedFrame]) -> Void)?
+  public func setFrameHandler(
+    _ onFrames: (([SynchronizedFrame]) -> Void)?
   ) async {
     await queue.perform {
       if let onFrames {
         self.delegate.onFrames = { frames in
-          let samples = frames.map { $0.toSynchronizedFrame() }
+          let samples = frames.map { $0.synchronizedFrame }
           onFrames(samples)
         }
       } else {
@@ -86,12 +80,12 @@ public final class OutputSynchronizer {
   /// drift in timelines.
   ///
   /// Registration and callback delivery are serialized on this synchronizer's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFrameDroppedCallback(onFrameDropped: ((MediaType, FrameDroppedReason) -> Void)?) async {
+  public func setFrameDropHandler(_ onFrameDropped: ((SynchronizedFrameDrop) -> Void)?) async {
     await queue.perform {
       if let onFrameDropped {
         self.delegate.onFrameDropped = { mediaType, avReason in
           let reason = FrameDroppedReason(reason: avReason)
-          onFrameDropped(mediaType, reason)
+          onFrameDropped(SynchronizedFrameDrop(mediaType: mediaType, reason: reason))
         }
       } else {
         self.delegate.onFrameDropped = nil

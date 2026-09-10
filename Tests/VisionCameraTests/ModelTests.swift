@@ -1,4 +1,5 @@
 import CoreLocation
+import CoreMedia
 import UIKit
 import VisionCamera
 import XCTest
@@ -6,7 +7,7 @@ import XCTest
 final class ModelTests: XCTestCase {
   func testPhotoDefaultsPreserveCaptureQuality() {
     let options = PhotoOutputOptions()
-    XCTAssertEqual(options.targetResolution, Size(width: 3024, height: 4032))
+    XCTAssertEqual(options.targetResolution, CGSize(width: 3024, height: 4032))
     XCTAssertEqual(options.containerFormat, .native)
     XCTAssertEqual(options.quality, 0.9)
     XCTAssertEqual(options.qualityPrioritization, .balanced)
@@ -15,30 +16,30 @@ final class ModelTests: XCTestCase {
 
   func testFrameDefaultsPreserveBufferDeliveryPolicy() {
     let options = FrameOutputOptions()
-    XCTAssertEqual(options.targetResolution, Size(width: 720, height: 1280))
+    XCTAssertEqual(options.targetResolution, CGSize(width: 720, height: 1280))
     XCTAssertEqual(options.pixelFormat, .native)
-    XCTAssertTrue(options.dropFramesWhileBusy)
-    XCTAssertTrue(options.allowDeferredStart)
-    XCTAssertFalse(options.enableCameraMatrixDelivery)
-    XCTAssertFalse(options.enablePhysicalBufferRotation)
-    XCTAssertFalse(options.enablePreviewSizedOutputBuffers)
+    XCTAssertTrue(options.discardsLateFrames)
+    XCTAssertTrue(options.allowsDeferredStart)
+    XCTAssertFalse(options.isCameraIntrinsicMatrixDeliveryEnabled)
+    XCTAssertFalse(options.rotatesBuffers)
+    XCTAssertFalse(options.usesPreviewSizedBuffers)
   }
 
   func testDepthDefaultsPreserveFilteringAndDeliveryPolicy() {
     let options = DepthOutputOptions()
-    XCTAssertEqual(options.targetResolution, Size(width: 480, height: 854))
-    XCTAssertTrue(options.enableFiltering)
-    XCTAssertTrue(options.dropFramesWhileBusy)
-    XCTAssertTrue(options.allowDeferredStart)
-    XCTAssertFalse(options.enablePhysicalBufferRotation)
+    XCTAssertEqual(options.targetResolution, CGSize(width: 480, height: 854))
+    XCTAssertTrue(options.isFilteringEnabled)
+    XCTAssertTrue(options.discardsLateFrames)
+    XCTAssertTrue(options.allowsDeferredStart)
+    XCTAssertFalse(options.rotatesBuffers)
   }
 
   func testVideoDefaultsDeferOptionalSettingsToTheRecorder() {
     let options = VideoOutputOptions()
-    XCTAssertEqual(options.targetResolution, Size(width: 1080, height: 1920))
-    XCTAssertNil(options.enableAudio)
-    XCTAssertNil(options.targetBitRate)
-    XCTAssertNil(options.fileType)
+    XCTAssertEqual(options.targetResolution, CGSize(width: 1080, height: 1920))
+    XCTAssertFalse(options.isAudioEnabled)
+    XCTAssertNil(options.bitRate)
+    XCTAssertEqual(options.fileType, .mov)
     XCTAssertNil(VideoOutputSettings().codec)
   }
 
@@ -49,20 +50,21 @@ final class ModelTests: XCTestCase {
     XCTAssertEqual(photoSettings.flashMode, .on)
     XCTAssertEqual(photoSettings.location, location)
 
-    let recorderSettings = RecorderSettings(location: location, maxDuration: 12)
+    let duration = CMTime(value: 12, timescale: 1)
+    let recorderSettings = RecorderSettings(location: location, maxDuration: duration)
     XCTAssertEqual(recorderSettings.location, location)
-    XCTAssertEqual(recorderSettings.maxDuration, 12)
+    XCTAssertEqual(recorderSettings.maxDuration, duration)
 
     var deliveredImage: UIImage?
-    let callbacks = CapturePhotoCallbacks(onPreviewImageAvailable: { deliveredImage = $0 })
+    let callbacks = CapturePhotoCallbacks(didReceivePreviewImage: { deliveredImage = $0 })
     let image = UIImage()
-    callbacks.onPreviewImageAvailable?(image)
+    callbacks.didReceivePreviewImage?(image)
     XCTAssertTrue(deliveredImage === image)
   }
 
   func testFocusResetDistinguishesDefaultDisabledAndTimedBehavior() {
-    XCTAssertNil(FocusOptions().autoResetAfter)
-    XCTAssertEqual(FocusOptions(autoResetAfter: .never).autoResetAfter, .never)
-    XCTAssertEqual(FocusOptions(autoResetAfter: .after(2)).autoResetAfter, .after(2))
+    XCTAssertEqual(FocusOptions().reset, .after(5))
+    XCTAssertEqual(FocusOptions(reset: .never).reset, .never)
+    XCTAssertEqual(FocusOptions(reset: .after(2)).reset, .after(2))
   }
 }

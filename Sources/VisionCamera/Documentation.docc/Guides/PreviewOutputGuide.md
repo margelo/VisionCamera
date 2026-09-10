@@ -12,8 +12,8 @@ import VisionCamera
 @MainActor
 func addPreview(session: CameraSession) async throws -> PreviewView {
 	let output = PreviewOutput()
-	let view = PreviewView(previewOutput: output)
-	_ = try await session.configure(connections: [
+	let view = PreviewView(output: output)
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -33,7 +33,7 @@ This preference is only a small bias in resolution negotiation. A preview can be
 import VisionCamera
 
 func preferRecordingResolution(video: any VideoOutput) -> [Constraint] {
-	[.resolutionBias(.init(resolutionBias: video))]
+	[.resolution(video)]
 }
 ```
 

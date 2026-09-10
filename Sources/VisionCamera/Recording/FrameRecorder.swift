@@ -14,12 +14,14 @@ import Foundation
 public final class FrameRecorder: Recorder {
   private let orientation: CameraOrientation
   private let masterClock: CMClock
-  private let fileURL: URL
+  /// The file URL this recorder is recording, or will record, to.
+  public let fileURL: URL
   private let assetWriter: AVAssetWriter
   private var videoTrack: Track?
   private var audioTrack: Track?
   private let queue: DispatchQueue
   private var isFinishing = false
+  private var didNotifyDelegateOfStart = false
   private let delegate: RecorderDelegate
   private let settings: RecorderSettings
 
@@ -28,10 +30,10 @@ public final class FrameRecorder: Recorder {
   /// the actual recorded data until `finishWriting` flushes.
   private var accumulatedBytes: Int64 = 0
 
-  private var onRecordingFinished: ((String, RecordingFinishedReason) -> Void)? = nil
-  private var onRecordingError: ((any Error) -> Void)? = nil
-  private var onRecordingPaused: (() -> Void)? = nil
-  private var onRecordingResumed: (() -> Void)? = nil
+  private var onFinished: ((RecordingResult) -> Void)? = nil
+  private var onError: ((any Error) -> Void)? = nil
+  private var onPaused: (() -> Void)? = nil
+  private var onResumed: (() -> Void)? = nil
 
   private var isFinished: Bool {
     let isVideoTrackFinished = videoTrack?.isFinished ?? true
@@ -48,8 +50,9 @@ public final class FrameRecorder: Recorder {
   ) throws {
     self.orientation = orientation
     self.masterClock = masterClock
-    if let path = settings.filePath {
-      self.fileURL = URL(fileURLWithPath: path)
+    try settings.validate()
+    if let fileURL = settings.fileURL {
+      self.fileURL = fileURL
     } else {
       self.fileURL = try URL.createTempURL(fileType: fileType.toUTType())
     }
@@ -66,52 +69,48 @@ public final class FrameRecorder: Recorder {
   }
 
   deinit {
+    if didNotifyDelegateOfStart { delegate.onRecorderDidStop() }
     if assetWriter.status == .writing {
       logger.error("FrameRecorder was deallocated while writing, cancelling AssetWriter...")
       assetWriter.cancelWriting()
     }
   }
 
-  /// Returns whether the output is currently recording.
-  public var isRecording: Bool {
-    return assetWriter.status == .writing
-  }
-
-  /// Returns whether the current recording is paused.
-  public var isPaused: Bool {
-    return videoTrack?.isPaused == true
-  }
-
-  /// Returns the currently recorded duration, in seconds.
-  public var recordedDuration: Double {
-    return videoTrack?.duration.seconds ?? 0.0
-  }
-
-  /// Returns the currently recorded file size, in bytes. Buffered writes can make the on-disk size lag behind recording; returns `0` if the file size is unavailable.
-  public var recordedFileSize: Double {
-    if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
-      let sizeBytes = attrs[.size] as? NSNumber
-    {
-      return sizeBytes.doubleValue
+  /// Reads the recording state and output file size on the recorder's owning queue.
+  ///
+  /// Buffered writes can make the on-disk size lag behind captured data. A file that has not been created yet reports a size of `0`.
+  /// - Returns: The current recording status.
+  /// - Throws: An underlying file-system error if the file size cannot be read.
+  public func status() async throws -> RecordingStatus {
+    return try await queue.perform {
+      let fileSize: Int64
+      do {
+        let attributes = try FileManager.default.attributesOfItem(atPath: self.fileURL.path)
+        fileSize = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+      } catch let error as NSError
+        where error.domain == NSCocoaErrorDomain
+        && (error.code == NSFileNoSuchFileError || error.code == NSFileReadNoSuchFileError)
+      {
+        fileSize = 0
+      }
+      let isRecording = self.assetWriter.status == .writing
+      return RecordingStatus(
+        isRecording: isRecording,
+        isPaused: isRecording && self.videoTrack?.isPaused == true,
+        duration: self.videoTrack?.duration ?? .zero,
+        fileSize: fileSize)
     }
-    return 0.0
-  }
-
-  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mp4`, not a `file://` URL.
-  public var filePath: String {
-    return fileURL.path
   }
 
   func initializeVideoTrack(withSettings settings: [String: Any]) throws {
     guard !settings.isEmpty else {
-      throw CameraError(message: "Tried to initialize Video Track with empty options!")
+      throw RecordingError.invalidOutputSettings(mediaType: .video)
     }
     guard videoTrack == nil else {
-      throw CameraError(message: "Tried to initialize Video Track twice!")
+      throw RecordingError.trackAlreadyConfigured(mediaType: .video)
     }
     guard assetWriter.canApply(outputSettings: settings, forMediaType: .video) else {
-      throw CameraError(
-        message: "The given output settings are not supported! \(settings)")
+      throw RecordingError.invalidOutputSettings(mediaType: .video)
     }
 
     logger.info("Initializing Video AssetWriter with settings: \(settings)")
@@ -143,7 +142,7 @@ public final class FrameRecorder: Recorder {
     throws
   {
     guard audioTrack == nil else {
-      throw CameraError(message: "Tried to initialize Audio Track twice!")
+      throw RecordingError.trackAlreadyConfigured(mediaType: .audio)
     }
 
     if let settings = settings {
@@ -161,42 +160,43 @@ public final class FrameRecorder: Recorder {
 
   /// Starts recording to the file selected when this recorder was created.
   ///
-  /// Returns once recording has successfully started. Read `filePath` for the filesystem path being recorded to, or use the path delivered to `onRecordingFinished` after finalization. Neither path is a `file://` URL.
+  /// Returns once recording has successfully started. Read ``fileURL`` for the destination, or use the ``RecordingResult`` delivered to `onFinished` after finalization.
   /// The recording continues after this method returns. Completion or failure is reported through the callbacks.
   /// Callbacks run on the recorder's owning serial queue. Move UIKit work to the main actor.
   ///
-  /// - Parameter onRecordingFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
-  /// - Parameter onRecordingError: Called when an unexpected error occurs while recording.
-  /// - Parameter onRecordingPaused: Called when recording pauses.
-  /// - Parameter onRecordingResumed: Called when recording resumes.
+  /// - Parameter onFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
+  /// - Parameter onError: Called when an unexpected error occurs while recording.
+  /// - Parameter onPaused: Called when recording pauses.
+  /// - Parameter onResumed: Called when recording resumes.
   /// - Throws: If this recorder has already been started or recording fails to start.
-  public func startRecording(
-    onRecordingFinished: @escaping (String, RecordingFinishedReason) -> Void,
-    onRecordingError: @escaping (any Error) -> Void,
-    onRecordingPaused: (() -> Void)? = nil,
-    onRecordingResumed: (() -> Void)? = nil
+  public func start(
+    onFinished: @escaping (RecordingResult) -> Void,
+    onError: @escaping (any Error) -> Void,
+    onPaused: (() -> Void)? = nil,
+    onResumed: (() -> Void)? = nil
   ) async throws {
     return try await queue.perform {
       guard self.assetWriter.status == .unknown, !self.isFinishing else {
-        throw CameraError(message: "A recorder can only be started once.")
+        throw RecordingError.alreadyStarted
       }
 
       // Notify about to start
+      self.didNotifyDelegateOfStart = true
       self.delegate.onRecorderWillStart()
 
       // Prepare the AssetWriter for writing to the video file
       let success = self.assetWriter.startWriting()
       guard success else {
-        self.delegate.onRecorderDidStop()
-        throw self.assetWriter.error ?? CameraError(message: "Failed to start AssetWriter.")
+        self.notifyDelegateOfStop()
+        throw self.assetWriter.error ?? RecordingError.writerCouldNotStart
       }
-      logger.info("AssetWriter started writing to \(self.filePath)!")
+      logger.info("AssetWriter started writing to \(self.fileURL.path)!")
 
       // Assign callbacks
-      self.onRecordingFinished = onRecordingFinished
-      self.onRecordingError = onRecordingError
-      self.onRecordingPaused = onRecordingPaused
-      self.onRecordingResumed = onRecordingResumed
+      self.onFinished = onFinished
+      self.onError = onError
+      self.onPaused = onPaused
+      self.onResumed = onResumed
 
       // Start the session at the specific timestamp
       let now = self.masterClock.time
@@ -210,8 +210,8 @@ public final class FrameRecorder: Recorder {
 
   /// Requests the Video recording to be stopped.
   ///
-  /// Once the recording has actually stopped and the file is written, the `onRecordingFinished` callback passed to `startRecording` is called. Returning from this method does not mean the file is finalized.
-  public func stopRecording() async {
+  /// Once the recording has actually stopped and the file is written, the `onFinished` callback passed to `start` is called. Returning from this method does not mean the file is finalized.
+  public func stop() async {
     return await queue.perform {
       // Stop each track
       self.videoTrack?.stop()
@@ -237,32 +237,32 @@ public final class FrameRecorder: Recorder {
 
   /// Requests the Video recording to be paused.
   /// Once the recording has actually been paused,
-  /// the `onRecordingPaused` callback passed to
-  /// ``FrameRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
-  public func pauseRecording() async {
+  /// the `onPaused` callback passed to
+  /// ``FrameRecorder/start(onFinished:onError:onPaused:onResumed:)`` will be called.
+  public func pause() async {
     return await queue.perform {
       // Pause each track
       self.videoTrack?.pause()
       self.audioTrack?.pause()
 
       // Notify listener
-      self.onRecordingPaused?()
+      self.onPaused?()
     }
   }
 
   /// Requests the currently paused Video recording
   /// to be resumed.
   /// Once the recording has actually been resumed,
-  /// the `onRecordingResumed` callback passed to
-  /// ``FrameRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
-  public func resumeRecording() async {
+  /// the `onResumed` callback passed to
+  /// ``FrameRecorder/start(onFinished:onError:onPaused:onResumed:)`` will be called.
+  public func resume() async {
     return await queue.perform {
       // Resume each track
       self.videoTrack?.resume()
       self.audioTrack?.resume()
 
       // Notify listener
-      self.onRecordingResumed?()
+      self.onResumed?()
     }
   }
 
@@ -270,20 +270,20 @@ public final class FrameRecorder: Recorder {
   /// the video file.
   ///
   /// Cancels writing on the recorder queue and removes the file. Completion callbacks are suppressed; file removal errors propagate to the caller. Throws if no recording is active.
-  public func cancelRecording() async throws {
+  public func cancel() async throws {
     return try await queue.perform {
       guard self.assetWriter.status == .writing else {
-        throw CameraError(message: "Not currently recording!")
+        throw RecordingError.notRecording
       }
       // Clear callbacks so they don't fire during cancellation
-      self.onRecordingFinished = nil
-      self.onRecordingError = nil
-      self.onRecordingPaused = nil
-      self.onRecordingResumed = nil
+      self.onFinished = nil
+      self.onError = nil
+      self.onPaused = nil
+      self.onResumed = nil
       // Cancel the writing session
       self.isFinishing = true
       self.assetWriter.cancelWriting()
-      self.delegate.onRecorderDidStop()
+      self.notifyDelegateOfStop()
       // Delete the temporary file
       try FileManager.default.removeItem(at: self.fileURL)
     }
@@ -312,7 +312,7 @@ public final class FrameRecorder: Recorder {
         // If we failed to write the frames, stop the Recording
         if self.assetWriter.status == .failed {
           logger.error("Failed to write buffer: \(self.assetWriter.error)")
-          let error = self.assetWriter.error ?? CameraError(message: "Failed to write Buffer!")
+          let error = self.assetWriter.error ?? RecordingError.writerCouldNotAppend
           self.fail(self.assetWriter.error ?? error)
           return
         }
@@ -327,7 +327,7 @@ public final class FrameRecorder: Recorder {
           return
         }
 
-        // When all tracks (video + audio) are finished (via `stopRecording`),
+        // When all tracks (video + audio) are finished (via `stop`),
         // finish the Recording.
         if self.isFinished {
           self.finish(reason: .stopped)
@@ -338,7 +338,7 @@ public final class FrameRecorder: Recorder {
   private func reachedFileSizeLimit() -> Bool {
     if let maxFileSize = settings.maxFileSize {
       // Check if video size >= max target file size
-      if accumulatedBytes >= Int64(maxFileSize) {
+      if accumulatedBytes >= maxFileSize {
         logger.info("Reached maxFileSize of \(maxFileSize) bytes - finishing recording.")
         return true
       }
@@ -350,7 +350,6 @@ public final class FrameRecorder: Recorder {
       let duration = videoTrack?.duration
     {
       // Check if video track duration >= max target duration
-      let maxDuration = CMTime(seconds: maxDuration, preferredTimescale: 600)
       if CMTimeCompare(duration, maxDuration) >= 0 {
         logger.info("Reached maxDuration of \(maxDuration.seconds)s - finishing recording.")
         return true
@@ -364,14 +363,12 @@ public final class FrameRecorder: Recorder {
     switch type {
     case .audio:
       guard let audioTrack else {
-        throw CameraError(
-          message: "Tried to write an audio buffer, but no audio track was initialized!")
+        throw RecordingError.trackUnavailable(mediaType: .audio)
       }
       return audioTrack
     case .video:
       guard let videoTrack else {
-        throw CameraError(
-          message: "Tried to write a video buffer, but no video track was initialized!")
+        throw RecordingError.trackUnavailable(mediaType: .video)
       }
       return videoTrack
     }
@@ -380,11 +377,11 @@ public final class FrameRecorder: Recorder {
   private func finish(reason: RecordingFinishedReason) {
     guard !isFinishing else { return }
     guard let lastVideoTimestamp = videoTrack?.lastTimestamp else {
-      fail(CameraError(message: "Cannot finish a recording before its first video frame."))
+      fail(RecordingError.noVideoFrames)
       return
     }
     guard assetWriter.status == .writing else {
-      fail(assetWriter.error ?? CameraError(message: "AssetWriter is not writing."))
+      fail(assetWriter.error ?? RecordingError.writerNotWriting)
       return
     }
     isFinishing = true
@@ -393,12 +390,12 @@ public final class FrameRecorder: Recorder {
       self.queue.async(
         execute: DispatchWorkItem {
           if self.assetWriter.status == .completed {
-            self.onRecordingFinished?(self.filePath, reason)
+            self.onFinished?(RecordingResult(fileURL: self.fileURL, reason: reason))
           } else {
-            self.onRecordingError?(self.assetWriter.error ?? CameraError(message: "Failed to finalize the recording."))
+            self.onError?(self.assetWriter.error ?? RecordingError.writerCouldNotFinish)
           }
           self.clearCallbacks()
-          self.delegate.onRecorderDidStop()
+          self.notifyDelegateOfStop()
         })
     }
   }
@@ -407,15 +404,21 @@ public final class FrameRecorder: Recorder {
     guard !isFinishing else { return }
     isFinishing = true
     if assetWriter.status == .writing { assetWriter.cancelWriting() }
-    onRecordingError?(error)
+    onError?(error)
     clearCallbacks()
+    notifyDelegateOfStop()
+  }
+
+  private func notifyDelegateOfStop() {
+    guard didNotifyDelegateOfStart else { return }
+    didNotifyDelegateOfStart = false
     delegate.onRecorderDidStop()
   }
 
   private func clearCallbacks() {
-    onRecordingFinished = nil
-    onRecordingError = nil
-    onRecordingPaused = nil
-    onRecordingResumed = nil
+    onFinished = nil
+    onError = nil
+    onPaused = nil
+    onResumed = nil
   }
 }

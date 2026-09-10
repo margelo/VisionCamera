@@ -17,7 +17,7 @@ final class AudioSession {
 
   init() throws {
     guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-      throw CameraError(message: "Microphone permission has not been granted.")
+      throw PermissionError.microphoneAccessDenied(status: PermissionStatus(avStatus: AVCaptureDevice.authorizationStatus(for: .audio)))
     }
     logger.log("Initializing AudioSession...")
     // 1. Create AVCaptureSession
@@ -29,14 +29,13 @@ final class AudioSession {
 
     // 3. Create audio input
     guard let microphone = AVCaptureDevice.default(for: .audio) else {
-      throw CameraError(message: "No microphone available!")
+      throw ConfigurationError.microphoneUnavailable
     }
     self.input = try AVCaptureDeviceInput(device: microphone)
 
     // 4. Add audio input
     guard audioSession.canAddInput(input) else {
-      throw CameraError(
-        message: "Microphone \(input) cannot be added to AVCaptureSession \(audioSession)!")
+      throw ConfigurationError.inputRejected(deviceID: input.device.uniqueID)
     }
     audioSession.addInput(input)
 
@@ -44,8 +43,7 @@ final class AudioSession {
     self.output = AVCaptureAudioDataOutput()
     // 6. Add audio output
     guard audioSession.canAddOutput(output) else {
-      throw CameraError(
-        message: "Audio output \(output) cannot be added to AVCaptureSession \(audioSession)!")
+      throw ConfigurationError.outputRejected(outputType: String(describing: type(of: output)))
     }
     audioSession.addOutput(output)
 

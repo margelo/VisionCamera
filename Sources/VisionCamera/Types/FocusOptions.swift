@@ -1,16 +1,16 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// Options for a focus metering operation via
-/// ``CameraController/focusTo(point:options:)``
+/// ``CameraController/focus(at:options:)``
 public struct FocusOptions: Equatable, Sendable {
   /// The responsiveness of the metering operation.
   /// See ``FocusResponsiveness``
-  /// When `nil`, uses ``FocusResponsiveness/snappy``.
-  public var responsiveness: FocusResponsiveness?
+  /// Defaults to ``FocusResponsiveness/snappy``.
+  public var responsiveness: FocusResponsiveness
   /// The adaptiveness to changes in the scene.
   /// See ``SceneAdaptiveness``
-  /// When `nil`, uses ``SceneAdaptiveness/continuous``.
-  public var adaptiveness: SceneAdaptiveness?
+  /// Defaults to ``SceneAdaptiveness/continuous``.
+  public var adaptiveness: SceneAdaptiveness
   /// The metering modes to run this focus operation on.
   ///
   /// By default, all ``MeteringMode``s that are supported
@@ -29,25 +29,25 @@ public struct FocusOptions: Equatable, Sendable {
   /// Use ``FocusReset/after(_:)`` to specify a delay in seconds, or ``FocusReset/never`` to keep the
   /// metering configuration until focus is reset manually or another metering operation starts.
   ///
-  /// When `nil`, the delay is five seconds.
-  public var autoResetAfter: FocusReset?
+  /// The default delay is five seconds.
+  public var reset: FocusReset
 
   /// Creates the metering options for a focus operation.
   ///
   /// - Parameters:
-  ///   - responsiveness: The responsiveness of the metering operation. See ``FocusResponsiveness`` When `nil`, uses ``FocusResponsiveness/snappy``.
-  ///   - adaptiveness: The adaptiveness to changes in the scene. See ``SceneAdaptiveness`` When `nil`, uses ``SceneAdaptiveness/continuous``.
+  ///   - responsiveness: The responsiveness of the metering operation. See ``FocusResponsiveness`` Defaults to ``FocusResponsiveness/snappy``.
+  ///   - adaptiveness: The adaptiveness to changes in the scene. See ``SceneAdaptiveness`` Defaults to ``SceneAdaptiveness/continuous``.
   ///   - modes: The metering modes to run this focus operation on.
-  ///   - autoResetAfter: Controls whether focus automatically returns to continuous focus after it has settled.
+  ///   - reset: Controls whether focus automatically returns to continuous focus after it has settled.
   public init(
-    responsiveness: FocusResponsiveness? = nil,
-    adaptiveness: SceneAdaptiveness? = nil,
+    responsiveness: FocusResponsiveness = .snappy,
+    adaptiveness: SceneAdaptiveness = .continuous,
     modes: [MeteringMode]? = nil,
-    autoResetAfter: FocusReset? = nil
+    reset: FocusReset = .after(5)
   ) {
     self.responsiveness = responsiveness
     self.adaptiveness = adaptiveness
     self.modes = modes
-    self.autoResetAfter = autoResetAfter
+    self.reset = reset
   }
 }

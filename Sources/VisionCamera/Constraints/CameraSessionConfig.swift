@@ -11,8 +11,8 @@ import Foundation
 ///
 /// A ``CameraSession`` negotiates this configuration from your ordered ``Constraint`` values
 /// and connected outputs. You can also resolve a configuration before starting the session with
-/// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``.
-public final class CameraSessionConfig {
+/// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``.
+public struct CameraSessionConfig: CustomStringConvertible {
   /// The video format and optional depth format selected for the camera.
   public let negotiatedFormat: NegotiatedFormat
   /// The constraint values selected during format negotiation.
@@ -87,7 +87,7 @@ public final class CameraSessionConfig {
   /// Returns a description of the selected format and constraint values for debugging.
   ///
   /// - Returns: A readable description of this configuration.
-  public func toString() -> String {
+  public var description: String {
     let components = [
       "format: \(negotiatedFormat.format)",
       "selectedFPS: \(String(describing: selectedFPS))",

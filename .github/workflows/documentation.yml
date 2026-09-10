@@ -37,6 +37,8 @@ jobs:
         env:
           HOSTING_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: scripts/build-documentation.sh "$HOSTING_BASE_PATH"
+      - name: Compile documentation examples
+        run: python3 scripts/check-documentation-examples.py
       - name: Package Xcode documentation archive
         run: tar -czf build/VisionCamera.doccarchive.tar.gz -C build/documentation/Build/Products/Release-iphoneos/VisionCamera VisionCamera.doccarchive
       - name: Upload Xcode documentation archive
