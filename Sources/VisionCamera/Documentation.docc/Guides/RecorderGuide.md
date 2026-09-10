@@ -44,7 +44,7 @@ func beginRecording(recorder: any Recorder) async throws {
 }
 ```
 
-The method returns when recording starts. An error before recording starts is thrown to the caller. Later failures arrive through `onRecordingError`. Callbacks run on the recording backend's queue. Dispatch UIKit changes to the main queue.
+The method returns when recording starts. An error before recording starts is thrown to the caller. Later failures arrive through `onRecordingError`. Callbacks run on the recording backend's queue. Dispatch UI changes to the main queue.
 
 ### Inspect progress
 

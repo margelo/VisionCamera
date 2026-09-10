@@ -21,7 +21,7 @@ jobs:
           ruby-version: '3.4.9'
           bundler-cache: true
       - name: Check Swift formatting
-        run: xcrun swift-format lint --strict --recursive Sources Tests Example/Sources
+        run: xcrun swift-format lint --strict --recursive Sources Tests Example/Sources ExampleSwiftUI/Sources
       - name: Lint pod and run tests
         run: bundle exec pod lib lint VisionCamera.podspec --platforms=ios --verbose
       - name: Install example dependencies

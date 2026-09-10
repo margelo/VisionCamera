@@ -26,7 +26,7 @@ func captureWithEvents(output: PhotoOutput) async throws -> Photo {
 }
 ```
 
-These callbacks run on the photo output's queue. Dispatch UIKit changes to the main queue. The capture method returns the photo after processing succeeds, or throws if capture fails.
+These callbacks run on the photo output's queue. Dispatch UI changes to the main queue. The capture method returns the photo after processing succeeds, or throws if capture fails.
 
 ## Preview images
 

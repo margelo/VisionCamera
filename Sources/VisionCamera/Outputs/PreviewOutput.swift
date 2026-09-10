@@ -24,25 +24,18 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   public let mediaType: MediaType = .video
   /// The underlying `AVCaptureVideoPreviewLayer` connected to the Camera Session and displayed by ``PreviewView``.
   public let previewLayer: AVCaptureVideoPreviewLayer
-  private let orientationManager = InterfaceOrientationManager()
-  /// Gets or sets the output orientation of this ``CameraOutput``.
+  private let interfaceOrientation = OrientationSnapshot()
+  /// The interface orientation of the window scene displaying this preview.
   ///
-  /// Individual implementations of ``CameraOutput``
-  /// may choose different strategies for implementing
-  /// output orientation, for example:
-  /// - A Photo output might apply orientation via EXIF flags.
-  /// - A Video output might apply orientation via track transform metadata.
-  /// - A Preview output might apply orientation via view transforms.
-  /// - A Frame output might not apply orientation and only pass it as a
-  /// property via the `Frame` object, unless explicitly configured to
-  /// physically rotate buffers.
+  /// ``PreviewView`` supplies its window's orientation while attached. A detached output keeps its
+  /// last orientation, or ``CameraOrientation/up`` before mounting. Setting this property has no effect
+  /// because the live preview always follows its interface, independently of the capture outputs.
   public var outputOrientation: CameraOrientation {
     get {
-      return previewLayer.connection?.orientation ?? .up
+      return interfaceOrientation.current ?? .up
     }
     set {
-      // Setting orientation on a Preview output does nothing,
-      // as its orientation is always driven by the `orientationManager`.
+      // The attached PreviewView owns preview orientation.
     }
   }
   /// The resolution that the underlying capture pipeline has resolved
@@ -76,16 +69,6 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
     self.targetResolution = .min(Size(width: screen.bounds.width * screen.scale, height: screen.bounds.height * screen.scale))
     self.previewLayer = AVCaptureVideoPreviewLayer()
     self.previewLayer.videoGravity = .resizeAspectFill
-    self.orientationManager.startOrientationUpdates { [weak self] orientation in
-      guard let self else { return }
-      if let connection = self.previewLayer.connection {
-        try? connection.setOrientation(orientation)
-      }
-    }
-  }
-
-  deinit {
-    orientationManager.stopOrientationUpdates()
   }
 
   /// Applies mirroring and orientation settings to this output's current connection.
@@ -96,8 +79,19 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
       return
     }
     try? connection.setMirrorMode(config.mirrorMode)
-    if let interfaceOrientation = orientationManager.currentOrientation {
-      try? connection.setOrientation(interfaceOrientation)
-    }
+    try? connection.setOrientation(outputOrientation)
+  }
+
+  @MainActor
+  func setInterfaceOrientation(_ orientation: CameraOrientation) {
+    guard interfaceOrientation.update(orientation) else { return }
+    CameraSession.queue.async(
+      execute: DispatchWorkItem { [weak self] in
+        guard let self,
+          self.interfaceOrientation.current == orientation,
+          let connection = self.previewLayer.connection
+        else { return }
+        try? connection.setOrientation(orientation)
+      })
   }
 }

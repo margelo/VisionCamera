@@ -14,7 +14,16 @@ public final class FrameRendererView: UIView {
       if let renderer {
         layer.addSublayer(renderer.layer)
         renderer.layer.frame = bounds
+        renderer.layer.videoGravity = resizeMode.toAVLayerVideoGravity()
       }
+    }
+  }
+
+  /// How Frames fit within the view. The default is ``PreviewResizeMode/contain``.
+  public var resizeMode: PreviewResizeMode = .contain {
+    didSet {
+      guard renderer?.layer.superlayer === layer else { return }
+      renderer?.layer.videoGravity = resizeMode.toAVLayerVideoGravity()
     }
   }
 

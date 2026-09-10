@@ -4,6 +4,8 @@ Stream a Camera feed into a native preview.
 
 The ``PreviewOutput`` allows streaming a Camera feed into a preview, which may be connected to a ``PreviewView`` to display the Camera feed to the user.
 
+The SwiftUI ``Camera`` creates and connects its own preview output. For an app-owned session, display a retained output in ``CameraPreview``. See <doc:SwiftUICamera> and <doc:PreviewViewGuide>.
+
 ## Create a preview output
 
 ```swift

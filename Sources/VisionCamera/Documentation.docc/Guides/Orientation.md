@@ -4,7 +4,13 @@ Choose interface or device orientation and understand how outputs apply it.
 
 A Camera sensor has a fixed orientation relative to the device. Rotating the phone changes how its images need to be presented, and each output applies that orientation differently.
 
-## Follow orientation changes
+## Set SwiftUI orientation
+
+``Camera`` follows device orientation by default. Use `.orientationSource(.interface)` for interface rotation, or `.orientationSource(nil)` to preserve orientation values assigned directly to outputs. The preview follows the interface in every mode.
+
+Use `.onUIRotationChanged` to rotate controls relative to the interface. The Camera owns orientation subscriptions and removes them on teardown. See <doc:SwiftUICamera>.
+
+## Follow orientation changes in a native session
 
 In most cases, output orientation follows either the app's interface orientation or the phone's physical device orientation:
 
@@ -44,7 +50,7 @@ The preview follows the interface orientation automatically. Assigning `PreviewO
 
 ## Rotate UI controls
 
-When capture follows device orientation but the interface is locked, you can rotate individual buttons as the orientation changes. Keep this presentation choice in your UIKit code and update the views on the main actor.
+When capture follows device orientation but the interface is locked, you can rotate individual buttons as the orientation changes. Keep this presentation choice in your app and update the views on the main actor.
 
 ## How outputs apply orientation
 
