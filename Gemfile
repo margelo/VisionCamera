@@ -2,6 +2,8 @@ source 'https://rubygems.org'
 ruby '>= 3.4.9'
 gem 'cocoapods', '1.16.2'
 gem 'xcodeproj', '1.27.0'
+# ActiveSupport 7 used by CocoaPods still passes options removed in JSON 3.
+gem 'json', '~> 2.0'
 gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
