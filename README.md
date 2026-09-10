@@ -11,7 +11,7 @@ VisionCamera requires Xcode 26 or later and supports iOS 15.1 or later. The pack
 3. Until the first release containing `Package.swift`, select the **Branch** dependency rule and enter `main`. The existing `0.1.0` tag does not include the package manifest.
 4. Add the **VisionCamera** library product to your app target.
 
-The repository is currently private. Authenticate with a GitHub account that has access.
+The repository is currently private. Authenticate with a GitHub account that has access. For SSH authentication, use `ssh://git@github.com/margelo/VisionCamera.git` with a configured GitHub SSH key.
 
 For another Swift package, add the dependency and library product to your `Package.swift`:
 
