@@ -1,12 +1,13 @@
 // Copyright © 2026 Marc Rousavy @ Margelo
 
+import AVFoundation
 import Foundation
 
 @MainActor
 final class CameraCoordinator {
   let session: CameraSession
-  let configureSession: ([CameraSessionConnection], CameraSessionConfiguration?) async throws -> [CameraController]
-  let previewOutput = PreviewOutput()
+  let configureSession: ([CameraSessionConnection], CameraSessionConfiguration) async throws -> [CameraController]
+  let output = PreviewOutput()
   let scheduler = CameraUpdateScheduler()
   weak var preview: PreviewView?
   var camera: Camera?
@@ -18,15 +19,15 @@ final class CameraCoordinator {
   var didNotifyPreview = false
   var previewCleanup: ((PreviewView?) -> Void)?
   var reportedZoomConflict = false
-  var subscriptions: [ListenerSubscription] = []
+  var subscriptions: [ObservationToken] = []
   var subjectSubscription: CameraQueuedSubscription?
-  var zoomSubscription: ListenerSubscription?
+  var zoomSubscription: ObservationToken?
   var zoomGesture: ZoomGestureController?
   var focusGesture: TapToFocusGestureController?
   var appliedControllerConfiguration: CameraControllerConfiguration?
   var appliedZoom: Double?
   var appliedExposure: Double?
-  var appliedTorch: TorchMode?
+  var appliedTorch: AVCaptureDevice.TorchMode?
   var requestedRunning = false
   var deviceOrientationManager: DeviceOrientationManager?
   var orientationGeneration = 0
@@ -37,30 +38,30 @@ final class CameraCoordinator {
 
   init(
     session: CameraSession = CameraSession(),
-    configureSession: (([CameraSessionConnection], CameraSessionConfiguration?) async throws -> [CameraController])? = nil
+    configureSession: (([CameraSessionConnection], CameraSessionConfiguration) async throws -> [CameraController])? = nil
   ) {
     self.session = session
-    self.configureSession = configureSession ?? { try await session.configure(connections: $0, config: $1) }
+    self.configureSession = configureSession ?? { try await session.configure($0, configuration: $1) }
   }
 
   func mount(camera: Camera, preview: PreviewView) {
     self.preview = preview
     self.camera = camera
     subscriptions = [
-      session.addOnStartedListener { [weak self] in self?.camera?.callbacks.onStarted?() },
-      session.addOnStoppedListener { [weak self] in self?.camera?.callbacks.onStopped?() },
-      session.addOnErrorListener { [weak self] error in self?.report(error) },
-      session.addOnInterruptionStartedListener { [weak self] reason in self?.camera?.callbacks.onInterruptionStarted?(reason) },
-      session.addOnInterruptionEndedListener { [weak self] in self?.camera?.callbacks.onInterruptionEnded?() },
+      session.observeStarted { [weak self] in self?.camera?.callbacks.onStarted?() },
+      session.observeStopped { [weak self] in self?.camera?.callbacks.onStopped?() },
+      session.observeErrors { [weak self] error in self?.report(error) },
+      session.observeInterruptionStarted { [weak self] reason in self?.camera?.callbacks.onInterruptionStarted?(reason) },
+      session.observeInterruptionEnded { [weak self] in self?.camera?.callbacks.onInterruptionEnded?() },
     ]
-    preview.onPreviewStarted = { [weak self] in self?.camera?.callbacks.onPreviewStarted?() }
-    preview.onPreviewStopped = { [weak self] in self?.camera?.callbacks.onPreviewStopped?() }
+    preview.didStartPreview = { [weak self] in self?.camera?.callbacks.onPreviewStarted?() }
+    preview.didStopPreview = { [weak self] in self?.camera?.callbacks.onPreviewStopped?() }
     preview.onInterfaceOrientationChanged = { [weak self] orientation in
       guard let self, self.camera != nil else { return }
       self.interfaceOrientation = orientation
       self.scheduleUpdate()
     }
-    preview.previewOutput = previewOutput
+    preview.output = output
     interfaceOrientation = preview.interfaceOrientation
     update(camera: camera)
   }
@@ -84,19 +85,19 @@ final class CameraCoordinator {
     previewCleanup = nil
     self.camera = nil
     revision += 1
-    for subscription in subscriptions { subscription.remove() }
+    for subscription in subscriptions { subscription.cancel() }
     subscriptions.removeAll()
-    subjectSubscription?.remove()
+    subjectSubscription?.cancel()
     subjectSubscription = nil
-    zoomSubscription?.remove()
+    zoomSubscription?.cancel()
     zoomSubscription = nil
     stopDeviceOrientationTracking()
     orientationGeneration += 1
-    preview?.onPreviewStarted = nil
-    preview?.onPreviewStopped = nil
+    preview?.didStartPreview = nil
+    preview?.didStopPreview = nil
     preview?.onInterfaceOrientationChanged = nil
     preview?.gestureControllers = []
-    preview?.previewOutput = nil
+    preview?.output = nil
     zoomGesture = nil
     focusGesture = nil
     preview = nil
@@ -121,7 +122,7 @@ final class CameraCoordinator {
   }
 
   func replaceController(_ controller: CameraController?) {
-    subjectSubscription?.remove()
+    subjectSubscription?.cancel()
     subjectSubscription = nil
     self.controller = controller
     appliedControllerConfiguration = nil

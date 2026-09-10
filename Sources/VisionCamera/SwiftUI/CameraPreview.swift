@@ -13,8 +13,8 @@ import SwiftUI
 @MainActor
 public struct CameraPreview: UIViewRepresentable {
   /// The preview output to display, or `nil` for an empty preview.
-  public var previewOutput: PreviewOutput?
-  /// How the preview fits within the view. The default is ``PreviewResizeMode/cover``.
+  public var output: PreviewOutput?
+  /// How the preview fits within the view. The default is ``PreviewResizeMode/aspectFill``.
   public var resizeMode: PreviewResizeMode
   /// Native gesture controllers to attach, in recognition order.
   public var gestureControllers: [any GestureController]
@@ -25,19 +25,19 @@ public struct CameraPreview: UIViewRepresentable {
 
   /// Creates a preview for an existing Camera pipeline.
   /// - Parameters:
-  ///   - previewOutput: The preview output connected to your session.
+  ///   - output: The preview output connected to your session.
   ///   - resizeMode: Whether the preview fills or fits within the available space.
   ///   - gestureControllers: Stable native gesture controllers configured with your ``CameraController``.
   ///   - onPreviewStarted: Called when the preview starts displaying Frames.
   ///   - onPreviewStopped: Called when the preview stops displaying Frames while mounted.
   public init(
-    previewOutput: PreviewOutput?,
-    resizeMode: PreviewResizeMode = .cover,
+    output: PreviewOutput?,
+    resizeMode: PreviewResizeMode = .aspectFill,
     gestureControllers: [any GestureController] = [],
     onPreviewStarted: (() -> Void)? = nil,
     onPreviewStopped: (() -> Void)? = nil
   ) {
-    self.previewOutput = previewOutput
+    self.output = output
     self.resizeMode = resizeMode
     self.gestureControllers = gestureControllers
     self.onPreviewStarted = onPreviewStarted
@@ -53,22 +53,22 @@ public struct CameraPreview: UIViewRepresentable {
 
   /// Updates presentation and event handlers without reconfiguring the Camera session.
   public func updateUIView(_ uiView: PreviewView, context: Context) {
-    uiView.onPreviewStarted = onPreviewStarted
-    uiView.onPreviewStopped = onPreviewStopped
+    uiView.didStartPreview = onPreviewStarted
+    uiView.didStopPreview = onPreviewStopped
     if uiView.resizeMode != resizeMode { uiView.resizeMode = resizeMode }
     let hasSameGestures =
       uiView.gestureControllers.count == gestureControllers.count
       && zip(uiView.gestureControllers, gestureControllers).allSatisfy { $0 === $1 }
     if !hasSameGestures { uiView.gestureControllers = gestureControllers }
-    uiView.previewOutput = previewOutput
+    uiView.output = output
   }
 
   /// Removes callbacks, gestures, and the preview layer when SwiftUI removes the view.
   public static func dismantleUIView(_ uiView: PreviewView, coordinator: Void) {
-    uiView.onPreviewStarted = nil
-    uiView.onPreviewStopped = nil
+    uiView.didStartPreview = nil
+    uiView.didStopPreview = nil
     uiView.onInterfaceOrientationChanged = nil
     uiView.gestureControllers = []
-    uiView.previewOutput = nil
+    uiView.output = nil
   }
 }

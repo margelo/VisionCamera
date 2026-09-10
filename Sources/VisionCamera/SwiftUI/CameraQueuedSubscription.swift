@@ -5,17 +5,17 @@ import Foundation
 /// Keeps registration and removal on the queue that owns a subscription's native side effects.
 final class CameraQueuedSubscription {
   private let queue: DispatchQueue
-  private var subscription: ListenerSubscription?
+  private var subscription: ObservationToken?
 
-  init(queue: DispatchQueue, subscribe: @escaping () -> ListenerSubscription) {
+  init(queue: DispatchQueue, subscribe: @escaping () -> ObservationToken) {
     self.queue = queue
     queue.async(execute: DispatchWorkItem { self.subscription = subscribe() })
   }
 
-  func remove() {
+  func cancel() {
     queue.async(
       execute: DispatchWorkItem {
-        self.subscription?.remove()
+        self.subscription?.cancel()
         self.subscription = nil
       })
   }

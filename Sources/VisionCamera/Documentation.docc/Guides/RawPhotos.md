@@ -19,7 +19,7 @@ func prepareRAWCamera(device: CameraDevice) async throws -> (CameraSession, Phot
 		containerFormat: .dng,
 		previewImageTargetSize: .init(width: 320, height: 320)
 	))
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .device(device), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -27,7 +27,7 @@ func prepareRAWCamera(device: CameraDevice) async throws -> (CameraSession, Phot
 }
 ```
 
-RAW support depends on the selected device and configuration. Handle configuration and capture errors when RAW is unavailable.
+RAW support depends on the selected device and configuration. Handle configuration and capture errors when RAW is unavailable. Bayer RAW requires speed quality prioritization and device and connection zoom factors of `1`; incompatible requests throw before capture. Apple ProRAW supports quality prioritization and is not subject to that Bayer zoom restriction.
 
 Since RAW capture uses more bandwidth, a capture can take longer. Request a preview image to display as a thumbnail when available. See <doc:PhotoCallbacks>.
 
@@ -41,17 +41,16 @@ import VisionCamera
 
 func captureRAW(output: PhotoOutput) async throws -> URL {
 	let photo = try await output.capturePhoto()
-	let path = try await photo.saveToTemporaryFileAsync()
-	return URL(fileURLWithPath: path)
+	return try await photo.writeToTemporaryFile()
 }
 ```
 
-When the output is configured for DNG, the saved file has a `.dng` extension. Access available RAW pixels through the photo's `pixelBuffer`, or read encoded DNG data through `getFileDataAsync()`.
+When the output is configured for DNG, the saved file has a `.dng` extension. Access available RAW pixels through the photo's `pixelBuffer`, or read encoded DNG data through `encodedData()`.
 
 ## Apple ProRAW
 
 On supported devices and configurations, the photo output enables Apple ProRAW and selects its RAW format. ProRAW includes computational photography processing, so its processing differs from conventional sensor RAW.
 
-Use a RAW-capable image pipeline to develop either format. `Photo.toImageAsync()` does not develop RAW photos.
+Use a RAW-capable image pipeline to develop either format. `Photo.image()` does not develop RAW photos.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs/raw-photos.mdx. -->

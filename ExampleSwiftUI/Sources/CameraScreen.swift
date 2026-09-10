@@ -15,7 +15,7 @@ struct CameraScreen: View {
           device: device,
           isActive: model.isActive,
           outputs: [model.photoOutput, videoOutput],
-          constraints: [.fps(FPSConstraint(fps: 30))]
+          constraints: [.frameRate(30)]
         )
         .zoom($model.zoom)
         .enableZoomGesture()

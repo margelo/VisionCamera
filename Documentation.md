@@ -9,9 +9,10 @@ Use Xcode 26.2 or later and the Ruby version in `.ruby-version`:
 ```sh
 bundle install
 scripts/build-documentation.sh
+python3 scripts/check-documentation-examples.py
 ```
 
-The script installs the local CocoaPod, builds the framework's documentation, and checks that every public declaration has a documentation comment. Unresolved DocC links and other documentation warnings fail the build.
+The script installs the local CocoaPod, builds the framework's documentation, and checks that every public declaration has a documentation comment. Unresolved DocC links and other documentation warnings fail the build. The example checker compiles every complete Swift guide and README example against the built framework as a separate consumer. Compilation errors and warnings fail the check.
 
 The build produces:
 
@@ -41,7 +42,7 @@ xcodebuild docbuild -scheme VisionCamera -configuration Release \
 
 Use `///` comments above declarations. Start with a short summary, then explain behavior that the declaration alone doesn't describe. Include parameters, return values, thrown errors, callback queues, and buffer lifetimes where they apply.
 
-Link to a symbol with double backticks, such as ``CameraSession`` or ``CameraSession/configure(connections:config:)``. Use `<doc:PhotoOutputGuide>` for a guide and ordinary Markdown links for external Apple documentation.
+Link to a symbol with double backticks, such as ``CameraSession`` or ``CameraSession/configure(_:configuration:)``. Use `<doc:PhotoOutputGuide>` for a guide and ordinary Markdown links for external Apple documentation.
 
 Keep the author's existing explanations when adapting documentation from react-native-vision-camera. Change platform details, API names, examples, and links to match this framework. The native framework uses Swift callbacks, `async`/`await`, `UIImage`, and retained media buffers.
 
@@ -49,16 +50,26 @@ The initial documentation was adapted from the TypeScript specs and `docs/conten
 
 ## Publish with GitHub Pages
 
-The [Documentation workflow](./.github/workflows/documentation.yml) checks documentation on pull requests and pushes to `main`. Each run uploads an Xcode documentation archive and a Pages website artifact.
+The documentation website lives at **https://margelo.github.io/VisionCamera/**. The repository's About section and README link to this URL.
+
+The [Documentation workflow](./.github/workflows/documentation.yml) checks documentation on pull requests and pushes to `main`. Each successful build uploads an Xcode documentation archive and a Pages website artifact, including while the repository is private.
+
+Once Pages is enabled, the workflow publishes automatically when the repository becomes public and on subsequent pushes to `main`. Pull requests and private repositories only build and check the documentation. To publish again manually, run **Documentation** on `main` with **Publish the documentation** enabled.
 
 The Xcode archive is packaged as `VisionCamera.doccarchive.tar.gz` to preserve Swift symbol filenames. Extract it to open the resulting `.doccarchive` in Xcode.
 
-To publish from this repository:
+### First-time activation
 
-1. Enable GitHub Pages in the repository settings and select **GitHub Actions** as the build source.
-2. Check the site's visibility. Private source repositories do not automatically mean private websites.
-3. Run the **Documentation** workflow on `main` with **Publish the documentation** enabled.
+GitHub currently rejects Pages activation for this private repository on the organization's plan. After making the repository public, run this once from a checkout of `main`, using GitHub CLI authenticated as a repository administrator:
 
-The workflow reads the configured site's base path, so it works at a project URL such as `/VisionCamera` or a custom domain root. For a local build targeting a project URL, run `scripts/build-documentation.sh /VisionCamera`.
+```sh
+scripts/enable-documentation.sh
+```
 
-GitHub Free supports Pages for public repositories. A private repository needs GitHub Team or Enterprise Cloud; restricting the website itself to repository readers requires Enterprise Cloud. See [GitHub Pages availability](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages) and [site visibility](https://docs.github.com/en/enterprise-cloud@latest/pages/getting-started-with-github-pages/changing-the-visibility-of-your-github-pages-site).
+The script selects **GitHub Actions** as the Pages source and starts a fresh documentation deployment. It refuses to publish while the repository is private and does not change the repository's visibility. It is safe to run again if activation succeeded but the first build failed.
+
+Alternatively, select **GitHub Actions** under [Settings > Pages](https://github.com/margelo/VisionCamera/settings/pages), then run the **Documentation** workflow on `main`. A run triggered by making the repository public can reach deployment before Pages is enabled; activate Pages and start a fresh run in that case.
+
+This one-time step uses your local administrator session. GitHub's ordinary workflow token [cannot enable Pages](https://github.com/actions/configure-pages/blob/v6/action.yml), but it can publish subsequent updates without an additional secret. See [GitHub Pages availability](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages).
+
+The website artifact always uses `/VisionCamera` as its hosting base path so asset URLs and direct links work at the project URL. To build the same artifact locally, run `scripts/build-documentation.sh /VisionCamera`. A future custom domain would also need this workflow setting updated.

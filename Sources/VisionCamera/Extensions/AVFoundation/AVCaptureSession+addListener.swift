@@ -9,14 +9,14 @@ import Foundation
 
 extension AVCaptureSession {
   func addListener(for name: NSNotification.Name, listener: @escaping (Notification) -> Void)
-    -> ListenerSubscription
+    -> ObservationToken
   {
     let observer = NotificationCenter.default.addObserver(
       forName: name,
       object: self,
       queue: .main,
       using: listener)
-    return ListenerSubscription(remove: {
+    return ObservationToken({
       NotificationCenter.default.removeObserver(observer)
     })
   }

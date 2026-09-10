@@ -1,9 +1,10 @@
 // Copyright © 2026 Marc Rousavy @ Margelo
 
+import AVFoundation
 import SwiftUI
 
 extension Camera {
-  /// Sets how the preview fits the view. The default is ``PreviewResizeMode/cover``.
+  /// Sets how the preview fits the view. The default is ``PreviewResizeMode/aspectFill``.
   public func resizeMode(_ mode: PreviewResizeMode) -> Camera {
     var camera = self
     camera.options.resizeMode = mode
@@ -68,11 +69,11 @@ extension Camera {
     return camera
   }
 
-  /// Sets the requested torch mode while the Camera is active. The default is ``TorchMode/off``.
+  /// Sets the requested torch mode while the Camera is active. The default is `.off`.
   ///
   /// The torch is turned off before the Camera stops or changes device, and the requested mode is
   /// restored after capture starts again.
-  public func torchMode(_ mode: TorchMode) -> Camera {
+  public func torchMode(_ mode: AVCaptureDevice.TorchMode) -> Camera {
     var camera = self
     camera.options.torchMode = mode
     return camera

@@ -11,8 +11,8 @@ struct CameraViewConfiguration: Equatable {
     let outputs: [any CameraOutput] = [preview] + outputs
     return CameraSessionConnection(
       input: device,
-      outputs: outputs.map { CameraOutputConfiguration(mirrorMode: mirrorMode, output: $0) },
-      constraints: constraints + outputs.map { .resolutionBias(ResolutionBiasConstraint(resolutionBias: $0)) },
+      outputs: outputs.map { CameraOutputConfiguration(output: $0, mirrorMode: mirrorMode) },
+      constraints: constraints + outputs.map { .resolution($0) },
       initialZoom: initialZoom,
       initialExposureBias: initialExposureBias)
   }

@@ -19,13 +19,13 @@ extension AVCaptureConnection {
   ///
   /// Returns `nil` until the session is configured and the port has a
   /// format description attached.
-  public var inputStreamResolution: Size? {
+  public var inputStreamResolution: CGSize? {
     guard let port = inputPorts.first,
       let formatDescription = port.formatDescription
     else {
       return nil
     }
     let dims = CMVideoFormatDescriptionGetDimensions(formatDescription)
-    return Size(width: Double(dims.width), height: Double(dims.height))
+    return CGSize(width: Double(dims.width), height: Double(dims.height))
   }
 }

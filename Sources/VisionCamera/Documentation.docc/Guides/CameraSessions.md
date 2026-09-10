@@ -11,9 +11,7 @@ The SwiftUI ``Camera`` manages these steps for a single Camera. Use a session di
 ```swift
 import VisionCamera
 
-func createSession() -> CameraSession {
-	CameraSession()
-}
+let session = CameraSession()
 ```
 
 See <doc:MultiCamera> for multi-camera sessions.
@@ -29,7 +27,7 @@ func configurePhotoCapture(
 	session: CameraSession,
 	photoOutput: PhotoOutput
 ) async throws -> [CameraController] {
-	let controllers = try await session.configure(connections: [
+	let controllers = try await session.configure([
 		CameraSessionConnection(
 			input: .position(.back),
 			outputs: [CameraOutputConfiguration(output: photoOutput)])
@@ -49,6 +47,22 @@ There's three levels of Camera configuration:
 
 > Note: Properties like zoom, exposure, or focus can be adjusted without session reconfiguration. See <doc:CameraControllerGuide>.
 
+## Mix audio with other apps
+
+On iOS 18 and later, configure whether AVFoundation mixes recording audio with other apps:
+
+```swift
+import VisionCamera
+
+@available(iOS 18.0, *)
+func configureAudioMixing(session: CameraSession, connections: [CameraSessionConnection]) async throws {
+	let config = CameraSessionConfiguration(allowsBackgroundAudioPlayback: true)
+	_ = try await session.configure(connections, configuration: config)
+}
+```
+
+This setting applies when the capture session automatically configures the app's shared audio session. Leave it unspecified to preserve the current setting.
+
 ## Handle interruptions
 
 A ``CameraSession`` can be interrupted, for example due to an incoming FaceTime call or device thermal throttling. See ``InterruptionReason``.
@@ -56,22 +70,22 @@ A ``CameraSession`` can be interrupted, for example due to an incoming FaceTime 
 ```swift
 import VisionCamera
 
-func observeInterruptions(session: CameraSession) -> [ListenerSubscription] {
+func observeInterruptions(session: CameraSession) -> [ObservationToken] {
 	[
-		session.addOnInterruptionStartedListener { reason in
+		session.observeInterruptionStarted { reason in
 			print("Camera interrupted:", reason)
 		},
-		session.addOnInterruptionEndedListener {
+		session.observeInterruptionEnded {
 			print("Camera interruption ended")
 		},
-		session.addOnErrorListener { error in
+		session.observeErrors { error in
 			print("Camera error:", error)
 		}
 	]
 }
 ```
 
-Retain subscriptions while listening and call `remove()` when finished. Camera callbacks may arrive outside the main queue. Dispatch UI changes to the main queue.
+Retain observation tokens while listening, then call `cancel()` or release them when finished. Camera callbacks may arrive outside the main queue. Dispatch UIKit changes to the main queue.
 
 ## Stop a CameraSession
 

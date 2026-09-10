@@ -14,7 +14,7 @@ extension AVCaptureSession {
     let device = try AVCaptureDevice.resolve(value: deviceOrPosition)
     let deviceInput = try AVCaptureDeviceInput(device: device)
     guard canAddInput(deviceInput) else {
-      throw CameraError(message: "Input \"\(deviceInput)\" cannot be added to Camera Session!")
+      throw ConfigurationError.inputRejected(deviceID: device.uniqueID)
     }
     logger.info("Adding input \(deviceInput)...")
     addInputWithNoConnections(deviceInput)

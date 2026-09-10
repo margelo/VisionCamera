@@ -5,7 +5,7 @@ import SwiftUI
 /// A SwiftUI view that displays Frames submitted directly to a ``FrameRenderer``.
 ///
 /// Keep the renderer in a stable owner, such as your app's camera model, and pass the same instance
-/// whenever SwiftUI updates this view. Submit Frames with ``FrameRenderer/renderFrame(frame:)`` on
+/// whenever SwiftUI updates this view. Submit Frames with ``FrameRenderer/render(_:)`` on
 /// the serial queue that delivers them. Rendering does not publish per-frame SwiftUI state.
 ///
 /// A renderer has one display layer and can be displayed by one view at a time. Removing this view
@@ -14,14 +14,14 @@ import SwiftUI
 public struct CameraFrameRenderer: UIViewRepresentable {
   /// The renderer whose Frames this view displays.
   public var renderer: FrameRenderer
-  /// How Frames fit within the view. The default is ``PreviewResizeMode/contain``.
+  /// How Frames fit within the view. The default is ``PreviewResizeMode/aspectFit``.
   public var resizeMode: PreviewResizeMode
 
   /// Creates a SwiftUI view for an existing Frame renderer.
   /// - Parameters:
   ///   - renderer: The renderer owned by your camera model or frame pipeline.
   ///   - resizeMode: Whether Frames fit within or fill the available space.
-  public init(renderer: FrameRenderer, resizeMode: PreviewResizeMode = .contain) {
+  public init(renderer: FrameRenderer, resizeMode: PreviewResizeMode = .aspectFit) {
     self.renderer = renderer
     self.resizeMode = resizeMode
   }

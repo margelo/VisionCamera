@@ -41,7 +41,7 @@ struct PhotoCameraScreen: View {
 					Task {
 						do {
 							let photo = try await model.photo.capturePhoto(settings: .init())
-							let path = try await photo.saveToTemporaryFileAsync()
+							let path = try await photo.writeToTemporaryFile()
 							message = "Saved to \(path)"
 						} catch {
 							message = error.localizedDescription
@@ -74,12 +74,12 @@ func camera(device: CameraDevice, photo: PhotoOutput, active: Bool) -> some View
 		device: device,
 		isActive: active,
 		outputs: [photo],
-		constraints: [.fps(FPSConstraint(fps: 30))]
+		constraints: [.frameRate(30)]
 	)
 	.mirrorMode(.auto)
-	.resizeMode(.cover)
+	.resizeMode(.aspectFill)
 	.orientationSource(.device)
-	.sessionConfiguration(.init(allowHapticsAndSystemSoundsPlayback: true))
+	.sessionConfiguration(.init(allowsHapticsAndSystemSoundsPlayback: true))
 }
 ```
 
@@ -109,7 +109,7 @@ SwiftUI can keep a hidden tab or navigation screen mounted. Camera does not infe
 
 ## Handle events and orientation
 
-Camera event closures run on the main actor. Use `.onConfigured` and `.onSessionConfigSelected` for configuration, `.onStarted` and `.onStopped` for session activity, and `.onPreviewStarted` and `.onPreviewStopped` for preview activity. Session start and preview start are separate events.
+Camera event closures run on the main actor. Use `.onConfigured` and `.didSelectConfiguration` for configuration, `.onStarted` and `.onStopped` for session activity, and `.onPreviewStarted` and `.onPreviewStopped` for preview activity. Session start and preview start are separate events.
 
 Use `.onError`, `.onInterruptionStarted`, and `.onInterruptionEnded` to show capture problems in your UI. `.onSubjectAreaChanged` reports native subject-area changes. Callback replacement does not rebuild the session.
 

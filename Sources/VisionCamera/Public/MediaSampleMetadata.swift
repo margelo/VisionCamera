@@ -21,9 +21,9 @@ public struct MediaSampleMetadata {
   /// Creates metadata from the timestamp and the output's video connection.
   ///
   /// - Throws: If the output has no video connection.
-  public init(timestamp: CMTime, orientationFromOutput output: AVCaptureOutput) throws {
+  public init(timestamp: CMTime, orientationFromOutput output: AVCaptureOutput) throws(ConfigurationError) {
     guard let connection = output.connection(with: .video) else {
-      throw CameraError(message: "Output \(output) does not have a video connection!")
+      throw ConfigurationError.outputNotConnected
     }
     self.init(timestamp: timestamp, orientationFromConnection: connection)
   }

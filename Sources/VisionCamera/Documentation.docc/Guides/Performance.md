@@ -57,7 +57,7 @@ import VisionCamera
 
 func prepareAndCapture(output: PhotoOutput) async throws -> Photo {
 	let settings = CapturePhotoSettings(flashMode: .off)
-	try await output.prepareSettings(settings: [settings])
+	try await output.prepareSettings( [settings])
 	return try await output.capturePhoto(settings: settings)
 }
 ```

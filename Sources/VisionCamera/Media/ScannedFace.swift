@@ -1,33 +1,29 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 import AVFoundation
+import CoreGraphics
 
-/// Represents a Face.
-public final class ScannedFace: ScannedObject {
-  /// The retained native AVFoundation metadata object.
+/// A face detected by the capture pipeline.
+public struct ScannedFace: ScannedObject, Identifiable {
+  /// The retained native face metadata.
   public let face: AVMetadataFaceObject
   /// The underlying AVFoundation metadata object.
   public var object: AVMetadataObject { face }
 
-  /// Creates a ScannedFace that retains the given native AVFoundation metadata object.
+  /// Creates a value retaining a native detected face.
   public init(object: AVMetadataFaceObject) { self.face = object }
 
-  /// The ``ScannedObjectType`` of this ``ScannedObject``.
-  public var type: ScannedObjectType { ScannedObjectType(type: face.type) }
-  /// The bounding box coordinates of this ``ScannedObject``.
+  /// The detected metadata object type.
+  public var type: AVMetadataObject.ObjectType { face.type }
+  /// The face's bounds in its current coordinate system.
   ///
-  /// Coordinates are in camera-space (`0.0` ... `1.0`), and can be
-  /// converted to view-space via the ``PreviewView``.
-  public var boundingBox: BoundingBox { BoundingBox(face.bounds) }
-  /// The ID of this ``ScannedFace`` used to
-  /// identify multiple faces in the same scene.
-  public var faceID: Double { Double(face.faceID) }
-  /// A Boolean value indicating whether there is a valid roll angle associated with the face.
-  public var hasRollAngle: Bool { face.hasRollAngle }
-  /// The roll angle of the face specified in degrees.
-  public var rollAngle: Double { Double(face.rollAngle) }
-  /// A Boolean value indicating whether there is a valid yaw angle associated with the face.
-  public var hasYawAngle: Bool { face.hasYawAngle }
-  /// The yaw angle of the face specified in degrees.
-  public var yawAngle: Double { Double(face.yawAngle) }
+  /// ``ObjectOutput`` delivers normalized Camera coordinates. Values converted through ``PreviewView``
+  /// use the preview view's coordinate system instead.
+  public var bounds: CGRect { face.bounds }
+  /// The capture pipeline's identifier for tracking this face within a scene.
+  public var id: Int { face.faceID }
+  /// The face's roll angle in degrees, or `nil` when AVFoundation has no roll estimate.
+  public var rollAngle: CGFloat? { face.hasRollAngle ? face.rollAngle : nil }
+  /// The face's yaw angle in degrees, or `nil` when AVFoundation has no yaw estimate.
+  public var yawAngle: CGFloat? { face.hasYawAngle ? face.yawAngle : nil }
 }

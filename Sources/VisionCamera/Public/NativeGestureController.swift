@@ -18,14 +18,7 @@ public protocol NativeGestureController: AnyObject {
   var gestureRecognizer: GestureRecognizer { get }
 
   /// Called after this gesture recognizer is attached to a Preview View. The default implementation does nothing.
-  func onAttached(to preview: PreviewView)
+  func attach(to preview: PreviewView)
   /// Called after this gesture recognizer is removed from a Preview View. The default implementation does nothing.
-  func onDetached(from preview: PreviewView)
-}
-
-extension NativeGestureController {
-  /// Called after this gesture recognizer is attached to a Preview View. The default implementation does nothing.
-  public func onAttached(to preview: PreviewView) {}
-  /// Called after this gesture recognizer is removed from a Preview View. The default implementation does nothing.
-  public func onDetached(from preview: PreviewView) {}
+  func detach(from preview: PreviewView)
 }

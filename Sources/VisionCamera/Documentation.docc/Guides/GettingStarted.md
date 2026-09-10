@@ -54,7 +54,7 @@ Add `NSCameraUsageDescription`, and optionally `NSMicrophoneUsageDescription`, t
 
 ## Mount a SwiftUI Camera
 
-Request permission with ``VisionCamera/requestCameraPermission()`` and select a device with ``VisionCamera/getDefaultCamera(position:)``. Mount a ``Camera`` after permission is granted:
+Request permission with ``VisionCamera/requestCameraPermission()`` and select a device with ``VisionCamera/defaultCamera(for:)``. Mount a ``Camera`` after permission is granted:
 
 ```swift
 import SwiftUI
@@ -81,7 +81,7 @@ struct CameraScreen: View {
 					message = "Camera access was denied. Enable it in Settings."
 					return
 				}
-				device = VisionCamera.getDefaultCamera(position: .back)
+				device = VisionCamera.defaultCamera(for: .back)
 				if device == nil { message = "No Camera is available." }
 			} catch {
 				message = error.localizedDescription
@@ -106,17 +106,17 @@ import VisionCamera
 @MainActor
 func startCamera(in container: UIView) async throws -> CameraSession {
 	guard try await VisionCamera.requestCameraPermission() else {
-		throw CameraError(message: "Camera access was not granted.")
+		throw PermissionError.cameraAccessDenied(status: VisionCamera.cameraPermissionStatus)
 	}
 
 	let session = CameraSession()
 	let output = PreviewOutput()
-	let preview = PreviewView(previewOutput: output)
+	let preview = PreviewView(output: output)
 	preview.frame = container.bounds
 	preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 	container.addSubview(preview)
 
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		CameraSessionConnection(
 			input: .position(.back),
 			outputs: [CameraOutputConfiguration(output: output)])

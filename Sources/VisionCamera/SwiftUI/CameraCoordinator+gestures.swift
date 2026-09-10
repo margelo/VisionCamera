@@ -12,11 +12,11 @@ extension CameraCoordinator {
       changed = true
     }
     if enableZoom != (zoomGesture != nil) {
-      zoomSubscription?.remove()
+      zoomSubscription?.cancel()
       zoomSubscription = nil
       zoomGesture = enableZoom ? ZoomGestureController() : nil
       zoomGesture?.controller = controller
-      zoomSubscription = zoomGesture?.addOnZoomChangedListener { [weak self] zoom in
+      zoomSubscription = zoomGesture?.observeZoomChanges { [weak self] zoom in
         guard let self, case .binding(let binding) = self.camera?.options.zoom else { return }
         // The gesture already applies the value on the session queue. Avoid writing it a second time.
         self.appliedZoom = zoom

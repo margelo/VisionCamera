@@ -12,7 +12,7 @@ extension CameraCoordinator {
       orientationGeneration += 1
       let generation = orientationGeneration
       do {
-        try manager.startOrientationUpdates { [weak self] orientation in
+        try manager.startUpdates { [weak self] orientation in
           DispatchQueue.main.async {
             guard let self, self.camera != nil, self.orientationGeneration == generation else { return }
             self.deviceOrientation = orientation
@@ -34,7 +34,7 @@ extension CameraCoordinator {
 
   func stopDeviceOrientationTracking() {
     guard let deviceOrientationManager else { return }
-    deviceOrientationManager.stopOrientationUpdates()
+    deviceOrientationManager.stopUpdates()
     self.deviceOrientationManager = nil
     orientationGeneration += 1
   }

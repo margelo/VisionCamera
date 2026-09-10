@@ -48,7 +48,7 @@ final class CameraModel: ObservableObject {
         return
       }
       microphoneGranted = try await VisionCamera.requestMicrophonePermission()
-      guard let device = VisionCamera.getDefaultCamera(position: position) else {
+      guard let device = VisionCamera.defaultCamera(for: position) else {
         status = "No camera is available. Run this example on an iPhone or iPad."
         return
       }
@@ -75,7 +75,7 @@ final class CameraModel: ObservableObject {
       isActive = true
       return
     }
-    // If startRecording is still pending, toggleRecording submits the stop once it starts.
+    // If start is still pending, toggleRecording submits the stop once it starts.
     guard !isStartingRecording else { return }
     await finishRecording()
     // A new scene activation may have arrived while the stop request was being submitted.
@@ -119,7 +119,7 @@ final class CameraModel: ObservableObject {
   func switchCamera() {
     guard canSwitchCamera else { return }
     let nextPosition: TargetCameraPosition = position == .back ? .front : .back
-    guard let nextDevice = VisionCamera.getDefaultCamera(position: nextPosition) else {
+    guard let nextDevice = VisionCamera.defaultCamera(for: nextPosition) else {
       status = "The other camera is unavailable."
       return
     }
@@ -135,7 +135,7 @@ final class CameraModel: ObservableObject {
     defer { isBusy = false }
     do {
       let photo = try await photoOutput.capturePhoto()
-      thumbnail = try await photo.toImageAsync()
+      thumbnail = try await photo.image()
       status = "Photo captured"
     } catch {
       report(error)
@@ -164,21 +164,21 @@ final class CameraModel: ObservableObject {
       self.recorder = recorder
       recordingID = id
       isRecording = true
-      try await recorder.startRecording(
+      try await recorder.start(
         // Keep the model and recorder alive through finalization, even if the screen disappears.
         // recordingFinished releases the recorder and breaks this ownership relationship.
-        onRecordingFinished: { path, _ in
+        onFinished: { result in
           DispatchQueue.main.async {
-            self.recordingFinished(id: id, message: "Video saved: \(URL(fileURLWithPath: path).lastPathComponent)")
+            self.recordingFinished(id: id, message: "Video saved: \(result.fileURL.lastPathComponent)")
           }
         },
-        onRecordingError: { error in
+        onError: { error in
           DispatchQueue.main.async {
             self.recordingFinished(id: id, message: error.localizedDescription)
           }
         },
-        onRecordingPaused: nil,
-        onRecordingResumed: nil
+        onPaused: nil,
+        onResumed: nil
       )
       isStartingRecording = false
       guard recordingID == id else { return }
@@ -198,7 +198,7 @@ final class CameraModel: ObservableObject {
 
   private func setVideoOutput() {
     isConfigured = false
-    let options = VideoOutputOptions(enableAudio: microphoneGranted)
+    let options = VideoOutputOptions(isAudioEnabled: microphoneGranted)
     switch recordingMode {
     case .standard:
       videoOutput = MovieFileVideoOutput(options: options)
@@ -211,7 +211,7 @@ final class CameraModel: ObservableObject {
     guard let recorder, !isFinalizing, !isStartingRecording else { return }
     isFinalizing = true
     status = "Finishing video..."
-    await recorder.stopRecording()
+    await recorder.stop()
     // Retain the recorder until its callback confirms that the file is finalized.
   }
 

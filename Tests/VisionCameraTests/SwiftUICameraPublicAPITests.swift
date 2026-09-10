@@ -11,17 +11,17 @@ final class SwiftUICameraPublicAPITests: XCTestCase {
     let binding = Binding(get: { zoom }, set: { zoom = $0 })
     let camera: Camera = Camera(
       device: .position(.back), isActive: false, outputs: [photo, movie],
-      constraints: [.fps(FPSConstraint(fps: 30))]
+      constraints: [.frameRate(30)]
     )
     .zoom(binding)
     .exposureBias(0)
     .torchMode(.off)
-    .resizeMode(.cover)
+    .resizeMode(.aspectFill)
     .mirrorMode(.auto)
     .orientationSource(.device)
     .initialZoom(1)
     .initialExposureBias(0)
-    .sessionConfiguration(CameraSessionConfiguration(allowHapticsAndSystemSoundsPlayback: true))
+    .sessionConfiguration(CameraSessionConfiguration(allowsHapticsAndSystemSoundsPlayback: true))
     .controllerConfiguration(CameraControllerConfiguration())
     .enableZoomGesture()
     .enableTapToFocusGesture()

@@ -8,7 +8,7 @@ extension CameraCoordinator {
       await stop()
       replaceController(nil)
       do {
-        _ = try await configureSession([], nil)
+        _ = try await configureSession([], .init())
       } catch {
         logger.error("Failed to disconnect Camera: \(error)")
       }
@@ -23,7 +23,7 @@ extension CameraCoordinator {
     }
     let hasZoomConflict = options.enableZoomGesture && options.zoom?.isFixed == true
     if hasZoomConflict && !reportedZoomConflict {
-      report(CameraError(message: "A fixed zoom cannot be combined with the native zoom gesture. Pass a zoom binding or disable the gesture."))
+      report(ConfigurationError.fixedZoomWithGesture)
     }
     reportedZoomConflict = hasZoomConflict
     if hasZoomConflict {
@@ -45,7 +45,7 @@ extension CameraCoordinator {
       attemptedConfiguration = options.configuration
       appliedOutputOrientation = nil
       var connection = options.configuration.connection(
-        preview: previewOutput,
+        preview: output,
         initialZoom: options.zoom?.value ?? options.initialZoom,
         initialExposureBias: options.exposureBias ?? options.initialExposureBias)
       connection.onSessionConfigSelected = { [weak self] config in
@@ -58,7 +58,7 @@ extension CameraCoordinator {
         let controllers = try await configureSession([connection], options.configuration.sessionConfiguration)
         guard self.camera?.options.configuration == options.configuration else { return }
         guard let controller = controllers.first else {
-          throw CameraError(message: "Camera configuration did not return a controller.")
+          throw ConfigurationError.missingCameraController
         }
         replaceController(controller)
         configuredConfiguration = options.configuration
@@ -88,7 +88,7 @@ extension CameraCoordinator {
       guard self.camera?.options.isActive == true, self.revision == revision else { return }
       if appliedTorch != options.torchMode {
         appliedTorch = options.torchMode
-        do { try await controller.setTorchMode(mode: options.torchMode) } catch { report(error) }
+        do { try await controller.setTorchMode(options.torchMode) } catch { report(error) }
       }
     }
   }
@@ -98,7 +98,7 @@ extension CameraCoordinator {
     if appliedControllerConfiguration != options.controllerConfiguration {
       appliedControllerConfiguration = options.controllerConfiguration
       if options.controllerConfiguration != CameraControllerConfiguration() {
-        do { try await controller.configure(config: options.controllerConfiguration) } catch { report(error) }
+        do { try await controller.configure(options.controllerConfiguration) } catch { report(error) }
       }
     }
     guard self.controller === controller, camera != nil, self.revision == revision else { return }
@@ -106,19 +106,19 @@ extension CameraCoordinator {
       !(options.enableZoomGesture && options.zoom?.isFixed == true)
     {
       appliedZoom = zoom
-      do { try await controller.setZoom(zoom: zoom) } catch { report(error) }
+      do { try await controller.setZoom(zoom) } catch { report(error) }
     }
     guard self.controller === controller, camera != nil, self.revision == revision else { return }
     if let exposure = options.exposureBias, exposure != appliedExposure {
       appliedExposure = exposure
-      do { try await controller.setExposureBias(exposure: exposure) } catch { report(error) }
+      do { try await controller.setExposureBias(exposure) } catch { report(error) }
     }
   }
 
   func turnTorchOff() async {
     guard let controller, appliedTorch != .off else { return }
     appliedTorch = .off
-    do { try await controller.setTorchMode(mode: .off) } catch { report(error) }
+    do { try await controller.setTorchMode(.off) } catch { report(error) }
   }
 
   func stop() async {

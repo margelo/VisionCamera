@@ -17,7 +17,7 @@ extension AVCaptureDevice {
       // Get default wide-angle at .front
       return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
     case .external:
-      // On iOS, Position "external" is for some reason reflected on the .deviceType, not on .position.
+      // External capture devices use AVFoundation's unspecified lens position.
       guard #available(iOS 17.0, *) else {
         return nil
       }

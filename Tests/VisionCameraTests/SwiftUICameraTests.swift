@@ -10,9 +10,9 @@ final class SwiftUICameraTests: XCTestCase {
     let photo = PhotoOutput()
     let movie = MovieFileVideoOutput()
     let first = CameraViewConfiguration(
-      device: .position(.back), outputs: [photo, movie], constraints: [.fps(FPSConstraint(fps: 60))])
+      device: .position(.back), outputs: [photo, movie], constraints: [.frameRate(60)])
     let rebuilt = CameraViewConfiguration(
-      device: .position(.back), outputs: [photo, movie], constraints: [.fps(FPSConstraint(fps: 60))])
+      device: .position(.back), outputs: [photo, movie], constraints: [.frameRate(60)])
     XCTAssertEqual(first, rebuilt)
 
     var changed = rebuilt
@@ -22,13 +22,13 @@ final class SwiftUICameraTests: XCTestCase {
     changed.outputs = [PhotoOutput(), movie]
     XCTAssertNotEqual(first, changed)
     changed = rebuilt
-    changed.constraints = [.fps(FPSConstraint(fps: 30))]
+    changed.constraints = [.frameRate(30)]
     XCTAssertNotEqual(first, changed)
     changed = rebuilt
     changed.device = .position(.front)
     XCTAssertNotEqual(first, changed)
     changed = rebuilt
-    changed.sessionConfiguration.allowHapticsAndSystemSoundsPlayback = true
+    changed.sessionConfiguration.allowsHapticsAndSystemSoundsPlayback = true
     XCTAssertNotEqual(first, changed)
     changed = rebuilt
     changed.mirrorMode = .off
@@ -42,16 +42,16 @@ final class SwiftUICameraTests: XCTestCase {
     let movie = MovieFileVideoOutput()
     let configuration = CameraViewConfiguration(
       device: .position(.back), outputs: [photo, movie],
-      constraints: [.fps(FPSConstraint(fps: 60)), .resolutionBias(ResolutionBiasConstraint(resolutionBias: movie))])
+      constraints: [.frameRate(60), .resolution(movie)])
     let connection = configuration.connection(preview: preview, initialZoom: 2, initialExposureBias: -1)
     let expectedOutputs: [any CameraOutput] = [preview, photo, movie]
     XCTAssertTrue(connection.outputs.map(\.output).elementsEqual(expectedOutputs, by: { $0 === $1 }))
     XCTAssertEqual(connection.initialZoom, 2)
     XCTAssertEqual(connection.initialExposureBias, -1)
-    XCTAssertTrue(connection.constraints[0].isEquivalent(to: .fps(FPSConstraint(fps: 60))))
+    XCTAssertTrue(connection.constraints[0].isEquivalent(to: .frameRate(60)))
     let biases = connection.constraints.compactMap { constraint -> (any CameraOutput)? in
-      guard case .resolutionBias(let bias) = constraint else { return nil }
-      return bias.resolutionBias
+      guard case .resolution(let bias) = constraint else { return nil }
+      return bias
     }
     let expectedBiases: [any CameraOutput] = [movie, preview, photo, movie]
     XCTAssertTrue(biases.elementsEqual(expectedBiases, by: { $0 === $1 }))
@@ -65,11 +65,11 @@ final class SwiftUICameraTests: XCTestCase {
       .zoom(2)
       .exposureBias(-1)
       .torchMode(.on)
-      .controllerConfiguration(CameraControllerConfiguration(enableLowLightBoost: true))
+      .controllerConfiguration(CameraControllerConfiguration(isLowLightBoostEnabled: true))
       .initialZoom(4)
       .initialExposureBias(-2)
       .orientationSource(nil)
-      .resizeMode(.contain)
+      .resizeMode(.aspectFit)
       .enableTapToFocusGesture()
       .onError { _ in }
       .onConfigured { _ in }
@@ -141,13 +141,13 @@ final class SwiftUICameraTests: XCTestCase {
     let subscription = CameraQueuedSubscription(queue: queue) {
       XCTAssertEqual(DispatchQueue.getSpecific(key: key), true)
       events.append("subscribe")
-      return ListenerSubscription {
+      return ObservationToken {
         XCTAssertEqual(DispatchQueue.getSpecific(key: key), true)
         events.append("remove")
       }
     }
-    subscription.remove()
-    subscription.remove()
+    subscription.cancel()
+    subscription.cancel()
     await queue.perform { XCTAssertEqual(events, ["subscribe", "remove"]) }
   }
 
@@ -155,7 +155,7 @@ final class SwiftUICameraTests: XCTestCase {
   func testUnmountSupersedesPendingMountAndReleasesResources() async {
     var coordinator: CameraCoordinator? = CameraCoordinator()
     let isCoordinatorReleased = { [weak coordinator] in coordinator == nil }
-    let isOutputReleased = { [weak output = coordinator?.previewOutput] in output == nil }
+    let isOutputReleased = { [weak output = coordinator?.output] in output == nil }
     let scheduler = coordinator!.scheduler
     let session = coordinator!.session
     let preview = PreviewView()
@@ -167,7 +167,7 @@ final class SwiftUICameraTests: XCTestCase {
     coordinator?.dismantle()
     coordinator = nil
     await scheduler.waitUntilIdle()
-    XCTAssertNil(preview.previewOutput)
+    XCTAssertNil(preview.output)
     XCTAssertTrue(preview.gestureControllers.isEmpty)
     XCTAssertFalse(session.isRunning)
     XCTAssertTrue(session.session.connections.isEmpty)
@@ -304,23 +304,23 @@ final class SwiftUICameraTests: XCTestCase {
           resume = continuation
           entered.fulfill()
         }
-        throw CameraError(message: "superseded")
+        throw NSError(domain: "SwiftUICameraTests", code: 1, userInfo: [NSLocalizedDescriptionKey: "superseded"])
       }
-      throw CameraError(message: "current")
+      throw NSError(domain: "SwiftUICameraTests", code: 2, userInfo: [NSLocalizedDescriptionKey: "current"])
     }
     let preview = PreviewView()
     coordinator.mount(
       camera: Camera(device: .position(.back), isActive: true)
         .orientationSource(nil)
         .onError { error in
-          if error is CameraError { XCTFail("A stale configuration must not call its old handler") }
+          if (error as NSError).domain == "SwiftUICameraTests" { XCTFail("A stale configuration must not call its old handler") }
         },
       preview: preview)
     await fulfillment(of: [entered], timeout: 2)
     let latest = Camera(device: .position(.front), isActive: false)
       .orientationSource(nil)
       .onError { error in
-        if error is CameraError { errors.append(error.localizedDescription) }
+        if (error as NSError).domain == "SwiftUICameraTests" { errors.append(error.localizedDescription) }
       }
     coordinator.update(camera: latest)
     coordinator.update(camera: latest.exposureBias(1))
@@ -362,13 +362,13 @@ final class SwiftUICameraTests: XCTestCase {
       camera: Camera(device: .position(.back), isActive: true)
         .orientationSource(nil)
         .onError { error in
-          if error is CameraError { XCTFail("A removed Camera must not report late configuration results") }
+          if (error as NSError).domain == "SwiftUICameraTests" { XCTFail("A removed Camera must not report late configuration results") }
         }
         .onConfigured { _ in XCTFail("A removed Camera must not announce configuration") },
       preview: preview)
     await fulfillment(of: [entered], timeout: 2)
     coordinator.dismantle()
-    XCTAssertNil(preview.previewOutput)
+    XCTAssertNil(preview.output)
     XCTAssertTrue(coordinator.subscriptions.isEmpty)
     resume?.resume()
     await coordinator.scheduler.waitUntilIdle()
@@ -380,7 +380,7 @@ final class SwiftUICameraTests: XCTestCase {
 
   func testEmptySessionConfigurationDoesNotRequireCameraPermission() async throws {
     let session = CameraSession()
-    let controllers = try await session.configure(connections: [])
+    let controllers = try await session.configure([])
     XCTAssertTrue(controllers.isEmpty)
     XCTAssertTrue(session.session.inputs.isEmpty)
     XCTAssertTrue(session.session.outputs.isEmpty)

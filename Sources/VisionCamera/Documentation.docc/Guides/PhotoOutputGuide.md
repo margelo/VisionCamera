@@ -14,7 +14,7 @@ import VisionCamera
 func preparePhotoCamera() async throws -> (CameraSession, PhotoOutput) {
 	let session = CameraSession()
 	let output = PhotoOutput()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -48,12 +48,35 @@ import VisionCamera
 
 func takePhotoFile(output: PhotoOutput) async throws -> URL {
 	let photo = try await output.capturePhotoToFile()
-	return URL(fileURLWithPath: photo.filePath)
+	return photo.fileURL
 }
 ```
 
-`filePath` is a plain filesystem path. Use `URL(fileURLWithPath:)` when an API expects a URL.
+``PhotoFile/fileURL`` is a native `URL`, ready to pass to other file and image APIs.
 
 See ``CapturePhotoSettings`` for capture options and <doc:PhotoCallbacks> for capture events.
+
+
+## Select a photo format
+
+The default `.automatic()` format selects HEIC when the connected output supports it and falls back to JPEG. Use `.jpeg(quality:)` or `.heic(quality:)` for an explicit processed format, or `.dng` for RAW. Unsupported explicit formats throw. See <doc:PhotoQuality> and <doc:RawPhotos>.
+
+## Include depth data
+
+Enable depth delivery before configuring the session, then request it for each photo that needs depth:
+
+```swift
+import VisionCamera
+
+func makeDepthPhotoOutput() -> PhotoOutput {
+	PhotoOutput(options: .init(isDepthDataDeliveryEnabled: true))
+}
+
+func captureDepthPhoto(output: PhotoOutput) async throws -> Photo {
+	try await output.capturePhoto(settings: .init(isDepthDataEnabled: true))
+}
+```
+
+Depth requires a compatible device, format, and processed photo container. Session configuration throws when depth delivery is unsupported. Per-capture options such as flash, shutter-sound suppression, distortion correction, and virtual device fusion also throw when explicitly requested but unsupported. Unspecified capture settings retain AVFoundation defaults.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs/photo-output.mdx. -->

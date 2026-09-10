@@ -14,12 +14,12 @@ import VisionCamera
 func prepareScanner() async throws -> (CameraSession, ObjectOutput) {
 	let session = CameraSession()
 	let output = ObjectOutput(options: .init(enabledObjectTypes: [.qr]))
-	await output.setOnObjectsScannedCallback { objects in
+	await output.setObjectHandler { objects in
 		for case let code as ScannedCode in objects {
 			print("QR code:", code.value ?? "")
 		}
 	}
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -29,15 +29,15 @@ func prepareScanner() async throws -> (CameraSession, ObjectOutput) {
 
 Request Camera permission first. Retain the session and output while scanning. Add a <doc:PreviewOutputGuide> to the same connection if you want a live preview.
 
-The output enables the requested types that AVFoundation supports in the active configuration. Enable only the types you need. See ``ObjectOutputOptions`` and ``ScannedObjectType``.
+Configuration throws if AVFoundation does not support a requested type in the active configuration. Enable only the types you need. See ``ObjectOutputOptions``. Types use `AVMetadataObject.ObjectType`, so newer metadata types follow Apple's SDK availability checks. Bodies, animal heads, and salient objects remain available when the connected camera supports them.
 
 ## Receive scanned objects
 
 The callback receives values conforming to ``ScannedObject``. A ``ScannedCode`` represents a machine-readable code, while a ``ScannedFace`` represents a detected face.
 
-Callbacks run on the object output's queue. Dispatch UI updates to the main queue, and clear the callback with `await output.setOnObjectsScannedCallback(nil)` when scanning is no longer needed.
+Callbacks run on the object output's queue. Dispatch UI updates to the main queue, and clear the callback with `await output.setObjectHandler(nil)` when scanning is no longer needed.
 
-A successful session configuration means the metadata output is connected. It does not mean an object has been recognized. Recognition depends on the supported types, visible target, focus, lighting, and image size.
+A successful session configuration means the metadata output is connected and all requested types are enabled. It does not mean an object has been recognized. Recognition depends on the supported types, visible target, focus, lighting, and image size.
 
 See <doc:ScannedObjects> for result types and coordinate conversions.
 
@@ -48,5 +48,7 @@ Use the object output when its supported formats and metadata meet your needs. A
 VisionCamera is a good fit when scanning is part of a custom Camera flow. The Camera view stays inside your app, so you can draw your own overlay, use custom zoom and focus controls, scan multiple codes, convert coordinates, and decide when a scanned code should be accepted.
 
 Keep a camera session when you also need to capture photos or record videos. A standalone scanning UI can be a separate app-level choice when you only need a single result.
+
+Detected objects use unrotated, unmirrored capture-device coordinates. `outputOrientation` is read-only, and an explicit `.on` mirror mode is rejected. Use `PreviewView.convertedToViewCoordinates(_:)` for overlays.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: object-output, barcode-scanner-vs-object-output, visioncamera-vs-data-scanner. -->

@@ -5,5 +5,5 @@ import Foundation
 
 protocol ResolvableConstraint {
   associatedtype ResolvedValue
-  func resolve(for format: AVCaptureDevice.Format) throws(CameraError) -> ConstraintResolution<ResolvedValue>
+  func resolve(for format: AVCaptureDevice.Format) throws(ConfigurationError) -> ConstraintResolution<ResolvedValue>
 }

@@ -11,6 +11,7 @@ Third-party libraries can implement ``CameraOutput`` and ``NativeCameraOutput`` 
 This example wraps an `AVCaptureVideoDataOutput` with a caller-provided native delegate:
 
 ```swift
+import CoreGraphics
 import AVFoundation
 import CoreVideo
 import VisionCamera
@@ -21,7 +22,7 @@ final class SampleBufferOutput: CameraOutput, NativeCameraOutput {
 	let requiresAudioInput = false
 	let requiresDepthFormat = false
 	let streamType: StreamType = .video
-	let targetResolution: ResolutionRule = .closestTo(.init(width: 720, height: 1280))
+	let targetResolution: ResolutionRule = .closest(to: .init(width: 720, height: 1280))
 
 	private let delegate: any AVCaptureVideoDataOutputSampleBufferDelegate
 	private let queue = DispatchQueue(label: "com.example.camera.samples")
@@ -31,12 +32,12 @@ final class SampleBufferOutput: CameraOutput, NativeCameraOutput {
 		didSet { applyPresentation() }
 	}
 
-	var currentResolution: Size? {
+	var currentResolution: CGSize? {
 		guard let format = output.connection(with: .video)?.inputPorts.first?.formatDescription else {
 			return nil
 		}
 		let dimensions = CMVideoFormatDescriptionGetDimensions(format)
-		return Size(width: Double(dimensions.width), height: Double(dimensions.height))
+		return CGSize(width: Double(dimensions.width), height: Double(dimensions.height))
 	}
 
 	init(delegate: any AVCaptureVideoDataOutputSampleBufferDelegate) {
@@ -48,7 +49,7 @@ final class SampleBufferOutput: CameraOutput, NativeCameraOutput {
 		output.setSampleBufferDelegate(delegate, queue: queue)
 	}
 
-	func configure(config: OutputConfiguration) {
+	func configure(_ config: OutputConfiguration) {
 		mirrorMode = config.mirrorMode
 		applyPresentation()
 	}
@@ -89,7 +90,7 @@ final class SampleBufferOutput: CameraOutput, NativeCameraOutput {
 }
 ```
 
-The session calls `configure(config:)` during its configuration batch on the session's serial queue. Do not independently add this native output to another capture session. Coordinate subsequent configuration changes with the owner of your session.
+The session calls `configure(config:)` during its configuration batch on the session's serial queue. The method can throw to reject an unsupported format or setting before AVFoundation applies it. `MediaType.other(_:)` preserves native media identifiers for custom outputs. Do not independently add this native output to another capture session. Coordinate subsequent configuration changes with the owner of your session.
 
 This sample requests physical buffer rotation and native mirroring. Its delegate receives transformed buffers. For processing that accepts orientation metadata, you can design an output that leaves pixels in sensor orientation instead. See <doc:Orientation>.
 
@@ -105,11 +106,11 @@ func attachCustomOutput(
 	session: CameraSession,
 	output: any CameraOutput
 ) async throws {
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(
 			input: .position(.back),
 			outputs: [.init(output: output)],
-			constraints: [.resolutionBias(.init(resolutionBias: output))]
+			constraints: [.resolution(output)]
 		)
 	])
 }

@@ -33,7 +33,7 @@ extension VisionCamera {
   /// physical Cameras. You can inspect those physical Cameras via
   /// ``CameraDevice/physicalDevices``, but pass the
   /// returned ``CameraDevice``s directly to
-  /// ``CameraSession/configure(connections:config:)``.
+  /// ``CameraSession/configure(_:configuration:)``.
   ///
   /// If you need multiple independent inputs, choose a combination with at least
   /// two ``CameraDevice``s.
@@ -65,8 +65,8 @@ extension VisionCamera {
   ///       outputs: [CameraOutputConfiguration(output: PreviewOutput())]
   ///     )
   ///   }
-  ///   let session = try CameraSession(enableMultiCam: true)
-  ///   let controllers = try await session.configure(connections: connections)
+  ///   let session = try CameraSession(isMultiCamEnabled: true)
+  ///   let controllers = try await session.configure(connections)
   ///   await session.start()
   /// }
   /// ```
@@ -79,21 +79,16 @@ extension VisionCamera {
   /// Get or set the user's default preferred camera device.
   /// Setting a device here will persist the preference between apps.
   ///
-  /// Requires iOS 17 or later. On earlier versions, reading returns `nil` and setting has no effect.
+  /// Requires iOS 17 or later.
+  @available(iOS 17.0, *)
   public static var userPreferredCamera: CameraDevice? {
     get {
-      guard #available(iOS 17.0, *) else {
-        return nil
-      }
       guard let device = AVCaptureDevice.userPreferredCamera else {
         return nil
       }
       return CameraDevice(device: device)
     }
     set {
-      guard #available(iOS 17.0, *) else {
-        return
-      }
       AVCaptureDevice.userPreferredCamera = newValue?.device
     }
   }
@@ -103,9 +98,9 @@ extension VisionCamera {
   /// for example when an external USB Camera
   /// gets plugged in- or out- of the Device.
   ///
-  /// The callback runs on AVFoundation's observation delivery thread. Call ``ListenerSubscription/remove`` to stop receiving updates; move UIKit work to the main actor.
-  public static func addOnCameraDevicesChangedListener(listener: @escaping ([CameraDevice]) -> Void)
-    -> ListenerSubscription
+  /// The callback runs on AVFoundation's observation delivery thread. Retain the returned token while observing. Cancel or release it to stop receiving updates; dispatch UIKit work to the main queue.
+  public static func observeCameraDevices(_ listener: @escaping ([CameraDevice]) -> Void)
+    -> ObservationToken
   {
     // 1. Attach a listener using KVO
     let observation = discoverySession.observe(\.devices, options: [.old, .new]) { _, change in
@@ -116,7 +111,7 @@ extension VisionCamera {
     }
 
     // 2. Return a remove function that removes the listener via KVO
-    return ListenerSubscription(remove: {
+    return ObservationToken({
       observation.invalidate()
     })
   }
@@ -126,7 +121,7 @@ extension VisionCamera {
   ///
   /// If no device with the given `id` is found,
   /// this method returns `nil`.
-  public static func getCameraForId(id: String) -> CameraDevice? {
+  public static func camera(withID id: String) -> CameraDevice? {
     guard let device = AVCaptureDevice(uniqueID: id) else {
       return nil
     }
@@ -135,7 +130,7 @@ extension VisionCamera {
 
   /// Get the platform's default ``CameraDevice``
   /// at the given ``TargetCameraPosition``.
-  public static func getDefaultCamera(position: TargetCameraPosition) -> CameraDevice? {
+  public static func defaultCamera(for position: TargetCameraPosition) -> CameraDevice? {
     guard let device = AVCaptureDevice.default(for: position) else {
       return nil
     }

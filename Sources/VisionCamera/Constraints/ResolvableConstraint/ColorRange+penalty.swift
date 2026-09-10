@@ -16,12 +16,4 @@ extension ColorRange {
     }
   }
 
-  func toTargetColorRange() -> TargetColorRange {
-    switch self {
-    case .full:
-      return .full
-    case .video, .unknown:
-      return .video
-    }
-  }
 }

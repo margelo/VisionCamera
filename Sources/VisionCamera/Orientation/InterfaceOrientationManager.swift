@@ -27,7 +27,7 @@ public final class InterfaceOrientationManager: OrientationManager {
   /// Starts listening to orientation changes.
   ///
   /// Starting updates replaces the previous callback. Callbacks run on the main queue.
-  public func startOrientationUpdates(onChanged: @escaping (CameraOrientation) -> Void) {
+  public func startUpdates(_ onChanged: @escaping (CameraOrientation) -> Void) {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       if let observer = self.observer {
@@ -60,7 +60,7 @@ public final class InterfaceOrientationManager: OrientationManager {
   /// Stops listening to orientation changes.
   ///
   /// Stops delivery on the manager's owning queue. A callback already in progress may finish before removal takes effect.
-  public func stopOrientationUpdates() {
+  public func stopUpdates() {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       self.subscriptionID = nil

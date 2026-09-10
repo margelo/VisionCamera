@@ -7,7 +7,7 @@
 /// device, use ``CameraDevice/supportedVideoDynamicRanges``.
 ///
 /// To use a specific ``DynamicRange`` in a
-/// Camera session, use a ``VideoDynamicRangeConstraint``.
+/// Camera session, use a ``Constraint/videoDynamicRange(_:)``.
 public struct DynamicRange: Equatable, Sendable {
   /// The bit-depth for the dynamic range.
   /// Often 8-bit or 10-bit.

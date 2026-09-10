@@ -6,20 +6,19 @@ Exposure bias allows adjusting the Camera's exposure, where negative values resu
 
 ## Set exposure bias
 
-To adjust exposure bias on a ``CameraController``, use `setExposureBias(exposure:)`:
+To adjust exposure bias on a ``CameraController``, use `setExposureBias()`:
 
 ```swift
 import VisionCamera
 
 func brighten(controller: CameraController) async throws {
 	let device = controller.device
-	guard device.supportsExposureBias else { return }
 	let exposure = min(max(1, device.minExposureBias), device.maxExposureBias)
-	try await controller.setExposureBias(exposure: exposure)
+	try await controller.setExposureBias( exposure)
 }
 ```
 
-Make sure your ``CameraDevice`` supports exposure bias, and that your value stays within its `minExposureBias` and `maxExposureBias` range.
+Keep the requested bias within the device's `minExposureBias` and `maxExposureBias` range.
 
 ## Get exposure bias
 

@@ -6,6 +6,7 @@
 
 import AVFoundation
 import Foundation
+import UniformTypeIdentifiers
 
 extension PhotoContainerFormat {
   init(avFileType: AVFileType) {
@@ -30,42 +31,40 @@ extension PhotoContainerFormat {
     }
   }
 
-  init(targetFormat: TargetPhotoContainerFormat) {
-    switch targetFormat {
-    case .native:
-      // Apple's default Photo Format is HEIC
-      self = .heic
-    case .jpeg:
-      self = .jpeg
-    case .heic:
-      self = .heic
-    case .dng:
-      self = .dng
+  init(settings: AVCapturePhotoSettings) {
+    let fileType = settings.rawPhotoPixelFormatType == 0 ? settings.processedFileType : settings.rawFileType
+    if let fileType {
+      self.init(avFileType: fileType)
+    } else {
+      self = .unknown
     }
   }
 
-  func toUTType() throws -> UTType {
-    switch self {
-    case .unknown:
-      throw CameraError(message: "Cannot convert \"unknown\" ImageFormat to AVFileType!")
-    case .jpeg:
-      return .jpeg
-    case .heic:
-      return .heic
-    case .tiff:
-      return .tiff
-    case .dcm:
-      guard let type = UTType(tag: "dcm", tagClass: .filenameExtension, conformingTo: nil) else {
-        throw CameraError(
-          message: "PhotoContainerFormat \"dcm\" cannot be converted to UTType!")
+  var uniformType: UTType {
+    get throws(MediaError) {
+      switch self {
+      case .unknown:
+        throw .unsupportedPhotoContainerFormat(self)
+      case .jpeg:
+        return .jpeg
+      case .heic:
+        return .heic
+      case .tiff:
+        return .tiff
+      case .dcm:
+        guard let type = UTType(filenameExtension: "dcm") else {
+          throw MediaError.unsupportedPhotoContainerFormat(self)
+        }
+        return type
+      case .dng:
+        if #available(iOS 18.0, *) {
+          return .dng
+        }
+        guard let type = UTType("com.adobe.raw-image") else {
+          throw MediaError.unsupportedPhotoContainerFormat(self)
+        }
+        return type
       }
-      return type
-    case .dng:
-      guard #available(iOS 18.0, *) else {
-        throw CameraError(
-          message: "PhotoContainerFormat \"dng\" is only available on iOS 18.0 or newer!")
-      }
-      return .dng
     }
   }
 }

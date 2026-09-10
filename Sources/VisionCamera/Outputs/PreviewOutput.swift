@@ -16,7 +16,7 @@ import UIKit
 ///
 /// ```swift
 /// let previewOutput = PreviewOutput()
-/// let previewView = PreviewView(previewOutput: previewOutput)
+/// let previewView = PreviewView(output: previewOutput)
 /// ```
 public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   /// The media type of the content being streamed
@@ -28,23 +28,17 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   /// The interface orientation of the window scene displaying this preview.
   ///
   /// ``PreviewView`` supplies its window's orientation while attached. A detached output keeps its
-  /// last orientation, or ``CameraOrientation/up`` before mounting. Setting this property has no effect
-  /// because the live preview always follows its interface, independently of the capture outputs.
+  /// last orientation, or ``CameraOrientation/up`` before mounting. The live preview always follows its interface, independently of the capture outputs.
   public var outputOrientation: CameraOrientation {
-    get {
-      return interfaceOrientation.current ?? .up
-    }
-    set {
-      // The attached PreviewView owns preview orientation.
-    }
+    return interfaceOrientation.current ?? .up
   }
   /// The resolution that the underlying capture pipeline has resolved
   /// this ``CameraOutput`` to, in sensor-native (un-rotated) pixels,
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -52,13 +46,13 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard let connection = previewLayer.connection else { return nil }
     return connection.inputStreamResolution
   }
 
   /// The stream type used when negotiating this output's target resolution.
-  public var streamType: StreamType = .video
+  public let streamType: StreamType = .video
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public let targetResolution: ResolutionRule
 
@@ -66,7 +60,7 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   @MainActor
   public init() {
     let screen = UIScreen.main
-    self.targetResolution = .min(Size(width: screen.bounds.width * screen.scale, height: screen.bounds.height * screen.scale))
+    self.targetResolution = .atLeast(CGSize(width: screen.bounds.width * screen.scale, height: screen.bounds.height * screen.scale))
     self.previewLayer = AVCaptureVideoPreviewLayer()
     self.previewLayer.videoGravity = .resizeAspectFill
   }
@@ -74,12 +68,12 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) {
+  public func configure(_ config: OutputConfiguration) throws {
     guard let connection = previewLayer.connection else {
       return
     }
-    try? connection.setMirrorMode(config.mirrorMode)
-    try? connection.setOrientation(outputOrientation)
+    try connection.setMirrorMode(config.mirrorMode)
+    try connection.setOrientation(outputOrientation)
   }
 
   @MainActor

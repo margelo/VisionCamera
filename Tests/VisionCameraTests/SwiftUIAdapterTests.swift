@@ -24,7 +24,7 @@ final class SwiftUIAdapterTests: XCTestCase {
     XCTAssertEqual(firstRenderer.layer.videoGravity, .resizeAspect)
     XCTAssertEqual(firstRenderer.layer.frame, view.bounds)
 
-    host.rootView = CameraFrameRenderer(renderer: secondRenderer, resizeMode: .cover)
+    host.rootView = CameraFrameRenderer(renderer: secondRenderer, resizeMode: .aspectFill)
     host.view.setNeedsLayout()
     host.view.layoutIfNeeded()
     XCTAssertNil(firstRenderer.layer.superlayer)
@@ -48,7 +48,7 @@ final class SwiftUIAdapterTests: XCTestCase {
     var latestCallbackCount = 0
     let host = UIHostingController<CameraPreview?>(
       rootView: CameraPreview(
-        previewOutput: firstOutput,
+        output: firstOutput,
         gestureControllers: [pinch],
         onPreviewStarted: { firstCallbackCount += 1 }))
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 240))
@@ -65,8 +65,8 @@ final class SwiftUIAdapterTests: XCTestCase {
     XCTAssertEqual(firstOutput.previewLayer.videoGravity, .resizeAspectFill)
 
     host.rootView = CameraPreview(
-      previewOutput: secondOutput,
-      resizeMode: .contain,
+      output: secondOutput,
+      resizeMode: .aspectFit,
       gestureControllers: [focus],
       onPreviewStarted: { latestCallbackCount += 1 })
     host.view.setNeedsLayout()
@@ -76,7 +76,7 @@ final class SwiftUIAdapterTests: XCTestCase {
     XCTAssertNil(pinch.gestureRecognizer.view)
     XCTAssertTrue(focus.gestureRecognizer.view === view)
     XCTAssertEqual(secondOutput.previewLayer.videoGravity, .resizeAspect)
-    view.onPreviewStarted?()
+    view.didStartPreview?()
     XCTAssertEqual(firstCallbackCount, 0)
     XCTAssertEqual(latestCallbackCount, 1)
 
@@ -85,9 +85,9 @@ final class SwiftUIAdapterTests: XCTestCase {
     host.view.layoutIfNeeded()
     XCTAssertNil(secondOutput.previewLayer.superlayer)
     XCTAssertNil(focus.gestureRecognizer.view)
-    XCTAssertNil(view.previewOutput)
-    XCTAssertNil(view.onPreviewStarted)
-    XCTAssertNil(view.onPreviewStopped)
+    XCTAssertNil(view.output)
+    XCTAssertNil(view.didStartPreview)
+    XCTAssertNil(view.didStopPreview)
     XCTAssertNil(view.interfaceOrientation)
   }
 
@@ -101,10 +101,10 @@ final class SwiftUIAdapterTests: XCTestCase {
     CameraFrameRenderer.dismantleUIView(previousRendererView, coordinator: ())
     XCTAssertTrue(renderer.layer.superlayer === currentRendererView.layer)
 
-    let previewOutput = PreviewOutput()
-    let previousPreviewView = PreviewView(previewOutput: previewOutput)
-    let currentPreviewView = PreviewView(previewOutput: previewOutput)
+    let output = PreviewOutput()
+    let previousPreviewView = PreviewView(output: output)
+    let currentPreviewView = PreviewView(output: output)
     CameraPreview.dismantleUIView(previousPreviewView, coordinator: ())
-    XCTAssertTrue(previewOutput.previewLayer.superlayer === currentPreviewView.layer)
+    XCTAssertTrue(output.previewLayer.superlayer === currentPreviewView.layer)
   }
 }

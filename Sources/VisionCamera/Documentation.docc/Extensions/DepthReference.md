@@ -14,38 +14,28 @@
 - ``timestamp``
 - ``orientation``
 - ``isMirrored``
-- ``isDepthDataFiltered``
+- ``isFiltered``
 - ``pixelFormat``
-- ``depthDataAccuracy``
-- ``depthDataQuality``
-- ``availableDepthPixelFormats``
-- ``cameraCalibrationData``
+- ``accuracy``
+- ``quality``
+- ``availablePixelFormats``
+- ``calibrationData``
 - ``metadata``
 
 ### Accessing depth samples
 
 - ``depthData``
 - ``pixelBuffer``
-- ``getDepthData()``
-- ``getPixelBuffer()``
-- ``getNativeBuffer()``
+- ``byteCount``
 - ``withUnsafeBytes(_:)``
-- ``toFrame()``
-
-### Managing depth lifetime
-
-- ``isValid``
-- ``memorySize``
-- ``dispose()``
+- ``makeFrame()``
 
 ### Converting and rotating depth
 
-- ``convert(pixelFormat:)``
-- ``convertAsync(pixelFormat:)``
-- ``rotate(orientation:isMirrored:)``
-- ``rotateAsync(orientation:isMirrored:)``
+- ``converted(to:)``
+- ``rotated(by:mirrored:)``
 
 ### Converting coordinates
 
-- ``convertCameraPointToDepthPoint(cameraPoint:)``
-- ``convertDepthPointToCameraPoint(depthPoint:)``
+- ``point(fromCameraPoint:)``
+- ``cameraPoint(from:)``

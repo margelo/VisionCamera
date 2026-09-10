@@ -19,8 +19,8 @@ public final class FrameRendererView: UIView {
     }
   }
 
-  /// How Frames fit within the view. The default is ``PreviewResizeMode/contain``.
-  public var resizeMode: PreviewResizeMode = .contain {
+  /// How Frames fit within the view. The default is ``PreviewResizeMode/aspectFit``.
+  public var resizeMode: PreviewResizeMode = .aspectFit {
     didSet {
       guard renderer?.layer.superlayer === layer else { return }
       renderer?.layer.videoGravity = resizeMode.toAVLayerVideoGravity()

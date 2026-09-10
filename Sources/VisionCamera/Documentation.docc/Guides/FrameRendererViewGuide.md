@@ -16,7 +16,7 @@ struct RenderedFrames: View {
 	let renderer: FrameRenderer
 
 	var body: some View {
-		CameraFrameRenderer(renderer: renderer, resizeMode: .contain)
+		CameraFrameRenderer(renderer: renderer, resizeMode: .aspectFit)
 	}
 }
 ```
@@ -44,10 +44,9 @@ For example, render frames streamed by a ``FrameOutput``:
 import VisionCamera
 
 func connectRenderer(output: FrameOutput, renderer: FrameRenderer) async {
-	await output.setOnFrameCallback { frame in
-		defer { frame.dispose() }
+	await output.setFrameHandler { frame in
 		do {
-			try renderer.renderFrame(frame: frame)
+			try renderer.render( frame)
 		} catch {
 			print("Could not render frame:", error)
 		}
@@ -55,7 +54,7 @@ func connectRenderer(output: FrameOutput, renderer: FrameRenderer) async {
 }
 ```
 
-The display layer retains an enqueued sample buffer, so the frame wrapper can be disposed after enqueueing.
+The display layer retains an enqueued sample buffer, so the frame value can go out of scope after enqueueing.
 
 The processing owner also owns the frame callback. When processing ends, call `await output.setOnFrameCallback(nil)` on that owner before releasing it. Removing ``CameraFrameRenderer`` detaches the displayed layer. It does not replace or remove callbacks on outputs owned by your app.
 

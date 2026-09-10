@@ -12,7 +12,11 @@ extension PixelFormatConstraint: ResolvableConstraint {
   typealias ResolvedValue = Void
 
   func resolve(for format: AVCaptureDevice.Format) -> ConstraintResolution<Void> {
-    let formatPixelFormat = PixelFormat(mediaSubType: format.formatDescription.mediaSubType)
+    return resolve(mediaSubType: format.formatDescription.mediaSubType)
+  }
+
+  func resolve(mediaSubType: CMFormatDescription.MediaSubType) -> ConstraintResolution<Void> {
+    let formatPixelFormat = PixelFormat(mediaSubType: mediaSubType)
     let penalty = formatPixelFormat == self.pixelFormat ? 0.0 : 1.0
     return ConstraintResolution(
       penalty: ConstraintPenalty(distance: penalty),

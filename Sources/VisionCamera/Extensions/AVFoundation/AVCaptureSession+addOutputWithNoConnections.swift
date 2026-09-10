@@ -14,11 +14,10 @@ extension AVCaptureSession {
       // It's a normal AVCaptureOutput
       let output = output.output
       guard output.connections.isEmpty else {
-        throw CameraError(message: "The given Output \"\(output)\" is already connected to a different Camera Session!")
+        throw ConfigurationError.outputAlreadyConnected(outputType: String(describing: type(of: output)))
       }
       guard canAddOutput(output) else {
-        throw CameraError(
-          message: "Output \"\(output)\" cannot be added to Camera Session!")
+        throw ConfigurationError.outputRejected(outputType: String(describing: type(of: output)))
       }
       logger.info("Adding Output \(output)...")
       addOutputWithNoConnections(output)
@@ -27,7 +26,7 @@ extension AVCaptureSession {
       // It's an AVVideoPreviewLayer - we need to set its .session
       let previewLayer = preview.previewLayer
       guard previewLayer.session == nil else {
-        throw CameraError(message: "The given Preview Output \"\(previewLayer)\" is already connected to a different Camera Session!")
+        throw ConfigurationError.outputAlreadyConnected(outputType: String(describing: type(of: preview)))
       }
       logger.info("Adding Preview \(previewLayer)...")
       previewLayer.setSessionWithNoConnection(self)

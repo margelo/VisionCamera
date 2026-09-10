@@ -4,92 +4,92 @@ import AVFoundation
 import Foundation
 
 final class SynchronizedOutputDelegate: NSObject, AVCaptureDataOutputSynchronizerDelegate {
+  private let outputs: [ObjectIdentifier: any CameraOutput]
   var onFrames: (([SynchronizedDataFrame]) -> Void)?
   var onFrameDropped: ((MediaType, AVCaptureOutput.DataDroppedReason) -> Void)?
+
+  init(outputs: [any CameraOutput]) {
+    self.outputs = Dictionary(
+      uniqueKeysWithValues: outputs.compactMap { output in
+        guard let nativeOutput = output as? any NativeCameraOutput else { return nil }
+        return (ObjectIdentifier(nativeOutput.output), output)
+      })
+    super.init()
+  }
 
   func dataOutputSynchronizer(
     _ synchronizer: AVCaptureDataOutputSynchronizer,
     didOutput synchronizedDataCollection: AVCaptureSynchronizedDataCollection
   ) {
-    guard let onFrames else { return }
+    guard onFrames != nil || onFrameDropped != nil else { return }
 
-    var datas: [SynchronizedDataFrame] = []
+    var frames: [SynchronizedDataFrame] = []
     for output in synchronizer.dataOutputs {
-      guard let data = synchronizedDataCollection.synchronizedData(for: output) else {
-        logger.warning("AVCaptureSynchronizedDataCollection does not contain data for \(output)!")
-        continue
+      // A collection may omit outputs that have no sample ready for this timestamp.
+      guard let data = synchronizedDataCollection.synchronizedData(for: output) else { continue }
+      let type: MediaType
+      switch output {
+      case is AVCaptureAudioDataOutput: type = .other(.audio)
+      case is AVCaptureDepthDataOutput: type = .depth
+      case is AVCaptureMetadataOutput: type = .metadata
+      default: type = .video
       }
       do {
         switch data {
-        case let video as AVCaptureSynchronizedSampleBufferData:
-          // Video Frame
-          guard !video.sampleBufferWasDropped else {
-            onFrameDropped?(.video, video.droppedReason)
+        case let sample as AVCaptureSynchronizedSampleBufferData:
+          guard !sample.sampleBufferWasDropped else {
+            onFrameDropped?(type, sample.droppedReason)
             continue
           }
-          let frame = try getSynchronizedVideoFrame(from: synchronizer, data: video)
-          datas.append(frame)
+          if output is AVCaptureAudioDataOutput {
+            let metadata = MediaSampleMetadata(timestamp: sample.timestamp, orientation: .up, isMirrored: false)
+            frames.append(SynchronizedDataFrame(data: .audio(sample.sampleBuffer), metadata: metadata))
+          } else {
+            let metadata = try metadata(at: sample.timestamp, from: output, mediaType: .video)
+            frames.append(SynchronizedDataFrame(data: .video(sample.sampleBuffer), metadata: metadata))
+          }
         case let depth as AVCaptureSynchronizedDepthData:
-          // Depth Frame
           guard !depth.depthDataWasDropped else {
-            onFrameDropped?(.depth, depth.droppedReason)
+            onFrameDropped?(type, depth.droppedReason)
             continue
           }
-          let frame = try getSynchronizedDepthFrame(from: synchronizer, data: depth)
-          datas.append(frame)
+          let metadata = try metadata(at: depth.timestamp, from: output, mediaType: .depthData)
+          frames.append(SynchronizedDataFrame(data: .depth(depth.depthData), metadata: metadata))
+        case let objects as AVCaptureSynchronizedMetadataObjectData:
+          // Metadata coordinates stay in the native camera coordinate system. They have no pixel transform.
+          let metadata = MediaSampleMetadata(timestamp: objects.timestamp, orientation: .up, isMirrored: false)
+          frames.append(SynchronizedDataFrame(data: .metadata(objects.metadataObjects), metadata: metadata))
         default:
-          // ????? Frame
-          logger.error("SynchronizedOutputDelegate received an unknown data type! \(data)")
+          logger.error("Received an unsupported synchronized data type: \(data).")
         }
-      } catch (let error) {
-        logger.error("Failed to capture AVCaptureSynchronizedData \(data)! Error: \(error)")
-        onFrameDropped?(.other, .none)
+      } catch {
+        logger.error("Failed to read synchronized \(type.toAVMediaType().rawValue) data: \(error).")
+        onFrameDropped?(type, .none)
       }
     }
-    onFrames(datas)
+    onFrames?(frames)
   }
 
-  private func getConnectedOutput<T: AVCaptureOutput>(
-    from synchronizer: AVCaptureDataOutputSynchronizer
-  ) throws -> T {
-    for output in synchronizer.dataOutputs {
-      if let specific = output as? T {
-        return specific
-      }
+  private func metadata(at timestamp: CMTime, from output: AVCaptureOutput, mediaType: AVMediaType) throws -> MediaSampleMetadata {
+    guard let connection = output.connection(with: mediaType) else {
+      throw ConfigurationError.outputNotConnected
     }
-    throw CameraError(
-      message:
-        "AVCaptureDataOutputSynchronizer does not contain an output of type \(String(describing: T.self))!"
-    )
+    return metadata(
+      at: timestamp, from: output,
+      bufferOrientation: connection.orientation, isBufferMirrored: connection.isVideoMirrored)
   }
-  private func getConnection<T: AVCaptureOutput>(from output: T, ofType type: AVMediaType) throws
-    -> AVCaptureConnection
-  {
-    guard let connection = output.connection(with: type) else {
-      throw CameraError(message: "\(T.self) does not have a \(type) connection!")
+
+  func metadata(
+    at timestamp: CMTime, from output: AVCaptureOutput,
+    bufferOrientation: CameraOrientation, isBufferMirrored: Bool
+  ) -> MediaSampleMetadata {
+    switch outputs[ObjectIdentifier(output)] {
+    case let frame as FrameOutput:
+      return frame.getMediaSampleMetadata(at: timestamp, orientation: bufferOrientation, isMirrored: isBufferMirrored)
+    case let depth as DepthOutput:
+      return depth.getMediaSampleMetadata(at: timestamp, orientation: bufferOrientation, isMirrored: isBufferMirrored)
+    default:
+      return MediaSampleMetadata(timestamp: timestamp, orientation: bufferOrientation, isMirrored: isBufferMirrored)
     }
-    return connection
-  }
-
-  private func getSynchronizedVideoFrame(
-    from synchronizer: AVCaptureDataOutputSynchronizer, data: AVCaptureSynchronizedSampleBufferData
-  ) throws -> SynchronizedDataFrame {
-    let videoOutput: AVCaptureVideoDataOutput = try getConnectedOutput(from: synchronizer)
-    let connection = try getConnection(from: videoOutput, ofType: .video)
-    let buffer = data.sampleBuffer
-    let metadata = MediaSampleMetadata(
-      timestamp: data.timestamp, orientationFromConnection: connection)
-    return SynchronizedDataFrame(data: .video(buffer), metadata: metadata)
-  }
-
-  private func getSynchronizedDepthFrame(
-    from synchronizer: AVCaptureDataOutputSynchronizer, data: AVCaptureSynchronizedDepthData
-  ) throws -> SynchronizedDataFrame {
-    let depthOutput: AVCaptureDepthDataOutput = try getConnectedOutput(from: synchronizer)
-    let connection = try getConnection(from: depthOutput, ofType: .depthData)
-    let buffer = data.depthData
-    let metadata = MediaSampleMetadata(
-      timestamp: data.timestamp, orientationFromConnection: connection)
-    return SynchronizedDataFrame(data: .depth(buffer), metadata: metadata)
   }
 }

@@ -18,7 +18,7 @@ public final class ZoomGestureController: NSObject, GestureController, NativeGes
   public let gestureRecognizer = UIPinchGestureRecognizer()
   /// The Camera controller used by this gesture, held weakly.
   ///
-  /// Retain the ``CameraController`` returned by ``CameraSession/configure(connections:config:)`` elsewhere, and replace it when the session is reconfigured.
+  /// Retain the ``CameraController`` returned by ``CameraSession/configure(_:configuration:)`` elsewhere, and replace it when the session is reconfigured.
   public weak var controller: (CameraController)? = nil
 
   private let maximumZoomFactor = 15.0
@@ -69,14 +69,13 @@ public final class ZoomGestureController: NSObject, GestureController, NativeGes
   /// changes the target zoom factor.
   ///
   /// The listener can be called many times during one pinch gesture.
-  /// Call ``ListenerSubscription/remove`` on the returned
-  /// subscription to stop receiving updates.
-  public func addOnZoomChangedListener(onZoomChanged: @escaping (Double) -> Void)
-    -> ListenerSubscription
+  /// Retain the returned token while observing. Cancel or release it to stop receiving updates.
+  public func observeZoomChanges(_ onZoomChanged: @escaping (Double) -> Void)
+    -> ObservationToken
   {
     let id = UUID()
     onZoomChangedListeners[id] = onZoomChanged
-    return ListenerSubscription { [weak self] in
+    return ObservationToken { [weak self] in
       DispatchQueue.main.async { self?.onZoomChangedListeners.removeValue(forKey: id) }
     }
   }

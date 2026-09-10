@@ -18,7 +18,7 @@ public struct EnabledConstraints {
   /// The selected stabilization mode for preview streams.
   public let selectedPreviewStabilizationMode: TargetStabilizationMode?
   /// The selected dynamic range for video streams.
-  public let selectedVideoDynamicRange: TargetDynamicRange?
+  public let selectedVideoDynamicRange: DynamicRange?
 
   /// Creates a set of selected constraint values.
   ///
@@ -29,7 +29,7 @@ public struct EnabledConstraints {
   ///   - selectedVideoDynamicRange: The video dynamic range, or `nil` if none was selected.
   public init(
     selectedFPS: Double?, selectedVideoStabilizationMode: TargetStabilizationMode?, selectedPreviewStabilizationMode: TargetStabilizationMode?,
-    selectedVideoDynamicRange: TargetDynamicRange?
+    selectedVideoDynamicRange: DynamicRange?
   ) {
     self.selectedFPS = selectedFPS
     self.selectedVideoStabilizationMode = selectedVideoStabilizationMode

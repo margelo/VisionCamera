@@ -8,9 +8,9 @@ The photo capture pipeline has multiple stages. Each stage invokes the respectiv
 
 A photo capture exposes three stage callbacks:
 
-1. `onWillBeginCapture`
-2. `onWillCapturePhoto`
-3. `onDidCapturePhoto`
+1. `willBeginCapture`
+2. `willCapturePhoto`
+3. `didCapturePhoto`
 
 Pass callbacks to `capturePhoto(settings:callbacks:)`:
 
@@ -19,9 +19,9 @@ import VisionCamera
 
 func captureWithEvents(output: PhotoOutput) async throws -> Photo {
 	return try await output.capturePhoto(callbacks: .init(
-		onWillBeginCapture: { print("Capture beginning") },
-		onWillCapturePhoto: { print("Capturing photo") },
-		onDidCapturePhoto: { print("Photo captured") }
+		willBeginCapture: { print("Capture beginning") },
+		willCapturePhoto: { print("Capturing photo") },
+		didCapturePhoto: { print("Photo captured") }
 	))
 }
 ```
@@ -44,7 +44,7 @@ func makePhotoOutput() -> PhotoOutput {
 }
 ```
 
-Then pass an `onPreviewImageAvailable` callback when capturing:
+Then pass an `didReceivePreviewImage` callback when capturing:
 
 ```swift
 import UIKit
@@ -56,7 +56,7 @@ func captureWithThumbnail(
 	imageView: UIImageView
 ) async throws -> Photo {
 	return try await output.capturePhoto(callbacks: .init(
-		onPreviewImageAvailable: { image in
+		didReceivePreviewImage: { image in
 			DispatchQueue.main.async {
 				imageView.image = image
 			}
