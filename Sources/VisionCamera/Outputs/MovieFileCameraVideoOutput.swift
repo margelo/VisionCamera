@@ -92,7 +92,7 @@ public final class MovieFileCameraVideoOutput: CameraVideoOutput, NativeCameraOu
           guard self.options.targetBitRate == nil else {
             throw CameraError(
               message:
-                "Cannot set bit-rate when recording in a RAW codec! (\(codec.stringValue))")
+                "Cannot set bit-rate when recording in a RAW codec! (\(codec))")
           }
         }
 
@@ -100,7 +100,7 @@ public final class MovieFileCameraVideoOutput: CameraVideoOutput, NativeCameraOu
         guard self.output.availableVideoCodecTypes.contains(avCodec) else {
           throw CameraError(
             message:
-              "Video codec \(codec.stringValue) is not supported by this device! "
+              "Video codec \(codec) is not supported by this device! "
               + "Supported codecs: \(self.output.availableVideoCodecTypes.map(\.rawValue))")
         }
 

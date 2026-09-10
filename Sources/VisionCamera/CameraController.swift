@@ -278,7 +278,7 @@ public final class CameraController {
         }
         throw CameraError(
           message:
-            "Tried setting torch mode to `\(mode.stringValue)`, but the device does not have a `torch`!"
+            "Tried setting torch mode to `\(mode)`, but the device does not have a `torch`!"
         )
       }
 

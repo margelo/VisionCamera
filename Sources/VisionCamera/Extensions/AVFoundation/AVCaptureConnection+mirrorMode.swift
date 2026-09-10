@@ -16,7 +16,7 @@ extension AVCaptureConnection {
       guard self.isVideoMirroringSupported else {
         throw CameraError(
           message:
-            "Cannot set mirrorMode=\"\(mirrorMode.stringValue)\" - this connection does not support video mirroring!"
+            "Cannot set mirrorMode=\"\(mirrorMode)\" - this connection does not support video mirroring!"
         )
       }
       self.automaticallyAdjustsVideoMirroring = false
