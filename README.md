@@ -1,4 +1,4 @@
-<a href="./Sources/VisionCamera/Documentation.docc/VisionCamera.md">
+<a href="https://margelo.github.io/VisionCamera/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./images/banner-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="./images/banner-light.svg" />
@@ -32,7 +32,7 @@ VisionCamera requires Xcode 26 or later and supports iOS 15.1 or later. The pack
 3. Until the first release containing `Package.swift`, select the **Branch** dependency rule and enter `main`. The existing `0.1.0` tag does not include the package manifest.
 4. Add the **VisionCamera** library product to your app target.
 
-The repository is currently private. Authenticate with a GitHub account that has access. For SSH authentication, use `ssh://git@github.com/margelo/VisionCamera.git` with a configured GitHub SSH key.
+While the repository is private, authenticate with a GitHub account that has access. For SSH authentication, use `ssh://git@github.com/margelo/VisionCamera.git` with a configured GitHub SSH key.
 
 For another Swift package, add the dependency and library product to your `Package.swift`:
 
@@ -63,7 +63,7 @@ pod 'VisionCamera',
 ```
 
 Run `pod install` and open your app's `.xcworkspace`.
-The repository is private, so your GitHub account needs access.
+While the repository is private, your GitHub account needs access.
 These docs describe the current `main` branch. The `0.1.0` tag is the initial extraction and has an older API.
 Pin a release tag once a release containing these changes is available.
 
@@ -104,8 +104,8 @@ See the [UIKit example app](./Example/) for a full camera screen with permission
 
 ### Documentation
 
-The [guides](./Sources/VisionCamera/Documentation.docc/VisionCamera.md) and API reference are written with DocC, Apple's documentation compiler.
-You can read them in Xcode or build the documentation website locally. See [Building the documentation](./Documentation.md).
+Read the [guides and API reference](https://margelo.github.io/VisionCamera/documentation/visioncamera/) on the documentation website.
+They are written with DocC, Apple's documentation compiler. You can also [read the guides here](./Sources/VisionCamera/Documentation.docc/VisionCamera.md), open them in Xcode, or [build the website locally](./Documentation.md).
 
 ### Build and test
 

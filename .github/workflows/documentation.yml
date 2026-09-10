@@ -3,13 +3,14 @@ name: Documentation
 on:
   push:
     branches: [main]
+  public:
   pull_request:
   workflow_dispatch:
     inputs:
       deploy:
         description: Publish the documentation to the configured GitHub Pages site
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -18,9 +19,6 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
-    permissions:
-      contents: read
-      pages: read
     steps:
       - uses: actions/checkout@v6
       - name: Select Xcode
@@ -29,13 +27,9 @@ jobs:
         with:
           ruby-version: '3.4.9'
           bundler-cache: true
-      - name: Read Pages configuration
-        if: github.event_name == 'workflow_dispatch' && inputs.deploy
-        id: pages
-        uses: actions/configure-pages@v6
       - name: Build and check documentation
         env:
-          HOSTING_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          HOSTING_BASE_PATH: /VisionCamera
         run: scripts/build-documentation.sh "$HOSTING_BASE_PATH"
       - name: Compile documentation examples
         run: python3 scripts/check-documentation-examples.py
@@ -53,7 +47,12 @@ jobs:
           path: build/site
 
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'margelo/VisionCamera' &&
+      github.event.repository.private == false &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'public' || github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy))
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -66,6 +65,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # First-time activation requires a repository administrator. After making
+      # the repository public, run scripts/enable-documentation.sh once.
+      - name: Check Pages configuration
+        uses: actions/configure-pages@v6
       - name: Deploy documentation
         id: deployment
         uses: actions/deploy-pages@v5
