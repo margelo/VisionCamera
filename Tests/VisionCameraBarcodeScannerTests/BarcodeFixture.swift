@@ -46,7 +46,9 @@ struct BarcodeFixture {
     let left = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"]
     let right = ["1110010", "1100110", "1101100", "1000010", "1011100", "1001110", "1010000", "1000100", "1001000", "1110100"]
     let digits = value.compactMap(\.wholeNumberValue)
-    let bits = "101" + digits[1...6].map { left[$0] }.joined() + "01010" + digits[7...12].map { right[$0] }.joined() + "101"
+    let leftBits: String = digits[1...6].map { left[$0] }.joined()
+    let rightBits: String = digits[7...12].map { right[$0] }.joined()
+    let bits = "101" + leftBits + "01010" + rightBits + "101"
     let context = try bitmapContext(width: 640, height: 480)
     context.setFillColor(CGColor(gray: 1, alpha: 1))
     context.fill(CGRect(x: 0, y: 0, width: 640, height: 480))
