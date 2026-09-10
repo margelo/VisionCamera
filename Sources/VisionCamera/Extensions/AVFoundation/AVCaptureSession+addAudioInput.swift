@@ -10,28 +10,27 @@ import Foundation
 extension AVCaptureSession {
   func addAudioInput() throws {
     guard let microphone = AVCaptureDevice.default(for: .audio) else {
-      throw CameraError(message: "This device does not have a microphone!")
+      throw ConfigurationError.microphoneUnavailable
     }
     let input = try AVCaptureDeviceInput(device: microphone)
+    guard canAddInput(input) else {
+      throw ConfigurationError.inputRejected(deviceID: microphone.uniqueID)
+    }
     logger.info("Adding microphone \(input)...")
     self.addInputWithNoConnections(input)
   }
   func addAudioConnection(to output: AVCaptureOutput) throws {
     guard let audioDevice = self.inputs.first(where: { $0.isMicrophone }) else {
-      throw CameraError(
-        message:
-          "Tried to form a Connection between the Audio Device and Output \(output), but no Audio Device is attached to this CameraSession!"
-      )
+      throw ConfigurationError.audioInputNotConnected
     }
     guard let audioPort = audioDevice.ports.first(where: { $0.mediaType == .audio }) else {
-      throw CameraError(message: "Audio Device does not have an audio port!")
+      throw ConfigurationError.audioPortUnavailable
     }
     let connection = AVCaptureConnection(
       inputPorts: [audioPort],
       output: output)
     guard self.canAddConnection(connection) else {
-      throw CameraError(
-        message: "Audio Connection \"\(connection)\" cannot be added to Camera Session!")
+      throw ConfigurationError.connectionRejected(mediaType: .audio)
     }
     self.addConnection(connection)
   }

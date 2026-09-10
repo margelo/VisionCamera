@@ -57,9 +57,7 @@ extension CapturePhotoSettings {
     quality: Double
   ) throws -> AVCapturePhotoSettings {
     guard quality >= 0.0 && quality <= 1.0 else {
-      throw CameraError(
-        message:
-          "Photo `quality` is not within 0.0 to 1.0 range! (Received: \(quality))")
+      throw CaptureError.invalidQuality(quality)
     }
 
     switch containerFormat {
@@ -80,10 +78,7 @@ extension CapturePhotoSettings {
     case .dng:
       // For RAW, we need to get the first available RAW format (often Bayer14)
       guard let rawFormat = output.bestRawPixelFormat else {
-        throw CameraError(
-          message: "This PhotoOutput does not support raw capture (\"dng\" format)! "
-            + "Select a Format that contains `dng` in its `supportedPhotoContainerFormats` to capture raw photos."
-        )
+        throw CaptureError.rawCaptureUnsupported
       }
       return AVCapturePhotoSettings(rawPixelFormatType: rawFormat)
     case .native:
@@ -98,9 +93,9 @@ extension CapturePhotoSettings {
 
   /// - Options that are supported will be applied
 
-  /// - Options that are not supported but don't directly affect results (e.g. `enableDistortionCorrection`) will be swallowed.
+  /// - Options that are not supported but don't directly affect results (e.g. `isDistortionCorrectionEnabled`) will be swallowed.
 
-  /// - Options that are not supported but directly affect results (e.g. `enableDepthData`) will throw.
+  /// - Options that are not supported but directly affect results (e.g. `isDepthDataEnabled`) will throw.
   func toAVCapturePhotoSettings(
     for output: AVCapturePhotoOutput, withOptions options: PhotoOutputOptions
   ) throws -> AVCapturePhotoSettings {
@@ -121,62 +116,54 @@ extension CapturePhotoSettings {
     }
 
     // flashMode={...}
-    if let flashMode {
-      let avFlashMode = flashMode.toAVCaptureDeviceFlashMode()
-      if output.supportedFlashModes.contains(avFlashMode) {
-        settings.flashMode = avFlashMode
-      }
+    let avFlashMode = flashMode.toAVCaptureDeviceFlashMode()
+    if output.supportedFlashModes.contains(avFlashMode) {
+      settings.flashMode = avFlashMode
     }
-    // enableShutterSound={...}
-    if let enableShutterSound {
+    // isShutterSoundEnabled={...}
+    if let isShutterSoundEnabled {
       if #available(iOS 18.0, *) {
         if output.isShutterSoundSuppressionSupported {
-          settings.isShutterSoundSuppressionEnabled = !enableShutterSound
+          settings.isShutterSoundSuppressionEnabled = !isShutterSoundEnabled
         }
       }
     }
-    // enableDepthData={...}
-    if let enableDepthData {
-      // TODO: This is probably broken since we need to set `output.enableDepthDataDelivery` first,
+    // isDepthDataEnabled={...}
+    if let isDepthDataEnabled {
+      // TODO: This is probably broken since we need to set `output.isDepthDataEnabledDelivery` first,
       //       at init or configuration time (configure(...)), not at each capture.
       guard settings.supportsDepthData else {
-        throw CameraError(
-          message:
-            "Depth Data is only available in processed photo formats such as JPEG or HEIC - not in RAW/DNG!"
-        )
+        throw CaptureError.depthDataUnavailableForRawPhoto
       }
-      if enableDepthData && !output.isDepthDataDeliverySupported {
-        throw CameraError(
-          message: "`enableDepthData` is not supported on this PhotoOutput!")
+      if isDepthDataEnabled && !output.isDepthDataDeliverySupported {
+        throw CaptureError.depthDataUnsupported
       }
-      settings.isDepthDataDeliveryEnabled = enableDepthData
-      settings.embedsDepthDataInPhoto = enableDepthData
+      settings.isDepthDataDeliveryEnabled = isDepthDataEnabled
+      settings.embedsDepthDataInPhoto = isDepthDataEnabled
     }
-    // enableCameraCalibrationDataDelivery={...}
-    if let enableCameraCalibrationDataDelivery {
-      if enableCameraCalibrationDataDelivery && !output.isCameraCalibrationDataDeliverySupported {
-        throw CameraError(
-          message: "`enableCameraCalibrationDataDelivery` is not supported on this PhotoOutput!"
-        )
+    // isCameraCalibrationDataDeliveryEnabled={...}
+    if let isCameraCalibrationDataDeliveryEnabled {
+      if isCameraCalibrationDataDeliveryEnabled && !output.isCameraCalibrationDataDeliverySupported {
+        throw CaptureError.cameraCalibrationDataUnsupported
       }
-      settings.isCameraCalibrationDataDeliveryEnabled = enableCameraCalibrationDataDelivery
+      settings.isCameraCalibrationDataDeliveryEnabled = isCameraCalibrationDataDeliveryEnabled
     }
-    // enableRedEyeReduction={...}
-    if let enableRedEyeReduction {
+    // isRedEyeReductionEnabled={...}
+    if let isRedEyeReductionEnabled {
       if output.isAutoRedEyeReductionSupported {
-        settings.isAutoRedEyeReductionEnabled = enableRedEyeReduction
+        settings.isAutoRedEyeReductionEnabled = isRedEyeReductionEnabled
       }
     }
-    // enableDistortionCorrection={...}
-    if let enableDistortionCorrection {
+    // isDistortionCorrectionEnabled={...}
+    if let isDistortionCorrectionEnabled {
       if settings.supportsDistortionCorrection && output.isContentAwareDistortionCorrectionSupported {
-        settings.isAutoContentAwareDistortionCorrectionEnabled = enableDistortionCorrection
+        settings.isAutoContentAwareDistortionCorrectionEnabled = isDistortionCorrectionEnabled
       }
     }
-    // enableVirtualDeviceFusion={...}
-    if let enableVirtualDeviceFusion {
+    // isVirtualDeviceFusionEnabled={...}
+    if let isVirtualDeviceFusionEnabled {
       if output.isVirtualDeviceFusionSupported {
-        settings.isAutoVirtualDeviceFusionEnabled = enableVirtualDeviceFusion
+        settings.isAutoVirtualDeviceFusionEnabled = isVirtualDeviceFusionEnabled
       }
     }
     // previewPhotoTargetSize={...}

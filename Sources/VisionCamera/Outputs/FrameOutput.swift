@@ -12,9 +12,8 @@ import Foundation
 ///
 /// ```swift
 /// let frameOutput = FrameOutput()
-/// await frameOutput.setOnFrameCallback { frame in
-///   defer { frame.dispose() }
-///   print(frame.width, frame.height)
+/// await frameOutput.setFrameHandler { frame in
+///   print(frame.width as Any, frame.height as Any)
 /// }
 /// ```
 public final class FrameOutput: CameraOutput, NativeCameraOutput {
@@ -48,7 +47,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
       let orientation = outputOrientation
       queue.async { self.metadataOrientation = orientation }
       guard let connection = output.connection(with: .video) else { return }
-      if options.enablePhysicalBufferRotation {
+      if options.rotatesBuffers {
         // TODO: Should we apply that within the CameraSession's DispatchQueue? Batch it?
         try? connection.setOrientation(outputOrientation)
       }
@@ -59,8 +58,8 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -68,7 +67,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard let connection = output.connection(with: .video) else { return nil }
     return connection.inputStreamResolution
   }
@@ -77,7 +76,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   public var streamType: StreamType = .video
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
-    return .closestTo(options.targetResolution)
+    return .closest(to: options.targetResolution)
   }
 
   /// Creates a Camera output with the given options.
@@ -97,20 +96,20 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
     // Configure `videoSettings`
     output.videoSettings = videoSettingsForPixelFormat(options.pixelFormat)
     // If the pipeline stalls, drop frames to avoid blowing up RAM
-    output.alwaysDiscardsLateVideoFrames = options.dropFramesWhileBusy
+    output.alwaysDiscardsLateVideoFrames = options.discardsLateFrames
     // The session configures the video resolution, we don't want to downscale here by default.
     output.automaticallyConfiguresOutputBufferDimensions = false
     if #available(iOS 26.0, *), output.isDeferredStartSupported {
       // Deferred start allows the Session to delay this output's startup in favor
       // of preview-related outputs to make preview appear faster.
-      output.isDeferredStartEnabled = options.allowDeferredStart
+      output.isDeferredStartEnabled = options.allowsDeferredStart
     }
-    // TODO: Add a flag called `allowBufferResizing` and probably get rid of `enablePreviewSizedOutputBuffers`
+    // TODO: Add a flag called `allowBufferResizing` and probably get rid of `usesPreviewSizedBuffers`
     //       If `allowBufferResizing` is true, we can set `.videoSettings`/dimensions here to `options.targetResolution`
     //       and `targetResolution` to `.any` (to not participate in resolution negotiations).
     //       If `allowBufferResizing` is false, we don't set `.videoSettings` ("native" resolution), and reflect our
     //       target resolution via `targetResolution` to participate in resolution negotiations.
-    if #available(iOS 17.0, *), options.enablePreviewSizedOutputBuffers {
+    if #available(iOS 17.0, *), options.usesPreviewSizedBuffers {
       output.deliversPreviewSizedOutputBuffers = true
     }
     if #available(iOS 26.0, *) {
@@ -122,18 +121,18 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) {
+  public func configure(_ config: OutputConfiguration) {
     queue.async { self.mirrorMode = config.mirrorMode }
 
     guard let connection = output.connection(with: .video) else {
       return
     }
-    if options.enablePhysicalBufferRotation {
+    if options.rotatesBuffers {
       // Pipeline should physically rotate buffers on the `connection`
       try? connection.setOrientation(outputOrientation)
       try? connection.setMirrorMode(config.mirrorMode)
     }
-    if options.enableCameraMatrixDelivery {
+    if options.isCameraIntrinsicMatrixDeliveryEnabled {
       // Pipeline should deliver camera matrix (via attachment on `CMSampleBuffer`)
       if connection.isCameraIntrinsicMatrixDeliverySupported {
         connection.isCameraIntrinsicMatrixDeliveryEnabled = true
@@ -189,7 +188,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   /// every time the Camera produces a new ``Frame``.
   ///
   /// Registration and callback delivery are serialized on this output's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFrameCallback(onFrame: ((Frame) -> Void)?) async {
+  public func setFrameHandler(_ onFrame: ((Frame) -> Void)?) async {
     await queue.perform {
       if let onFrame {
         self.delegate.onFrame = { [weak self] (sampleBuffer, timestamp, bufferOrientation, isBufferMirrored) in
@@ -200,7 +199,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
             orientation: bufferOrientation,
             isMirrored: isBufferMirrored)
           let frame = Frame(
-            buffer: sampleBuffer,
+            sampleBuffer: sampleBuffer,
             metadata: metadata)
           // Deliver the sample on the output queue.
           onFrame(frame)
@@ -215,7 +214,7 @@ public final class FrameOutput: CameraOutput, NativeCameraOutput {
   /// This often happens if your Frame Callback is taking longer than a frame interval.
   ///
   /// Registration and callback delivery are serialized on this output's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFrameDroppedCallback(onFrameDropped: ((FrameDroppedReason) -> Void)?) async {
+  public func setFrameDropHandler(_ onFrameDropped: ((FrameDroppedReason) -> Void)?) async {
     await queue.perform {
       if let onFrameDropped {
         self.delegate.onFrameDropped = { sampleBuffer in

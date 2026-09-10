@@ -7,7 +7,7 @@ extension AVCaptureDevice {
       return camera.device
     case .position(let position):
       guard let device = AVCaptureDevice.default(for: position) else {
-        throw CameraError(message: "No camera exists at position \(position).")
+        throw ConfigurationError.cameraUnavailable(position: position)
       }
       return device
     }

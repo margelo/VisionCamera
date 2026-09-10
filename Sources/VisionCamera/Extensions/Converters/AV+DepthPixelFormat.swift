@@ -1,5 +1,5 @@
 ///
-/// AutoFocusSystem+DepthPixelFormat.swift
+/// AV+DepthPixelFormat.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -23,23 +23,20 @@ extension DepthPixelFormat {
     }
   }
 
-  func toCVPixelFormatType() throws -> OSType {
-    switch self {
-    case .unknown:
-      throw CameraError(
-        message: "Cannot convert DepthPixelFormat \"unknown\" to native OSType!")
-    case .depthPointCloud32Bit:
-      throw CameraError(
-        message: "DepthPixelFormat \"depth-point-cloud-32-bit\" is not supported on iOS!")
-    case .depth16Bit:
-      return kCVPixelFormatType_DepthFloat16
-    case .depth32Bit:
-      return kCVPixelFormatType_DepthFloat32
-    case .disparity16Bit:
-      return kCVPixelFormatType_DisparityFloat16
-    case .disparity32Bit:
-      return kCVPixelFormatType_DisparityFloat32
+  var cvPixelFormat: OSType {
+    get throws(MediaError) {
+      switch self {
+      case .unknown, .depthPointCloud32Bit:
+        throw .unsupportedDepthPixelFormat(self)
+      case .depth16Bit:
+        return kCVPixelFormatType_DepthFloat16
+      case .depth32Bit:
+        return kCVPixelFormatType_DepthFloat32
+      case .disparity16Bit:
+        return kCVPixelFormatType_DisparityFloat16
+      case .disparity32Bit:
+        return kCVPixelFormatType_DisparityFloat32
+      }
     }
   }
-
 }

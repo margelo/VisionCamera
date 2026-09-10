@@ -110,7 +110,7 @@ struct ResolvedCameraSessionConnection {
       return device
     case .position(let targetCameraPosition):
       guard let device = AVCaptureDevice.default(for: targetCameraPosition) else {
-        throw CameraError(message: "No CameraDevice exists at position \"\(targetCameraPosition)\"!")
+        throw ConfigurationError.cameraUnavailable(position: targetCameraPosition)
       }
       return CameraDevice(device: device)
     }
@@ -127,7 +127,7 @@ struct ResolvedCameraSessionConnection {
         output: .preview(nativePreview),
         mirrorMode: outputConfiguration.mirrorMode)
     default:
-      throw CameraError(message: "Output \"\(outputConfiguration.output)\" is not of type `NativeCameraOutput` or `NativePreviewViewOutput`!")
+      throw ConfigurationError.unsupportedOutput(outputType: String(describing: type(of: outputConfiguration.output)))
     }
   }
 }

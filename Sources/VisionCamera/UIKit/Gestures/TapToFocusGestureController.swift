@@ -10,7 +10,7 @@ import UIKit
 
 /// A ``TapToFocusGestureController`` is a ``GestureController``
 /// that can trigger a ``CameraController``'s
-/// ``CameraController/focusTo(point:options:)``
+/// ``CameraController/focus(at:options:)``
 /// action via a native tap to focus gesture.
 @MainActor
 public final class TapToFocusGestureController: NSObject, GestureController,
@@ -20,7 +20,7 @@ public final class TapToFocusGestureController: NSObject, GestureController,
   public let gestureRecognizer = UITapGestureRecognizer()
   /// The Camera controller used by this gesture, held weakly.
   ///
-  /// Retain the ``CameraController`` returned by ``CameraSession/configure(connections:config:)`` elsewhere, and replace it when the session is reconfigured.
+  /// Retain the ``CameraController`` returned by ``CameraSession/configure(_:configuration:)`` elsewhere, and replace it when the session is reconfigured.
   public weak var controller: (CameraController)? = nil
 
   private weak var previewView: (PreviewView)? = nil
@@ -47,7 +47,7 @@ public final class TapToFocusGestureController: NSObject, GestureController,
 
       Task { [weak self] in
         do {
-          try await controller.focusTo(point: meteringPoint, options: FocusOptions())
+          try await controller.focus(at: meteringPoint, options: FocusOptions())
           guard let self else { return }
           let listeners = Array(self.onFocusCompletedListeners.values)
           for listener in listeners { listener(meteringPoint) }
@@ -63,14 +63,13 @@ public final class TapToFocusGestureController: NSObject, GestureController,
   /// Adds a listener that is called when a native tap gesture creates a
   /// ``MeteringPoint``, immediately before focusing begins.
   ///
-  /// Call ``ListenerSubscription/remove`` on the returned
-  /// subscription to stop receiving updates.
-  public func addOnTapListener(onTap: @escaping (MeteringPoint) -> Void)
-    -> ListenerSubscription
+  /// Retain the returned token while observing. Cancel or release it to stop receiving updates.
+  public func observeTaps(_ onTap: @escaping (MeteringPoint) -> Void)
+    -> ObservationToken
   {
     let id = UUID()
     onTapListeners[id] = onTap
-    return ListenerSubscription { [weak self] in
+    return ObservationToken { [weak self] in
       DispatchQueue.main.async { self?.onTapListeners.removeValue(forKey: id) }
     }
   }
@@ -79,24 +78,24 @@ public final class TapToFocusGestureController: NSObject, GestureController,
   /// native tap completes.
   ///
   /// This is not called if the focus operation fails. Call
-  /// ``ListenerSubscription/remove`` on the returned
+  /// ``ObservationToken/cancel()`` on the returned
   /// subscription to stop receiving updates.
-  public func addOnFocusCompletedListener(
-    onFocusCompleted: @escaping (MeteringPoint) -> Void
-  ) -> ListenerSubscription {
+  public func observeFocusCompletion(
+    _ onFocusCompleted: @escaping (MeteringPoint) -> Void
+  ) -> ObservationToken {
     let id = UUID()
     onFocusCompletedListeners[id] = onFocusCompleted
-    return ListenerSubscription { [weak self] in
+    return ObservationToken { [weak self] in
       DispatchQueue.main.async { self?.onFocusCompletedListeners.removeValue(forKey: id) }
     }
   }
 
-  /// Associates this tap gesture with the Preview View used to convert tap coordinates into a Metering Point.
-  public func onAttached(to preview: PreviewView) {
+  /// Associates this tap gesture with the Preview View used to convert tap coordinates into a Metering CGPoint.
+  public func attach(to preview: PreviewView) {
     self.previewView = preview
   }
   /// Clears the attached Preview View when this gesture is removed.
-  public func onDetached(from preview: PreviewView) {
+  public func detach(from preview: PreviewView) {
     if self.previewView === preview {
       self.previewView = nil
     }

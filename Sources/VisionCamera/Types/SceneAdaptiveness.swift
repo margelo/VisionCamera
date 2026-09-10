@@ -8,7 +8,7 @@
 ///   until focus is manually reset via ``CameraController/resetFocus()``
 ///   or another focus metering operation starts.
 ///
-/// See ``CameraController/focusTo(point:options:)``
+/// See ``CameraController/focus(at:options:)``
 /// See ``FocusOptions``
 public enum SceneAdaptiveness: CaseIterable, Sendable {
   /// Continuously keeps the target point relative to the screen in focus, adapting AE/AF/AWB values if the

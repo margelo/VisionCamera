@@ -5,7 +5,7 @@
 ///
 /// This is used for getting available resolutions for a given
 /// ``OutputStreamType`` via
-/// ``CameraDevice/getSupportedResolutions(outputStreamType:)``
+/// ``CameraDevice/supportedResolutions(for:)``
 public enum OutputStreamType: CaseIterable, Sendable {
   /// A recorded video stream.
   case video

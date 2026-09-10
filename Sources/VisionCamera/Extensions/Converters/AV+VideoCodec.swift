@@ -62,8 +62,7 @@ extension VideoCodec {
   func toAVVideoCodecType() throws -> AVVideoCodecType {
     switch self {
     case .unknown:
-      throw CameraError(
-        message: "VideoCodec \"unknown\" cannot be used as AVVideoCodecType!")
+      throw RecordingError.unsupportedCodec(self)
     case .h264:
       return .h264
     case .h265:
@@ -84,20 +83,17 @@ extension VideoCodec {
       return .jpeg
     case .proRes4444Xq:
       guard #available(iOS 18.0, *) else {
-        throw CameraError(
-          message: "VideoCodec \"pro-res-4444-xq\" is only available on iOS 18.0 or higher!")
+        throw RecordingError.unsupportedCodec(self)
       }
       return .appleProRes4444XQ
     case .proResRaw:
       guard #available(iOS 26.0, *) else {
-        throw CameraError(
-          message: "VideoCodec \"pro-res-raw\" is only available on iOS 18.0 or higher!")
+        throw RecordingError.unsupportedCodec(self)
       }
       return .proResRAW
     case .proResRawHq:
       guard #available(iOS 26.0, *) else {
-        throw CameraError(
-          message: "VideoCodec \"pro-res-raw-hq\" is only available on iOS 18.0 or higher!")
+        throw RecordingError.unsupportedCodec(self)
       }
       return .proResRAWHQ
     }

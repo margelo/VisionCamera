@@ -18,7 +18,7 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(CameraOrientation(uiOrientation: imageOrientation), orientation)
         XCTAssertEqual(imageOrientation.isMirrored, isMirrored)
         let exifOrientation = orientation.toCGOrientation(isMirrored: isMirrored)
-        XCTAssertEqual(try UIImage.Orientation(fromExif: exifOrientation.rawValue), imageOrientation)
+        XCTAssertEqual(UIImage.Orientation(exifValue: exifOrientation.rawValue), imageOrientation)
       }
       for relativeOrientation in CameraOrientation.allCases {
         XCTAssertEqual(orientation.relativeTo(relativeOrientation).rotatedBy(relativeOrientation), orientation)
@@ -46,23 +46,18 @@ final class GeometryTests: XCTestCase {
     ]
     for orientation in CameraOrientation.allCases {
       for isMirrored in [false, true] {
-        let frameToCamera = FrameCoordinateSystemConverter.getFrameToCameraMatrix(
-          pixelBuffer: pixelBuffer, orientation: orientation, isMirrored: isMirrored
-        )
-        let cameraToFrame = FrameCoordinateSystemConverter.getCameraToFrameMatrix(
-          pixelBuffer: pixelBuffer, orientation: orientation, isMirrored: isMirrored
-        )
+        let frame = try makeFrame(pixelBuffer: pixelBuffer, orientation: orientation, isMirrored: isMirrored)
         for point in points {
-          let cameraPoint = point.applying(frameToCamera)
+          let cameraPoint = try frame.cameraPoint(from: point)
           XCTAssertGreaterThanOrEqual(cameraPoint.x, -0.000001)
           XCTAssertLessThanOrEqual(cameraPoint.x, 1.000001)
           XCTAssertGreaterThanOrEqual(cameraPoint.y, -0.000001)
           XCTAssertLessThanOrEqual(cameraPoint.y, 1.000001)
-          let restoredPoint = cameraPoint.applying(cameraToFrame)
+          let restoredPoint = try frame.point(fromCameraPoint: cameraPoint)
           XCTAssertEqual(restoredPoint.x, point.x, accuracy: 0.000001)
           XCTAssertEqual(restoredPoint.y, point.y, accuracy: 0.000001)
         }
-        let center = CGPoint(x: 320, y: 240).applying(frameToCamera)
+        let center = try frame.cameraPoint(from: CGPoint(x: 320, y: 240))
         XCTAssertEqual(center.x, 0.5, accuracy: 0.000001)
         XCTAssertEqual(center.y, 0.5, accuracy: 0.000001)
       }
@@ -79,29 +74,25 @@ final class GeometryTests: XCTestCase {
       (.left, CGPoint(x: 0.25, y: 0.25)),
     ]
     for (orientation, expected) in expectedPoints {
-      let transform = FrameCoordinateSystemConverter.getFrameToCameraMatrix(
-        pixelBuffer: pixelBuffer, orientation: orientation, isMirrored: false
-      )
-      let result = point.applying(transform)
+      let frame = try makeFrame(pixelBuffer: pixelBuffer, orientation: orientation, isMirrored: false)
+      let result = try frame.cameraPoint(from: point)
       XCTAssertEqual(result.x, expected.x, accuracy: 0.000001)
       XCTAssertEqual(result.y, expected.y, accuracy: 0.000001)
     }
-    let mirroredTransform = FrameCoordinateSystemConverter.getFrameToCameraMatrix(
-      pixelBuffer: pixelBuffer, orientation: .up, isMirrored: true
-    )
-    let mirroredPoint = point.applying(mirroredTransform)
+    let mirroredFrame = try makeFrame(pixelBuffer: pixelBuffer, orientation: .up, isMirrored: true)
+    let mirroredPoint = try mirroredFrame.cameraPoint(from: point)
     XCTAssertEqual(mirroredPoint.x, 0.75, accuracy: 0.000001)
     XCTAssertEqual(mirroredPoint.y, 0.75, accuracy: 0.000001)
   }
 
-  func testGeometryConversionsPreserveFractionalCoordinates() {
-    let cgPoint = CGPoint(x: -5.5, y: 27.25)
-    XCTAssertEqual(Point(cgPoint).toCGPoint(), cgPoint)
-    XCTAssertEqual(Size(CGSize(width: 1920, height: 1080)), Size(width: 1920, height: 1080))
-    XCTAssertEqual(
-      BoundingBox(CGRect(x: 0.125, y: 0.25, width: 0.5, height: 0.75)),
-      BoundingBox(x: 0.125, y: 0.25, width: 0.5, height: 0.75)
-    )
+  private func makeFrame(pixelBuffer: CVPixelBuffer, orientation: CameraOrientation, isMirrored: Bool) throws -> Frame {
+    let format = try CMFormatDescription(imageBuffer: pixelBuffer)
+    let timing = CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: .zero, decodeTimeStamp: .invalid)
+    let sample = try CMSampleBuffer(imageBuffer: pixelBuffer, formatDescription: format, sampleTiming: timing)
+    return Frame(
+      sampleBuffer: sample,
+      metadata: MediaSampleMetadata(
+        timestamp: .zero, orientation: orientation, isMirrored: isMirrored))
   }
 
   private func makePixelBuffer() throws -> CVPixelBuffer {

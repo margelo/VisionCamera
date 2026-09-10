@@ -14,12 +14,12 @@ import VisionCamera
 func prepareScanner() async throws -> (CameraSession, ObjectOutput) {
 	let session = CameraSession()
 	let output = ObjectOutput(options: .init(enabledObjectTypes: [.qr]))
-	await output.setOnObjectsScannedCallback { objects in
+	await output.setObjectHandler { objects in
 		for case let code as ScannedCode in objects {
 			print("QR code:", code.value ?? "")
 		}
 	}
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -35,7 +35,7 @@ The output enables the requested types that AVFoundation supports in the active 
 
 The callback receives values conforming to ``ScannedObject``. A ``ScannedCode`` represents a machine-readable code, while a ``ScannedFace`` represents a detected face.
 
-Callbacks run on the object output's queue. Dispatch UI updates to the main queue, and clear the callback with `await output.setOnObjectsScannedCallback(nil)` when scanning is no longer needed.
+Callbacks run on the object output's queue. Dispatch UI updates to the main queue, and clear the callback with `await output.setObjectHandler(nil)` when scanning is no longer needed.
 
 A successful session configuration means the metadata output is connected. It does not mean an object has been recognized. Recognition depends on the supported types, visible target, focus, lighting, and image size.
 

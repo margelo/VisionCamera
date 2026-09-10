@@ -11,8 +11,8 @@ public struct CapturePhotoSettings {
   ///
   /// On supported devices, AVFoundation uses Retina Flash.
   ///
-  /// See ``CameraDevice/hasFlash``. When `nil`, the capture uses its default flash mode, which is off.
-  public var flashMode: FlashMode?
+  /// See ``CameraDevice/hasFlash``. Defaults to off.
+  public var flashMode: FlashMode
   /// Enables or disables the system shutter sound.
   /// The shutter sound is fired exactly when a photo will be captured.
   ///
@@ -21,14 +21,14 @@ public struct CapturePhotoSettings {
   ///
   /// When `nil`, the capture pipeline keeps its default shutter-sound behavior. Suppression is requested
   /// only on iOS 18 and later when the output supports it.
-  public var enableShutterSound: Bool?
+  public var isShutterSoundEnabled: Bool?
   /// Enables or disables depth data delivery in the resulting
   /// ``Photo``.
   ///
   /// Depth data will be embedded in the Photo and can be accessed
   /// via ``Photo/depth``.
   ///
-  /// ``CapturePhotoSettings/enableDepthData`` can only be enabled if the
+  /// ``CapturePhotoSettings/isDepthDataEnabled`` can only be enabled if the
   /// ``PhotoOutput`` supports depth data - see
   /// ``PhotoOutput/supportsDepthDataDelivery``.
   ///
@@ -36,7 +36,7 @@ public struct CapturePhotoSettings {
   ///
   /// Depth delivery also requires a processed photo format and an underlying `AVCapturePhotoOutput`
   /// configured for depth delivery. Capturing RAW photos with an explicit depth setting is unsupported.
-  public var enableDepthData: Bool?
+  public var isDepthDataEnabled: Bool?
   /// Specifies whether red-eye reduction should be applied
   /// automatically on flash captures.
   ///
@@ -46,7 +46,7 @@ public struct CapturePhotoSettings {
   /// When `nil`, the capture pipeline keeps its default setting.
   ///
   /// This option is applied only when the capture output supports it.
-  public var enableRedEyeReduction: Bool?
+  public var isRedEyeReductionEnabled: Bool?
   /// Specifies whether the capture pipeline should
   /// deliver Camera calibration data.
   ///
@@ -56,7 +56,7 @@ public struct CapturePhotoSettings {
   /// When `nil`, the capture pipeline keeps its default setting.
   ///
   /// Requesting delivery throws when the photo output does not support it.
-  public var enableCameraCalibrationDataDelivery: Bool?
+  public var isCameraCalibrationDataDeliveryEnabled: Bool?
   /// Specifies whether the capture pipeline should
   /// automatically correct lens distortion.
   ///
@@ -67,7 +67,7 @@ public struct CapturePhotoSettings {
   /// When `nil`, the capture pipeline keeps its default setting.
   ///
   /// This option is applied only when the capture output supports it.
-  public var enableDistortionCorrection: Bool?
+  public var isDistortionCorrectionEnabled: Bool?
   /// Enables or disables virtual device image fusion.
   ///
   /// If enabled, the Camera pipeline may capture photos
@@ -80,7 +80,7 @@ public struct CapturePhotoSettings {
   /// When `nil`, the capture pipeline keeps its default setting.
   ///
   /// This option is applied only when the capture output supports it.
-  public var enableVirtualDeviceFusion: Bool?
+  public var isVirtualDeviceFusionEnabled: Bool?
   /// Sets the given `CLLocation` to be embedded
   /// into the EXIF data of the captured ``Photo``.
   ///
@@ -91,30 +91,30 @@ public struct CapturePhotoSettings {
   ///
   /// - Parameters:
   ///   - flashMode: Configures the ``FlashMode`` for this Photo capture.
-  ///   - enableShutterSound: Enables or disables the system shutter sound. The shutter sound is fired exactly when a photo will be captured.
-  ///   - enableDepthData: Enables or disables depth data delivery in the resulting ``Photo``.
-  ///   - enableRedEyeReduction: Specifies whether red-eye reduction should be applied automatically on flash captures.
-  ///   - enableCameraCalibrationDataDelivery: Specifies whether the capture pipeline should deliver Camera calibration data.
-  ///   - enableDistortionCorrection: Specifies whether the capture pipeline should automatically correct lens distortion.
-  ///   - enableVirtualDeviceFusion: Enables or disables virtual device image fusion.
+  ///   - isShutterSoundEnabled: Enables or disables the system shutter sound. The shutter sound is fired exactly when a photo will be captured.
+  ///   - isDepthDataEnabled: Enables or disables depth data delivery in the resulting ``Photo``.
+  ///   - isRedEyeReductionEnabled: Specifies whether red-eye reduction should be applied automatically on flash captures.
+  ///   - isCameraCalibrationDataDeliveryEnabled: Specifies whether the capture pipeline should deliver Camera calibration data.
+  ///   - isDistortionCorrectionEnabled: Specifies whether the capture pipeline should automatically correct lens distortion.
+  ///   - isVirtualDeviceFusionEnabled: Enables or disables virtual device image fusion.
   ///   - location: Sets the given `CLLocation` to be embedded into the EXIF data of the captured ``Photo``.
   public init(
-    flashMode: FlashMode? = nil,
-    enableShutterSound: Bool? = nil,
-    enableDepthData: Bool? = nil,
-    enableRedEyeReduction: Bool? = nil,
-    enableCameraCalibrationDataDelivery: Bool? = nil,
-    enableDistortionCorrection: Bool? = nil,
-    enableVirtualDeviceFusion: Bool? = nil,
+    flashMode: FlashMode = .off,
+    isShutterSoundEnabled: Bool? = nil,
+    isDepthDataEnabled: Bool? = nil,
+    isRedEyeReductionEnabled: Bool? = nil,
+    isCameraCalibrationDataDeliveryEnabled: Bool? = nil,
+    isDistortionCorrectionEnabled: Bool? = nil,
+    isVirtualDeviceFusionEnabled: Bool? = nil,
     location: CLLocation? = nil
   ) {
     self.flashMode = flashMode
-    self.enableShutterSound = enableShutterSound
-    self.enableDepthData = enableDepthData
-    self.enableRedEyeReduction = enableRedEyeReduction
-    self.enableCameraCalibrationDataDelivery = enableCameraCalibrationDataDelivery
-    self.enableDistortionCorrection = enableDistortionCorrection
-    self.enableVirtualDeviceFusion = enableVirtualDeviceFusion
+    self.isShutterSoundEnabled = isShutterSoundEnabled
+    self.isDepthDataEnabled = isDepthDataEnabled
+    self.isRedEyeReductionEnabled = isRedEyeReductionEnabled
+    self.isCameraCalibrationDataDeliveryEnabled = isCameraCalibrationDataDeliveryEnabled
+    self.isDistortionCorrectionEnabled = isDistortionCorrectionEnabled
+    self.isVirtualDeviceFusionEnabled = isVirtualDeviceFusionEnabled
     self.location = location
   }
 }

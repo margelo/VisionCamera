@@ -3,7 +3,7 @@
 /// Output settings for a ``VideoOutput``.
 ///
 /// See ``VideoOutput``
-/// See ``VideoOutput/setOutputSettings(settings:)``
+/// See ``VideoOutput/setOutputSettings(_:)``
 public struct VideoOutputSettings: Equatable, Sendable {
   /// Configures the ``VideoCodec`` to use for recording a video.
   ///

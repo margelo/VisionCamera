@@ -6,7 +6,7 @@ Video stabilization applies software and sometimes hardware processing to stabil
 
 ## Enable stabilization
 
-Pass a ``VideoStabilizationModeConstraint`` with your desired ``TargetStabilizationMode``:
+Pass a ``Constraint/videoStabilization(_:)`` with your desired ``TargetStabilizationMode``:
 
 ```swift
 import VisionCamera
@@ -15,12 +15,12 @@ func configureStabilizedVideo(
 	session: CameraSession,
 	output: any VideoOutput
 ) async throws {
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(
 			input: .position(.back),
 			outputs: [.init(output: output)],
 			constraints: [
-				.videoStabilizationMode(.init(videoStabilizationMode: .cinematic))
+				.videoStabilization(.cinematic)
 			]
 		)
 	])
@@ -29,7 +29,7 @@ func configureStabilizedVideo(
 
 Modes have different device and OS requirements. Inspect `CameraSessionConfig.selectedVideoStabilizationMode` to see the result of negotiation.
 
-Use a ``PreviewStabilizationModeConstraint`` to express a preview stabilization preference. See <doc:Constraints> for how preferences are negotiated together.
+Use a ``Constraint/previewStabilization(_:)`` to express a preview stabilization preference. See <doc:Constraints> for how preferences are negotiated together.
 
 ## Latency and field of view
 

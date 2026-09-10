@@ -6,6 +6,7 @@
 
 import AVFoundation
 import Foundation
+import UniformTypeIdentifiers
 
 extension PhotoContainerFormat {
   init(avFileType: AVFileType) {
@@ -44,28 +45,31 @@ extension PhotoContainerFormat {
     }
   }
 
-  func toUTType() throws -> UTType {
-    switch self {
-    case .unknown:
-      throw CameraError(message: "Cannot convert \"unknown\" ImageFormat to AVFileType!")
-    case .jpeg:
-      return .jpeg
-    case .heic:
-      return .heic
-    case .tiff:
-      return .tiff
-    case .dcm:
-      guard let type = UTType(tag: "dcm", tagClass: .filenameExtension, conformingTo: nil) else {
-        throw CameraError(
-          message: "PhotoContainerFormat \"dcm\" cannot be converted to UTType!")
+  var uniformType: UTType {
+    get throws(MediaError) {
+      switch self {
+      case .unknown:
+        throw .unsupportedPhotoContainerFormat(self)
+      case .jpeg:
+        return .jpeg
+      case .heic:
+        return .heic
+      case .tiff:
+        return .tiff
+      case .dcm:
+        guard let type = UTType(filenameExtension: "dcm") else {
+          throw MediaError.unsupportedPhotoContainerFormat(self)
+        }
+        return type
+      case .dng:
+        if #available(iOS 18.0, *) {
+          return .dng
+        }
+        guard let type = UTType(filenameExtension: "dng", conformingTo: .image) else {
+          throw MediaError.unsupportedPhotoContainerFormat(self)
+        }
+        return type
       }
-      return type
-    case .dng:
-      guard #available(iOS 18.0, *) else {
-        throw CameraError(
-          message: "PhotoContainerFormat \"dng\" is only available on iOS 18.0 or newer!")
-      }
-      return .dng
     }
   }
 }

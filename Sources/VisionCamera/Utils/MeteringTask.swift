@@ -45,19 +45,6 @@ final class MeteringTask {
   private struct MeteringProgress {
     var settledAt: Date? = nil
   }
-  private enum MeteringError: Error, CustomStringConvertible {
-    case timeouted
-    case canceled
-
-    var description: String {
-      switch self {
-      case .timeouted:
-        return "The metering operation has timeouted!"
-      case .canceled:
-        return "The metering operation has been canceled!"
-      }
-    }
-  }
   enum AutoReset {
     case after(seconds: Double)
     case never
@@ -120,10 +107,10 @@ final class MeteringTask {
     isFinished = true
     let callback = onError
     destroy()
-    callback?(MeteringError.canceled)
+    callback?(CancellationError())
   }
 
-  private func destroy() {
+  private func destroy(error: Error = CancellationError()) {
     logger.info("Destroying `MeteringTask`...")
     for observation in observations { observation.invalidate() }
     observations.removeAll()
@@ -135,13 +122,13 @@ final class MeteringTask {
     isFinished = true
     onError = nil
     onComplete = nil
-    callback?(MeteringError.timeouted)
+    callback?(error)
   }
 
   private func onTimedOut() {
     guard !isFinished else { return }
     logger.info("Metering operations timed out after \(self.timeout) seconds!")
-    destroy()
+    destroy(error: CameraControlError.meteringTimedOut)
   }
 
   private func update() {
@@ -275,7 +262,7 @@ final class MeteringTask {
   /// This method throws if the `AVCaptureDevice` isn't currently locked for configuration.
   func startMeteringAE(to point: CGPoint, responsiveness: FocusResponsiveness) throws {
     guard self.device.isExposurePointOfInterestSupported else {
-      throw CameraError(message: "Metering Mode `AE` is not supported on this device!")
+      throw CameraControlError.unsupportedMeteringMode(.ae)
     }
     logger.info("Started metering AE to \(point.debugDescription)...")
     // Track AE completion
@@ -300,7 +287,7 @@ final class MeteringTask {
   /// This method throws if the `AVCaptureDevice` isn't currently locked for configuration.
   func startMeteringAF(to point: CGPoint, responsiveness: FocusResponsiveness) throws {
     guard self.device.isFocusPointOfInterestSupported else {
-      throw CameraError(message: "Metering Mode `AF` is not supported on this device!")
+      throw CameraControlError.unsupportedMeteringMode(.af)
     }
     logger.info("Started metering AF to \(point.debugDescription)...")
     // Track AF completion
@@ -361,7 +348,7 @@ final class MeteringTask {
         return .autoExpose
       }
     }
-    throw CameraError(message: "Metering Mode `AF` is not supported on this device!")
+    throw CameraControlError.unsupportedMeteringMode(.ae)
   }
 
   private func getFocusMode(responsiveness: FocusResponsiveness) throws -> AVCaptureDevice.FocusMode {
@@ -382,7 +369,7 @@ final class MeteringTask {
         return .autoFocus
       }
     }
-    throw CameraError(message: "Metering Mode `AF` is not supported on this device!")
+    throw CameraControlError.unsupportedMeteringMode(.af)
   }
 
   private func getWhiteBalanceMode(responsiveness: FocusResponsiveness) throws
@@ -405,6 +392,6 @@ final class MeteringTask {
         return .autoWhiteBalance
       }
     }
-    throw CameraError(message: "Metering Mode `AWB` is not supported on this device!")
+    throw CameraControlError.unsupportedMeteringMode(.awb)
   }
 }

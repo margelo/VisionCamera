@@ -6,21 +6,18 @@ Native frame processing is a Swift function that receives a ``Frame`` and perfor
 
 ## Read a native sample buffer
 
-The frame exposes its optional `sampleBuffer` and `pixelBuffer` directly:
+The frame exposes its `sampleBuffer` and optional `pixelBuffer` directly:
 
 ```swift
 import CoreMedia
 import VisionCamera
 
-func presentationTime(frame: Frame) throws -> CMTime {
-	guard let sampleBuffer = frame.sampleBuffer else {
-		throw CameraError(message: "Frame has been disposed.")
-	}
-	return CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+func presentationTime(frame: Frame) -> CMTime {
+	return CMSampleBufferGetPresentationTimeStamp(frame.sampleBuffer)
 }
 ```
 
-For APIs that work with a `CVPixelBuffer`, use `getPixelBuffer()`. The returned object is retained and can be passed directly to Core Image, Vision, or other native processing code.
+For APIs that work with a `CVPixelBuffer`, use `pixelBuffer`. The returned object is retained and can be passed directly to Core Image, Vision, or other native processing code.
 
 ## Process a frame with Vision
 
@@ -32,7 +29,14 @@ import UIKit
 import Vision
 import VisionCamera
 
+enum BarcodeProcessingError: Error {
+	case unsupportedOrientation
+}
+
 func scanBarcodes(frame: Frame) throws -> [String] {
+	guard let pixelBuffer = frame.pixelBuffer else {
+		throw MediaError.missingPixelBuffer
+	}
 	let orientation: CGImagePropertyOrientation
 	switch frame.metadata.uiImageOrientation {
 	case .up: orientation = .up
@@ -44,13 +48,13 @@ func scanBarcodes(frame: Frame) throws -> [String] {
 	case .right: orientation = .right
 	case .rightMirrored: orientation = .rightMirrored
 	@unknown default:
-		throw CameraError(message: "Unsupported image orientation.")
+		throw BarcodeProcessingError.unsupportedOrientation
 	}
 
 	let request = VNDetectBarcodesRequest()
 	request.symbologies = [.qr]
 	let handler = VNImageRequestHandler(
-		cvPixelBuffer: try frame.getPixelBuffer(),
+		cvPixelBuffer: pixelBuffer,
 		orientation: orientation
 	)
 	try handler.perform([request])
@@ -67,7 +71,7 @@ func installProcessor(
 	output: FrameOutput,
 	process: @escaping (Frame) throws -> [String]
 ) async {
-	await output.setOnFrameCallback { frame in
+	await output.setFrameHandler { frame in
 		do {
 			print(try process(frame))
 		} catch {

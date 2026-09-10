@@ -5,8 +5,8 @@
 ### Creating and configuring a session
 
 - ``init()``
-- ``init(enableMultiCam:)``
-- ``configure(connections:config:)``
+- ``init(isMultiCamEnabled:)``
+- ``configure(_:configuration:)``
 
 ### Starting and stopping capture
 
@@ -16,11 +16,11 @@
 
 ### Observing session events
 
-- ``addOnStartedListener(onStarted:)``
-- ``addOnStoppedListener(onStopped:)``
-- ``addOnErrorListener(onError:)``
-- ``addOnInterruptionStartedListener(onInterruptionStarted:)``
-- ``addOnInterruptionEndedListener(onInterruptionEnded:)``
+- ``observeStarted(_:)``
+- ``observeStopped(_:)``
+- ``observeErrors(_:)``
+- ``observeInterruptionStarted(_:)``
+- ``observeInterruptionEnded(_:)``
 
 ### Accessing AVFoundation
 

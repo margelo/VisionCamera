@@ -1,7 +1,6 @@
 import UIKit
 import VisionCamera
 
-@MainActor
 final class CameraViewController: UIViewController {
   private let preview = PreviewView()
   private let status = UILabel()
@@ -22,7 +21,7 @@ final class CameraViewController: UIViewController {
   private var queuedOperations = 0
   private var isReady = false
   private var orientationManager: (any OrientationManager)?
-  private var subscriptions: [ListenerSubscription] = []
+  private var subscriptions: [ObservationToken] = []
   private var position: TargetCameraPosition = .back
   private var microphoneGranted = false
   private var setupStarted = false
@@ -93,8 +92,8 @@ final class CameraViewController: UIViewController {
 
   deinit {
     NotificationCenter.default.removeObserver(self)
-    for subscription in subscriptions { subscription.remove() }
-    orientationManager?.stopOrientationUpdates()
+    for subscription in subscriptions { subscription.cancel() }
+    orientationManager?.stopUpdates()
   }
 
   private func enqueue(_ action: @escaping @MainActor () async throws -> Void) {
@@ -122,23 +121,23 @@ final class CameraViewController: UIViewController {
     self.session = session
     let previewOutput = PreviewOutput()
     self.previewOutput = previewOutput
-    preview.previewOutput = previewOutput
+    preview.output = previewOutput
     photoOutput = PhotoOutput()
     subscriptions = [
-      session.addOnErrorListener { [weak self] error in
+      session.observeErrors { [weak self] error in
         DispatchQueue.main.async { self?.status.text = error.localizedDescription }
       },
-      session.addOnInterruptionStartedListener { [weak self] reason in
+      session.observeInterruptionStarted { [weak self] reason in
         DispatchQueue.main.async { self?.status.text = "Camera interrupted: \(reason)" }
       },
-      session.addOnInterruptionEndedListener { [weak self] in
+      session.observeInterruptionEnded { [weak self] in
         DispatchQueue.main.async { self?.updateLifecycle() }
       },
     ]
     try await configureVideoOutput()
     let manager = DeviceOrientationManager()
     orientationManager = manager
-    try manager.startOrientationUpdates { [weak self] orientation in
+    try manager.startUpdates { [weak self] orientation in
       DispatchQueue.main.async {
         self?.photoOutput?.outputOrientation = orientation
         self?.videoOutput?.outputOrientation = orientation
@@ -150,7 +149,7 @@ final class CameraViewController: UIViewController {
   }
 
   private func configureVideoOutput() async throws {
-    let options = VideoOutputOptions(enableAudio: microphoneGranted)
+    let options = VideoOutputOptions(isAudioEnabled: microphoneGranted)
     if recordingMode.selectedSegmentIndex == 1 {
       videoOutput = VideoFrameOutput(options: options)
     } else {
@@ -167,11 +166,11 @@ final class CameraViewController: UIViewController {
     guard let session, let photoOutput, let videoOutput, let previewOutput else { return }
     let outputs: [any CameraOutput] = [photoOutput, videoOutput, previewOutput]
     let constraints: [Constraint] =
-      [.fps(FPSConstraint(fps: 30))]
+      [.frameRate(30)]
       + outputs.map {
-        .resolutionBias(ResolutionBiasConstraint(resolutionBias: $0))
+        .resolution($0)
       }
-    let controllers = try await session.configure(connections: [
+    let controllers = try await session.configure([
       CameraSessionConnection(
         input: .position(position),
         outputs: outputs.map { CameraOutputConfiguration(output: $0) },
@@ -204,7 +203,7 @@ final class CameraViewController: UIViewController {
     enqueue {
       guard let output = self.photoOutput else { return }
       let photo = try await output.capturePhoto(settings: .init(), callbacks: .init())
-      self.thumbnail.image = try await photo.toImageAsync()
+      self.thumbnail.image = try await photo.image()
       self.status.text = "Photo captured"
     }
   }
@@ -221,19 +220,19 @@ final class CameraViewController: UIViewController {
       self.recorder = recorder
       self.recordingID = id
       do {
-        try await recorder.startRecording(
-          onRecordingFinished: { [weak self] path, _ in
+        try await recorder.start(
+          onFinished: { [weak self] result in
             DispatchQueue.main.async {
-              self?.recordingFinished(id: id, message: "Video saved: \(URL(fileURLWithPath: path).lastPathComponent)")
+              self?.recordingFinished(id: id, message: "Video saved: \(result.fileURL.lastPathComponent)")
             }
           },
-          onRecordingError: { [weak self] error in
+          onError: { [weak self] error in
             DispatchQueue.main.async {
               self?.recordingFinished(id: id, message: error.localizedDescription)
             }
           },
-          onRecordingPaused: nil,
-          onRecordingResumed: nil
+          onPaused: nil,
+          onResumed: nil
         )
         guard self.recordingID == id else { return }
         self.recordButton.setTitle("Stop", for: .normal)
@@ -250,7 +249,7 @@ final class CameraViewController: UIViewController {
     isFinalizing = true
     refreshControls()
     status.text = "Finishing video..."
-    await recorder.stopRecording()
+    await recorder.stop()
   }
 
   private func recordingFinished(id: UUID, message: String) {
@@ -266,7 +265,8 @@ final class CameraViewController: UIViewController {
   @objc private func switchCamera() {
     enqueue {
       guard !self.isFinalizing, self.recorder == nil || self.usesPersistentRecorder else {
-        throw CameraError(message: "Use persistent recording to switch cameras while recording.")
+        self.status.text = "Use persistent recording to switch cameras while recording."
+        return
       }
       self.position = self.position == .back ? .front : .back
       try await self.configureSession()

@@ -10,8 +10,8 @@ import VisionCamera
 
 @MainActor
 func makePreview(output: PreviewOutput, in container: UIView) -> PreviewView {
-	let preview = PreviewView(previewOutput: output)
-	preview.resizeMode = .cover
+	let preview = PreviewView(output: output)
+	preview.resizeMode = .aspectFill
 	preview.frame = container.bounds
 	preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 	container.addSubview(preview)
@@ -19,18 +19,19 @@ func makePreview(output: PreviewOutput, in container: UIView) -> PreviewView {
 }
 ```
 
-Use `.cover` to fill the view, cropping when aspect ratios differ, or `.contain` to keep the entire image visible.
+Use `.aspectFill` to fill the view, cropping when aspect ratios differ, or `.aspectFit` to keep the entire image visible.
 
 ## Access methods on the view
 
 The view provides methods for coordinate-system conversions and for creating metering points:
 
 ```swift
+import CoreGraphics
 import VisionCamera
 
 @MainActor
-func cameraPoint(for point: Point, in preview: PreviewView) throws -> Point {
-	try preview.convertViewPointToCameraPoint(viewPoint: point)
+func cameraPoint(for point: CGPoint, in preview: PreviewView) throws -> CGPoint {
+	try preview.cameraPoint(from: point)
 }
 ```
 
@@ -55,6 +56,6 @@ func attachGestures(to preview: PreviewView, controller: CameraController) {
 
 Assign and retain a controller returned by session configuration. Gesture controllers hold a weak reference to it, so your Camera screen must keep a strong reference for as long as gestures are active. When the input device changes, update the gesture controllers to use the new ``CameraController``.
 
-`onPreviewStarted` and `onPreviewStopped` report preview activity on the main queue. These describe the preview, which can start after the session itself starts.
+`didStartPreview` and `didStopPreview` report preview activity on the main queue. These describe the preview, which can start after the session itself starts.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: nativepreview-view,camera-view. -->

@@ -23,7 +23,7 @@ func followDeviceOrientation(photoOutput: PhotoOutput) throws -> any Orientation
 	if let orientation = manager.currentOrientation {
 		photoOutput.outputOrientation = orientation
 	}
-	try manager.startOrientationUpdates { [weak photoOutput] orientation in
+	try manager.startUpdates { [weak photoOutput] orientation in
 		DispatchQueue.main.async {
 			photoOutput?.outputOrientation = orientation
 		}
@@ -32,7 +32,7 @@ func followDeviceOrientation(photoOutput: PhotoOutput) throws -> any Orientation
 }
 ```
 
-Retain the manager while updates are needed, then call `stopOrientationUpdates()`. `currentOrientation` is `nil` until a usable orientation is known. Interface updates arrive on the main queue. Device updates arrive on the manager's serial queue.
+Retain the manager while updates are needed, then call `stopUpdates()`. `currentOrientation` is `nil` until a usable orientation is known. Interface updates arrive on the main queue. Device updates arrive on the manager's serial queue.
 
 Apply changes from one owner in your app. Avoid changing output properties concurrently from several callbacks or while another owner is reconfiguring the session.
 
@@ -58,7 +58,7 @@ For streamed frames and depth, orientation and mirroring are metadata by default
 
 ### Physical buffer rotation
 
-Set `enablePhysicalBufferRotation` in ``FrameOutputOptions`` or ``DepthOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
+Set `rotatesBuffers` in ``FrameOutputOptions`` or ``DepthOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
 
 Physical transformation adds processing. If your processing library accepts orientation and mirroring flags, passing metadata can avoid that work. See <doc:NativeProcessing> for a Vision example.
 

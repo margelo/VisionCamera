@@ -28,11 +28,11 @@ final class CapturePhotoDelegate: NSObject, AVCapturePhotoCaptureDelegate {
   }
 
   func photoOutput(_ output: AVCapturePhotoOutput, willBeginCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
-    queue.async { self.callbacks.onWillBeginCapture?() }
+    queue.async { self.callbacks.willBeginCapture?() }
   }
 
   func photoOutput(_ output: AVCapturePhotoOutput, willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
-    queue.async { self.callbacks.onWillCapturePhoto?() }
+    queue.async { self.callbacks.willCapturePhoto?() }
   }
 
   func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: (any Error)?) {
@@ -41,7 +41,7 @@ final class CapturePhotoDelegate: NSObject, AVCapturePhotoCaptureDelegate {
       self.didResolve = true
       do {
         if let error { throw error }
-        self.onCaptured(photo, try photo.getMediaSampleMetadata())
+        self.onCaptured(photo, try photo.captureMetadata)
       } catch {
         self.onError(error)
       }
@@ -49,7 +49,7 @@ final class CapturePhotoDelegate: NSObject, AVCapturePhotoCaptureDelegate {
   }
 
   func photoOutput(_ output: AVCapturePhotoOutput, didCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
-    queue.async { self.callbacks.onDidCapturePhoto?() }
+    queue.async { self.callbacks.didCapturePhoto?() }
   }
 
   func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: (any Error)?) {
@@ -62,7 +62,7 @@ final class CapturePhotoDelegate: NSObject, AVCapturePhotoCaptureDelegate {
       self.didFinish = true
       if !self.didResolve {
         self.didResolve = true
-        self.onError(error ?? CameraError(message: "Photo capture finished without a photo."))
+        self.onError(error ?? CaptureError.missingPhoto)
       }
       self.onFinished()
     }

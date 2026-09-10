@@ -29,36 +29,34 @@ public final class DeviceOrientationManager: OrientationManager {
   /// Starts listening to orientation changes.
   ///
   /// Starting updates replaces the previous callback. Callbacks run on this manager's serial orientation queue. Throws if the accelerometer is unavailable.
-  public func startOrientationUpdates(onChanged: @escaping (CameraOrientation) -> Void) throws {
+  public func startUpdates(_ onChanged: @escaping (CameraOrientation) -> Void) throws(OrientationError) {
     guard isAvailable else {
-      throw CameraError(message: "Cannot listen to device orientation changes: accelerometer is not available.")
+      throw OrientationError.accelerometerUnavailable
     }
-    queue.async(
-      execute: DispatchWorkItem { [weak self] in
-        guard let self else { return }
-        self.motionManager.stopAccelerometerUpdates()
-        let id = UUID()
-        self.subscriptionID = id
-        if let orientation = self.orientation.current { onChanged(orientation) }
-        self.motionManager.startAccelerometerUpdates(to: self.operationQueue) { [weak self] data, error in
-          guard let self, self.subscriptionID == id else { return }
-          if let error { logger.error("Accelerometer update failed: \(error)") }
-          guard let orientation = data?.deviceOrientation else { return }
-          if self.orientation.update(orientation) { onChanged(orientation) }
-        }
-      })
+    queue.async { [weak self] in
+      guard let self else { return }
+      self.motionManager.stopAccelerometerUpdates()
+      let id = UUID()
+      self.subscriptionID = id
+      if let orientation = self.orientation.current { onChanged(orientation) }
+      self.motionManager.startAccelerometerUpdates(to: self.operationQueue) { [weak self] data, error in
+        guard let self, self.subscriptionID == id else { return }
+        if let error { logger.error("Accelerometer update failed: \(error)") }
+        guard let orientation = data?.deviceOrientation else { return }
+        if self.orientation.update(orientation) { onChanged(orientation) }
+      }
+    }
   }
 
   /// Stops listening to orientation changes.
   ///
   /// Stops delivery on the manager's owning queue. A callback already in progress may finish before removal takes effect.
-  public func stopOrientationUpdates() {
-    queue.async(
-      execute: DispatchWorkItem { [weak self] in
-        guard let self else { return }
-        self.subscriptionID = nil
-        self.motionManager.stopAccelerometerUpdates()
-      })
+  public func stopUpdates() {
+    queue.async { [weak self] in
+      guard let self else { return }
+      self.subscriptionID = nil
+      self.motionManager.stopAccelerometerUpdates()
+    }
   }
 
   deinit { motionManager.stopAccelerometerUpdates() }

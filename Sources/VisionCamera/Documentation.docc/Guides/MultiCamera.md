@@ -13,7 +13,7 @@ import VisionCamera
 
 func makeMultiCameraSession() throws -> CameraSession? {
 	guard VisionCamera.supportsMultiCamSessions else { return nil }
-	return try CameraSession(enableMultiCam: true)
+	return try CameraSession(isMultiCamEnabled: true)
 }
 ```
 
@@ -46,12 +46,12 @@ func configurePair(
 ) async throws -> (PreviewView, PreviewView) {
 	let firstOutput = PreviewOutput()
 	let secondOutput = PreviewOutput()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .device(first), outputs: [.init(output: firstOutput)]),
 		.init(input: .device(second), outputs: [.init(output: secondOutput)])
 	])
 	await session.start()
-	return (PreviewView(previewOutput: firstOutput), PreviewView(previewOutput: secondOutput))
+	return (PreviewView(output: firstOutput), PreviewView(output: secondOutput))
 }
 ```
 

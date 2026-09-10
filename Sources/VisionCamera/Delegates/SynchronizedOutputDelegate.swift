@@ -57,16 +57,13 @@ final class SynchronizedOutputDelegate: NSObject, AVCaptureDataOutputSynchronize
         return specific
       }
     }
-    throw CameraError(
-      message:
-        "AVCaptureDataOutputSynchronizer does not contain an output of type \(String(describing: T.self))!"
-    )
+    throw ConfigurationError.outputNotConnected
   }
   private func getConnection<T: AVCaptureOutput>(from output: T, ofType type: AVMediaType) throws
     -> AVCaptureConnection
   {
     guard let connection = output.connection(with: type) else {
-      throw CameraError(message: "\(T.self) does not have a \(type) connection!")
+      throw ConfigurationError.outputNotConnected
     }
     return connection
   }
