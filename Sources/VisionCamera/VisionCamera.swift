@@ -46,8 +46,8 @@ public final class VisionCamera {
     return CameraDeviceFactory()
   }
 
-  public func createPhotoOutput(options: PhotoOutputOptions = .init()) throws -> CameraPhotoOutput {
-    return try CameraPhotoOutput(options: options)
+  public func createPhotoOutput(options: PhotoOutputOptions = .init()) -> CameraPhotoOutput {
+    return CameraPhotoOutput(options: options)
   }
 
   public func createVideoOutput(options: VideoOutputOptions = .init()) -> any CameraVideoOutput {

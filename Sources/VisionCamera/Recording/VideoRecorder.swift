@@ -114,8 +114,8 @@ public final class VideoRecorder: Recorder {
     }
   }
 
-  public func stopRecording() async throws {
-    return try await queue.perform {
+  public func stopRecording() async {
+    return await queue.perform {
       self.videoOutput.stopRecording()
     }
   }

@@ -68,7 +68,7 @@ public final class CameraDeviceFactory {
     return CameraDevice(device: device)
   }
 
-  public func getDefaultCamera(position: TargetCameraPosition) throws -> (CameraDevice)? {
+  public func getDefaultCamera(position: TargetCameraPosition) -> (CameraDevice)? {
     guard let device = AVCaptureDevice.default(for: position) else {
       return nil
     }

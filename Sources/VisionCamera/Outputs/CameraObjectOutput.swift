@@ -52,8 +52,8 @@ public final class CameraObjectOutput: CameraOutput, NativeCameraOutput {
     output.metadataObjectTypes = filteredObjectTypes
   }
 
-  public func setOnObjectsScannedCallback(onObjectsScanned: (([any ScannedObject]) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnObjectsScannedCallback(onObjectsScanned: (([any ScannedObject]) -> Void)?) async {
+    await queue.perform {
       if let onObjectsScanned {
         self.delegate.onMetadataObjects = { objects in
           onObjectsScanned(objects.map { Self.createScannedObject(from: $0) })

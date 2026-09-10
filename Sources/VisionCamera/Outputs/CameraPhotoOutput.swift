@@ -51,7 +51,7 @@ public final class CameraPhotoOutput: CameraOutput, NativeCameraOutput {
     return .closestTo(options.targetResolution)
   }
 
-  public init(options: PhotoOutputOptions) throws {
+  public init(options: PhotoOutputOptions) {
     self.output = AVCapturePhotoOutput()
     self.options = options
 

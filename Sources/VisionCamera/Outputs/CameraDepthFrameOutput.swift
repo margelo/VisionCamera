@@ -103,8 +103,8 @@ public final class CameraDepthFrameOutput: CameraOutput, NativeCameraOutput {
       isMirrored: isMirrored)
   }
 
-  public func setOnDepthFrameCallback(onDepthFrame: ((Depth) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnDepthFrameCallback(onDepthFrame: ((Depth) -> Void)?) async {
+    await queue.perform {
       if let onDepthFrame {
         self.delegate.onDepthFrame = { [weak self] (depth, timestamp, bufferOrientation, isBufferMirrored) in
           guard let self else { return }
@@ -125,8 +125,8 @@ public final class CameraDepthFrameOutput: CameraOutput, NativeCameraOutput {
     }
   }
 
-  public func setOnDepthFrameDroppedCallback(onDepthFrameDropped: ((FrameDroppedReason) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnDepthFrameDroppedCallback(onDepthFrameDropped: ((FrameDroppedReason) -> Void)?) async {
+    await queue.perform {
       if let onDepthFrameDropped {
         self.delegate.onDepthFrameDropped = { avReason in
           let reason = FrameDroppedReason(reason: avReason)

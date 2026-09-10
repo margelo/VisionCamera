@@ -14,7 +14,7 @@ public protocol Recorder: AnyObject {
     onRecordingPaused: (() -> Void)?,
     onRecordingResumed: (() -> Void)?
   ) async throws
-  func stopRecording() async throws
+  func stopRecording() async
   func pauseRecording() async throws
   func resumeRecording() async throws
   func cancelRecording() async throws

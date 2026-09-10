@@ -13,7 +13,7 @@ public final class CameraController {
   public let captureDevice: AVCaptureDevice
   private var activeMeteringTask: MeteringTask? = nil
 
-  init(device: CameraDevice, queue: DispatchQueue) throws {
+  init(device: CameraDevice, queue: DispatchQueue) {
     self.device = device
     self.captureDevice = device.device
 
@@ -445,7 +445,7 @@ public final class CameraController {
 
   public func convertWhiteBalanceTemperatureAndTintValues(
     whiteBalanceTemperatureAndTint: WhiteBalanceTemperatureAndTint
-  ) throws -> WhiteBalanceGains {
+  ) -> WhiteBalanceGains {
     // 1. Convert our type to the AVFoundation type
     let tintValues = AVCaptureDevice.WhiteBalanceTemperatureAndTintValues(
       temperature: Float(whiteBalanceTemperatureAndTint.temperature),

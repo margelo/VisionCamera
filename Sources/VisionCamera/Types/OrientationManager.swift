@@ -5,5 +5,5 @@ public protocol OrientationManager: AnyObject {
   var currentOrientation: CameraOrientation? { get }
 
   func startOrientationUpdates(onChanged: @escaping (_ orientation: CameraOrientation) -> Void) throws
-  func stopOrientationUpdates() throws
+  func stopOrientationUpdates()
 }

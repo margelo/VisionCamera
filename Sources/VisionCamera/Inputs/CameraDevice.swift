@@ -66,7 +66,7 @@ public final class CameraDevice {
       .withoutDuplicates()
   }()
 
-  public func supportsOutput(output: any CameraOutput) throws -> Bool {
+  public func supportsOutput(output: any CameraOutput) -> Bool {
     guard let output = output as? any NativeCameraOutput else {
       // Not a NativeCameraOutput!
       return false
@@ -74,20 +74,20 @@ public final class CameraDevice {
     return device.formats.contains { $0.supportsOutput(output.output) }
   }
 
-  public func supportsFPS(fps: Double) throws -> Bool {
+  public func supportsFPS(fps: Double) -> Bool {
     return supportedFPSRanges.contains { range in
       fps >= range.min && fps <= range.max
     }
   }
 
-  public func supportsVideoStabilizationMode(videoStabilizationMode: TargetStabilizationMode) throws -> Bool {
+  public func supportsVideoStabilizationMode(videoStabilizationMode: TargetStabilizationMode) -> Bool {
     let stabilizationMode = videoStabilizationMode.toAVCaptureVideoStabilizationMode()
     return device.formats.contains { $0.isVideoStabilizationModeSupported(stabilizationMode) }
   }
 
-  public func supportsPreviewStabilizationMode(previewStabilizationMode: TargetStabilizationMode) throws -> Bool {
+  public func supportsPreviewStabilizationMode(previewStabilizationMode: TargetStabilizationMode) -> Bool {
     // Video and Preview stabilization flows through the same connection on iOS.
-    return try supportsVideoStabilizationMode(videoStabilizationMode: previewStabilizationMode)
+    return supportsVideoStabilizationMode(videoStabilizationMode: previewStabilizationMode)
   }
 
   public var id: String {
@@ -255,7 +255,7 @@ public final class CameraDevice {
     return allMediaTypes.filter { device.hasMediaType($0.toAVMediaType()) }
   }
 
-  public func isSessionConfigSupported(config: CameraSessionConfig) throws -> Bool {
+  public func isSessionConfigSupported(config: CameraSessionConfig) -> Bool {
     let format = config.negotiatedFormat.format
     guard device.formats.contains(format) else {
       // Format is from a different `AVCaptureDevice`

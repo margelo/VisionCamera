@@ -50,8 +50,8 @@ public final class CameraOutputSynchronizer {
 
   public func setOnFramesCallback(
     onFrames: (([SynchronizedFrame]) -> Void)?
-  ) async throws {
-    try await queue.perform {
+  ) async {
+    await queue.perform {
       if let onFrames {
         self.delegate.onFrames = { frames in
           let samples = frames.map { $0.toSynchronizedFrame() }
@@ -63,8 +63,8 @@ public final class CameraOutputSynchronizer {
     }
   }
 
-  public func setOnFrameDroppedCallback(onFrameDropped: ((MediaType, FrameDroppedReason) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnFrameDroppedCallback(onFrameDropped: ((MediaType, FrameDroppedReason) -> Void)?) async {
+    await queue.perform {
       if let onFrameDropped {
         self.delegate.onFrameDropped = { mediaType, avReason in
           let reason = FrameDroppedReason(reason: avReason)

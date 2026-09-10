@@ -95,7 +95,7 @@ final class CameraViewController: UIViewController {
   deinit {
     NotificationCenter.default.removeObserver(self)
     for subscription in subscriptions { subscription.remove() }
-    try? orientationManager?.stopOrientationUpdates()
+    orientationManager?.stopOrientationUpdates()
   }
 
   private func enqueue(_ action: @escaping @MainActor () async throws -> Void) {
@@ -124,15 +124,15 @@ final class CameraViewController: UIViewController {
     let previewOutput = camera.createPreviewOutput()
     self.previewOutput = previewOutput
     preview.previewOutput = previewOutput
-    photoOutput = try camera.createPhotoOutput()
+    photoOutput = camera.createPhotoOutput()
     subscriptions = [
-      try session.addOnErrorListener { [weak self] error in
+      session.addOnErrorListener { [weak self] error in
         DispatchQueue.main.async { self?.status.text = error.localizedDescription }
       },
-      try session.addOnInterruptionStartedListener { [weak self] reason in
+      session.addOnInterruptionStartedListener { [weak self] reason in
         DispatchQueue.main.async { self?.status.text = "Camera interrupted: \(reason)" }
       },
-      try session.addOnInterruptionEndedListener { [weak self] in
+      session.addOnInterruptionEndedListener { [weak self] in
         DispatchQueue.main.async { self?.updateLifecycle() }
       },
     ]
@@ -145,7 +145,7 @@ final class CameraViewController: UIViewController {
         self?.videoOutput?.outputOrientation = orientation
       }
     }
-    try await applyLifecycle()
+    await applyLifecycle()
     status.text = microphoneGranted ? "Ready" : "Ready. Microphone denied; video will be silent."
     isReady = true
   }
@@ -187,16 +187,16 @@ final class CameraViewController: UIViewController {
   }
 
   @objc private func updateLifecycle() {
-    enqueue { try await self.applyLifecycle() }
+    enqueue { await self.applyLifecycle() }
   }
 
-  private func applyLifecycle() async throws {
+  private func applyLifecycle() async {
     guard let session else { return }
     if visible && UIApplication.shared.applicationState == .active {
-      try await session.start()
+      await session.start()
     } else {
-      if recorder != nil && !isFinalizing { try await finishRecording() }
-      try await session.stop()
+      if recorder != nil && !isFinalizing { await finishRecording() }
+      await session.stop()
     }
   }
 
@@ -212,7 +212,7 @@ final class CameraViewController: UIViewController {
   @objc private func toggleRecording() {
     enqueue {
       if self.recorder != nil {
-        if !self.isFinalizing { try await self.finishRecording() }
+        if !self.isFinalizing { await self.finishRecording() }
         return
       }
       guard let output = self.videoOutput else { return }
@@ -245,15 +245,12 @@ final class CameraViewController: UIViewController {
     }
   }
 
-  private func finishRecording() async throws {
+  private func finishRecording() async {
     guard let recorder else { return }
     isFinalizing = true
     refreshControls()
     status.text = "Finishing video..."
-    do { try await recorder.stopRecording() } catch {
-      isFinalizing = false
-      throw error
-    }
+    await recorder.stopRecording()
   }
 
   private func recordingFinished(id: UUID, message: String) {

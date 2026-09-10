@@ -104,8 +104,8 @@ public final class CameraSession {
       }
 
       // Return CameraControllers per connection to adjust camera settings (focus, etc)
-      return try connections.map { connection in
-        return try CameraController(device: connection.input, queue: Self.queue)
+      return connections.map { connection in
+        return CameraController(device: connection.input, queue: Self.queue)
       }
     }
   }
@@ -208,8 +208,8 @@ public final class CameraSession {
   }
 
   // pragma MARK: Start/Stop
-  public func start() async throws {
-    return try await Self.queue.perform {
+  public func start() async {
+    return await Self.queue.perform {
       if self.session.isRunning {
         return
       }
@@ -217,8 +217,8 @@ public final class CameraSession {
     }
   }
 
-  public func stop() async throws {
-    return try await Self.queue.perform {
+  public func stop() async {
+    return await Self.queue.perform {
       if !self.session.isRunning {
         return
       }
@@ -398,20 +398,20 @@ public final class CameraSession {
   }
 
   // pragma MARK: On Started/Stopped Listeners
-  public func addOnStartedListener(onStarted: @escaping () -> Void) throws -> ListenerSubscription {
+  public func addOnStartedListener(onStarted: @escaping () -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.didStartRunningNotification) { _ in
       onStarted()
     }
   }
 
-  public func addOnStoppedListener(onStopped: @escaping () -> Void) throws -> ListenerSubscription {
+  public func addOnStoppedListener(onStopped: @escaping () -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.didStopRunningNotification) { _ in
       onStopped()
     }
   }
 
   // pragma MARK: On Error Listener
-  public func addOnErrorListener(onError: @escaping (any Error) -> Void) throws -> ListenerSubscription {
+  public func addOnErrorListener(onError: @escaping (any Error) -> Void) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.runtimeErrorNotification) {
       notification in
       if let errorAny = notification.userInfo?[AVCaptureSessionErrorKey],
@@ -431,7 +431,7 @@ public final class CameraSession {
   // pragma MARK: On Interrupted Listeners
   public func addOnInterruptionStartedListener(
     onInterruptionStarted: @escaping (InterruptionReason) -> Void
-  ) throws -> ListenerSubscription {
+  ) -> ListenerSubscription {
     return self.session.addListener(for: AVCaptureSession.wasInterruptedNotification) {
       notification in
       if let reasonAny = notification.userInfo?[AVCaptureSessionInterruptionReasonKey],
@@ -446,7 +446,7 @@ public final class CameraSession {
     }
   }
 
-  public func addOnInterruptionEndedListener(onInterruptionEnded: @escaping () -> Void) throws
+  public func addOnInterruptionEndedListener(onInterruptionEnded: @escaping () -> Void)
     -> ListenerSubscription
   {
     return self.session.addListener(for: AVCaptureSession.interruptionEndedNotification) { _ in

@@ -74,7 +74,8 @@ public final class Depth {
   public func rotateAsync(orientation: CameraOrientation, isMirrored: Bool) async throws -> Depth {
     let depthData = try getDepthData()
     let metadata = metadata
-    return try await Self.conversionQueue.perform {
+    try Task.checkCancellation()
+    return await Self.conversionQueue.perform {
       let rotated = depthData.applyingExifOrientation(orientation.toCGOrientation(isMirrored: isMirrored))
       return Depth(depthData: rotated, metadata: metadata)
     }
@@ -90,7 +91,8 @@ public final class Depth {
     let depthData = try getDepthData()
     let metadata = metadata
     let osFormat = try pixelFormat.toCVPixelFormatType()
-    return try await Self.conversionQueue.perform {
+    try Task.checkCancellation()
+    return await Self.conversionQueue.perform {
       Depth(depthData: depthData.converting(toDepthDataType: osFormat), metadata: metadata)
     }
   }

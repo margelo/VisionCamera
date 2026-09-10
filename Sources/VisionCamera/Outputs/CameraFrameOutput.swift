@@ -139,8 +139,8 @@ public final class CameraFrameOutput: CameraOutput, NativeCameraOutput {
       isMirrored: isMirrored)
   }
 
-  public func setOnFrameCallback(onFrame: ((Frame) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnFrameCallback(onFrame: ((Frame) -> Void)?) async {
+    await queue.perform {
       if let onFrame {
         self.delegate.onFrame = { [weak self] (sampleBuffer, timestamp, bufferOrientation, isBufferMirrored) in
           guard let self else { return }
@@ -161,8 +161,8 @@ public final class CameraFrameOutput: CameraOutput, NativeCameraOutput {
     }
   }
 
-  public func setOnFrameDroppedCallback(onFrameDropped: ((FrameDroppedReason) -> Void)?) async throws {
-    try await queue.perform {
+  public func setOnFrameDroppedCallback(onFrameDropped: ((FrameDroppedReason) -> Void)?) async {
+    await queue.perform {
       if let onFrameDropped {
         self.delegate.onFrameDropped = { sampleBuffer in
           guard let attachment = sampleBuffer.attachments[.droppedFrameReason] else {

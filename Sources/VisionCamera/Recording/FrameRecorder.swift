@@ -189,8 +189,8 @@ public final class FrameRecorder: Recorder {
     }
   }
 
-  public func stopRecording() async throws {
-    return try await queue.perform {
+  public func stopRecording() async {
+    return await queue.perform {
       // Stop each track
       self.videoTrack?.stop()
       self.audioTrack?.stop()
@@ -213,8 +213,8 @@ public final class FrameRecorder: Recorder {
     }
   }
 
-  public func pauseRecording() async throws {
-    return try await queue.perform {
+  public func pauseRecording() async {
+    return await queue.perform {
       // Pause each track
       self.videoTrack?.pause()
       self.audioTrack?.pause()
@@ -224,8 +224,8 @@ public final class FrameRecorder: Recorder {
     }
   }
 
-  public func resumeRecording() async throws {
-    return try await queue.perform {
+  public func resumeRecording() async {
+    return await queue.perform {
       // Resume each track
       self.videoTrack?.resume()
       self.audioTrack?.resume()
