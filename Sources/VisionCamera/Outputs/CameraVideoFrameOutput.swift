@@ -104,7 +104,7 @@ public final class CameraVideoFrameOutput: CameraVideoOutput, NativeCameraOutput
         let nativeCodec = try codec.toAVVideoCodecType()
         let availableCodecs = self.output.availableVideoCodecTypesForAssetWriter(writingTo: self.fileType.toAVFileType())
         guard availableCodecs.contains(nativeCodec) else {
-          throw CameraError(message: "VideoOutput does not support codec \(codec.stringValue).")
+          throw CameraError(message: "VideoOutput does not support codec \(codec).")
         }
         guard !codec.isRawCodec || self.options.targetBitRate == nil else {
           throw CameraError(message: "Cannot use a custom bit rate with a RAW codec.")

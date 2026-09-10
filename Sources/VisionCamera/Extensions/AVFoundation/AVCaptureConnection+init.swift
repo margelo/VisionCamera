@@ -14,7 +14,7 @@ extension AVCaptureConnection {
     guard !targetPorts.isEmpty else {
       throw CameraError(
         message:
-          "Output \"\(output)\" operates on mediaType \"\(output.mediaType.stringValue)\", but Input \"\(input.device.uniqueID)\" does not have ports for that mediaType!"
+          "Output \"\(output)\" operates on mediaType \"\(output.mediaType)\", but Input \"\(input.device.uniqueID)\" does not have ports for that mediaType!"
       )
     }
 

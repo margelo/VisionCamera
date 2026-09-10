@@ -1,25 +1,17 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-public enum DeviceType: String, CaseIterable, Sendable {
+public enum DeviceType: CaseIterable, Sendable {
   case unknown
-  case wideAngle = "wide-angle"
-  case ultraWideAngle = "ultra-wide-angle"
+  case wideAngle
+  case ultraWideAngle
   case telephoto
   case dual
-  case dualWide = "dual-wide"
+  case dualWide
   case triple
   case quad
   case continuity
-  case lidarDepth = "lidar-depth"
-  case trueDepth = "true-depth"
-  case timeOfFlightDepth = "time-of-flight-depth"
+  case lidarDepth
+  case trueDepth
+  case timeOfFlightDepth
   case external
-
-  public var stringValue: String {
-    rawValue
-  }
-
-  public init?(fromString string: String) {
-    self.init(rawValue: string)
-  }
 }

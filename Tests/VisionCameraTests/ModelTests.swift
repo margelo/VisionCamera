@@ -67,12 +67,4 @@ final class ModelTests: XCTestCase {
     XCTAssertEqual(FocusOptions(autoResetAfter: .never).autoResetAfter, .never)
     XCTAssertEqual(FocusOptions(autoResetAfter: .after(2)).autoResetAfter, .after(2))
   }
-
-  func testNativeEnumValuesPreserveSerializedCameraSettings() {
-    XCTAssertEqual(PixelFormat(rawValue: "yuv-420-10-bit-full"), .yuv42010BitFull)
-    XCTAssertEqual(TargetStabilizationMode(rawValue: "cinematic-extended-enhanced"), .cinematicExtendedEnhanced)
-    XCTAssertEqual(ScannedObjectType(rawValue: "interleaved-2-of-5"), .interleaved2Of5)
-    XCTAssertEqual(VideoCodec.proRes422Hq.rawValue, "pro-res-422-hq")
-    XCTAssertNil(CameraOrientation(rawValue: "portrait"))
-  }
 }

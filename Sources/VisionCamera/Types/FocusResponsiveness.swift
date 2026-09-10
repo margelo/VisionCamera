@@ -1,14 +1,6 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-public enum FocusResponsiveness: String, CaseIterable, Sendable {
+public enum FocusResponsiveness: CaseIterable, Sendable {
   case steady
   case snappy
-
-  public var stringValue: String {
-    rawValue
-  }
-
-  public init?(fromString string: String) {
-    self.init(rawValue: string)
-  }
 }
