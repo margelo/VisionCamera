@@ -15,5 +15,6 @@ public protocol NativePreviewViewOutput: AnyObject, ResolutionNegotiationPartici
   /// Called whenever the output configuration might change, in a `beginConfiguration()`/`commitConfiguration()` batch.
   ///
   /// The preview output is expected to apply orientation and mirroring settings here. ``CameraSession`` calls this method on its serial configuration queue.
-  func configure(config: OutputConfiguration)
+  /// - Throws: If the preview cannot apply an explicitly requested setting.
+  func configure(_ config: OutputConfiguration) throws
 }

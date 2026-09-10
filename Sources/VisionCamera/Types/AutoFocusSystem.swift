@@ -2,7 +2,7 @@
 
 /// Represents the auto-focus algorithm used by the ``CameraDevice``, either while
 /// continuously keeping a scene in focus (via auto-3A / AE/AF/AWB), or for a metering
-/// action via ``CameraController/focusTo(point:options:)``.
+/// action via ``CameraController/focus(at:options:)``.
 ///
 /// - ``AutoFocusSystem/none``: The ``CameraDevice`` does not support auto-focus at all.
 /// - ``AutoFocusSystem/contrastDetection``: Finds focus by adjusting the lens until image contrast is highest.

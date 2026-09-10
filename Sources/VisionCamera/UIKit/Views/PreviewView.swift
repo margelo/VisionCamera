@@ -3,7 +3,7 @@ import UIKit
 
 /// A UIKit view that displays a Camera preview.
 ///
-/// Connect a ``PreviewOutput`` both to a ``CameraSession`` and to this view's ``PreviewView/previewOutput``. All view operations run on the main actor.
+/// Connect a ``PreviewOutput`` both to a ``CameraSession`` and to this view's ``PreviewView/output``. All view operations run on the main actor.
 @MainActor
 public final class PreviewView: UIView {
   /// Sets the ``PreviewOutput`` for the ``PreviewView``.
@@ -11,21 +11,27 @@ public final class PreviewView: UIView {
   /// The ``PreviewOutput`` can be connected to a
   /// ``CameraSession`` to start in parallel, possibly
   /// even before the ``PreviewView`` is mounted/visible.
-  public var previewOutput: PreviewOutput? {
+  public var output: PreviewOutput? {
     didSet { updatePreviewLayer() }
   }
   /// Fires when the ``PreviewView`` started.
   ///
   /// The callback runs on the main actor when the attached preview layer starts displaying Camera content.
-  public var onPreviewStarted: (() -> Void)?
+  public var didStartPreview: (() -> Void)?
   /// Fires when the ``PreviewView`` stopped.
   ///
   /// The callback runs on the main actor when the preview stops or its output is detached.
-  public var onPreviewStopped: (() -> Void)?
+  public var didStopPreview: (() -> Void)?
+  /// Called on the main actor when the interface orientation of this view's window scene changes.
+  ///
+  /// The preview follows this orientation independently of the orientation chosen for capture outputs.
+  public var onInterfaceOrientationChanged: ((CameraOrientation) -> Void)?
+  /// The current orientation of this view's window scene, or `nil` when detached.
+  public private(set) var interfaceOrientation: CameraOrientation?
   /// Sets the ``PreviewResizeMode`` for the ``PreviewView``.
   ///
-  /// The default is 'cover'
-  public var resizeMode: PreviewResizeMode = .cover {
+  /// The default is ``PreviewResizeMode/aspectFill``
+  public var resizeMode: PreviewResizeMode = .aspectFill {
     didSet {
       if attachedLayer?.superlayer === layer { attachedLayer?.videoGravity = resizeMode.toAVLayerVideoGravity() }
     }
@@ -38,11 +44,11 @@ public final class PreviewView: UIView {
     didSet {
       for controller in oldValue {
         removeGestureRecognizer(controller.gestureRecognizer)
-        controller.onDetached(from: self)
+        controller.detach(from: self)
       }
       for controller in gestureControllers {
         addGestureRecognizer(controller.gestureRecognizer)
-        controller.onAttached(to: self)
+        controller.attach(to: self)
       }
     }
   }
@@ -50,10 +56,12 @@ public final class PreviewView: UIView {
   private var isPreviewingObserver: NSKeyValueObservation?
   private var isPreviewing = false
   private var observationID = UUID()
+  private let orientationObserver = PreviewOrientationObserver()
+  private var orientationObservationID = UUID()
 
   /// Creates a preview view attached to the given output, or an empty view when the output is `nil`.
-  public init(previewOutput: PreviewOutput? = nil) {
-    self.previewOutput = previewOutput
+  public init(output: PreviewOutput? = nil) {
+    self.output = output
     super.init(frame: .zero)
     updatePreviewLayer()
   }
@@ -72,84 +80,59 @@ public final class PreviewView: UIView {
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard attachedLayer?.superlayer === layer else { return }
+    orientationObserver.update()
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     attachedLayer?.frame = bounds
     CATransaction.commit()
   }
 
-  /// Converts the given `cameraPoint` in
-  /// camera sensor coordinates into a ``Point``
-  /// in view coordinates, relative to this ``PreviewView``.
-  ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
-  /// - Throws: If the ``PreviewView`` isn't ready yet.
-  ///
-  /// ```swift
-  /// let point = try previewView.convertCameraPointToViewPoint(cameraPoint: Point(x: 0.5, y: 0.5))
-  /// ```
-  public func convertCameraPointToViewPoint(cameraPoint: Point) throws -> Point {
-    let layer = try requirePreviewLayer()
-    return Point(layer.layerPointConverted(fromCaptureDevicePoint: cameraPoint.toCGPoint()))
+  /// Tracks the interface orientation of the window scene displaying this preview.
+  public override func didMoveToWindow() {
+    super.didMoveToWindow()
+    updateOrientationObservation()
   }
 
-  /// Converts the given `viewPoint` in
-  /// view coordinates relative to this ``PreviewView``
-  /// into a ``Point`` in camera sensor coordinates.
-  ///
-  /// - Note: Camera sensor coordinates are not necessarily normalized from `0.0` to `1.0`. Some implementations may have a different opaque coordinate system.
-  /// - Throws: If the ``PreviewView`` isn't ready yet.
-  ///
-  /// ```swift
-  /// let point = try previewView.convertViewPointToCameraPoint(viewPoint: Point(x: 196, y: 379.5))
-  /// ```
-  public func convertViewPointToCameraPoint(viewPoint: Point) throws -> Point {
-    let layer = try requirePreviewLayer()
-    return Point(layer.captureDevicePointConverted(fromLayerPoint: viewPoint.toCGPoint()))
+  /// Converts normalized Camera coordinates into this view's coordinates, including rotation, mirroring, and cropping.
+  /// - Throws: ``PreviewError/outputNotAttached`` if the view has no attached output.
+  public func point(fromCameraPoint point: CGPoint) throws(PreviewError) -> CGPoint {
+    try requirePreviewLayer().layerPointConverted(fromCaptureDevicePoint: point)
   }
 
-  /// Returns a new ``ScannedObject`` where all coordinates
-  /// in the given `scannedObject` are converted into
-  /// view coordinates.
-  /// - Parameter scannedObject: The scanned object in its original coordinates.
-  public func convertScannedObjectCoordinatesToViewCoordinates(
-    scannedObject: any ScannedObject
-  ) throws -> any ScannedObject {
+  /// Converts this view's coordinates into normalized Camera coordinates.
+  /// - Throws: ``PreviewError/outputNotAttached`` if the view has no attached output.
+  public func cameraPoint(from point: CGPoint) throws(PreviewError) -> CGPoint {
+    try requirePreviewLayer().captureDevicePointConverted(fromLayerPoint: point)
+  }
+
+  /// Returns a scanned object with coordinates converted into this view's coordinate system.
+  /// - Parameter object: An object delivered by ``ObjectOutput`` in Camera coordinates.
+  /// - Throws: If the output is not attached or AVFoundation cannot transform the object.
+  public func convertedToViewCoordinates(_ object: some ScannedObject) throws(PreviewError) -> any ScannedObject {
     let layer = try requirePreviewLayer()
-    guard let transformed = layer.transformedMetadataObject(for: scannedObject.object) else {
-      throw CameraError(message: "Cannot transform scanned object coordinates into preview coordinates.")
+    guard let transformed = layer.transformedMetadataObject(for: object.object) else {
+      throw .metadataConversionFailed
     }
     return ObjectOutput.scannedObject(from: transformed)
   }
 
-  /// Creates a ``MeteringPoint`` that can be used for
-  /// focusing AE/AF/AWB on the Camera via ``CameraController/focusTo(point:options:)``.
-  ///
-  /// The point is relative to this
-  /// ``PreviewView``, and takes orientation, scaling and cropping
-  /// into account.
-  /// - Parameter point: A point in the View's coordinate system, such as the location of a tap.
-  /// - Parameter size: (Optional) The size of the ``MeteringPoint`` within
-  /// the View's coordinate system.
-  ///
-  /// - Throws: If the ``PreviewView`` isn't ready yet.
-  public func meteringPoint(at point: CGPoint, size: Double? = nil) throws -> MeteringPoint {
+  /// Creates a metering point from a location in this view, accounting for orientation, scaling, and cropping.
+  /// - Parameter point: A location in this view's coordinate system, such as a tap.
+  /// - Throws: ``PreviewError/outputNotAttached`` if the view has no attached output.
+  public func meteringPoint(at point: CGPoint) throws(PreviewError) -> MeteringPoint {
     let layer = try requirePreviewLayer()
-    let normalizedPoint = layer.captureDevicePointConverted(fromLayerPoint: point)
-    return MeteringPoint(
-      relativeX: point.x, relativeY: point.y, relativeSize: size,
-      normalizedX: normalizedPoint.x, normalizedY: normalizedPoint.y)
+    return MeteringPoint(location: layer.captureDevicePointConverted(fromLayerPoint: point))
   }
 
-  private func requirePreviewLayer() throws -> AVCaptureVideoPreviewLayer {
+  private func requirePreviewLayer() throws(PreviewError) -> AVCaptureVideoPreviewLayer {
     guard let attachedLayer, attachedLayer.superlayer === layer else {
-      throw CameraError(message: "PreviewView is not attached to a preview output.")
+      throw .outputNotAttached
     }
     return attachedLayer
   }
 
   private func updatePreviewLayer() {
-    let nextLayer = previewOutput?.previewLayer
+    let nextLayer = output?.previewLayer
     if nextLayer === attachedLayer, nextLayer?.superlayer === layer { return }
     isPreviewingObserver?.invalidate()
     isPreviewingObserver = nil
@@ -176,10 +159,38 @@ public final class PreviewView: UIView {
             value != self.isPreviewing
           else { return }
           self.isPreviewing = value
-          if value { self.onPreviewStarted?() } else { self.onPreviewStopped?() }
+          if value { self.didStartPreview?() } else { self.didStopPreview?() }
         }
       }
     }
-    if wasPreviewing { onPreviewStopped?() }
+    updateOrientationObservation()
+    if wasPreviewing { didStopPreview?() }
+  }
+
+  private func updateOrientationObservation() {
+    orientationObservationID = UUID()
+    guard attachedLayer?.superlayer === layer, let scene = window?.windowScene else {
+      orientationObserver.stop()
+      interfaceOrientation = nil
+      return
+    }
+    let observationID = orientationObservationID
+    orientationObserver.start(scene: scene) { [weak self] orientation in
+      guard let self else { return }
+      guard self.attachedLayer?.superlayer === self.layer else {
+        self.orientationObserver.stop()
+        self.interfaceOrientation = nil
+        return
+      }
+      self.interfaceOrientation = orientation
+      self.output?.setInterfaceOrientation(orientation)
+      DispatchQueue.main.async { [weak self] in
+        guard let self, self.orientationObservationID == observationID, self.interfaceOrientation == orientation else { return }
+        self.onInterfaceOrientationChanged?(orientation)
+      }
+    }
+    if let interfaceOrientation {
+      output?.setInterfaceOrientation(interfaceOrientation)
+    }
   }
 }

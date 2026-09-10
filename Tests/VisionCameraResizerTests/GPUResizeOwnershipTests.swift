@@ -30,7 +30,6 @@ final class GPUResizeOwnershipTests: XCTestCase {
       let frame = try ResizerTestImage.frame(input)
       let resizer = try GPUResizer(options: ResizerOptions(width: 4, height: 2))
       let result = try resizer.resize(frame)
-      frame.dispose()
       return result
     }
     ResizerTestImage.assertLuma(result, Array(repeating: 100, count: 8))

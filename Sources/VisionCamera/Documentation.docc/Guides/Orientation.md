@@ -4,7 +4,13 @@ Choose interface or device orientation and understand how outputs apply it.
 
 A Camera sensor has a fixed orientation relative to the device. Rotating the phone changes how its images need to be presented, and each output applies that orientation differently.
 
-## Follow orientation changes
+## Set SwiftUI orientation
+
+``Camera`` follows device orientation by default. Use `.orientationSource(.interface)` for interface rotation, or `.orientationSource(nil)` to preserve orientation values assigned directly to outputs. The preview follows the interface in every mode.
+
+Use `.onUIRotationChanged` to rotate controls relative to the interface. The Camera owns orientation subscriptions and removes them on teardown. See <doc:SwiftUICamera>.
+
+## Follow orientation changes in a native session
 
 In most cases, output orientation follows either the app's interface orientation or the phone's physical device orientation:
 
@@ -23,7 +29,7 @@ func followDeviceOrientation(photoOutput: PhotoOutput) throws -> any Orientation
 	if let orientation = manager.currentOrientation {
 		photoOutput.outputOrientation = orientation
 	}
-	try manager.startOrientationUpdates { [weak photoOutput] orientation in
+	try manager.startUpdates { [weak photoOutput] orientation in
 		DispatchQueue.main.async {
 			photoOutput?.outputOrientation = orientation
 		}
@@ -32,7 +38,7 @@ func followDeviceOrientation(photoOutput: PhotoOutput) throws -> any Orientation
 }
 ```
 
-Retain the manager while updates are needed, then call `stopOrientationUpdates()`. `currentOrientation` is `nil` until a usable orientation is known. Interface updates arrive on the main queue. Device updates arrive on the manager's serial queue.
+Retain the manager while updates are needed, then call `stopUpdates()`. `currentOrientation` is `nil` until a usable orientation is known. Interface updates arrive on the main queue. Device updates arrive on the manager's serial queue.
 
 Apply changes from one owner in your app. Avoid changing output properties concurrently from several callbacks or while another owner is reconfiguring the session.
 
@@ -40,11 +46,11 @@ Apply changes from one owner in your app. Avoid changing output properties concu
 
 For manual control, assign an output's `outputOrientation` directly. ``CameraOrientation`` has `.up`, `.right`, `.down`, and `.left` values.
 
-The preview follows the interface orientation automatically. Assigning `PreviewOutput.outputOrientation` does not override that behavior.
+The preview follows the interface orientation automatically. `PreviewOutput.outputOrientation` is read-only.
 
 ## Rotate UI controls
 
-When capture follows device orientation but the interface is locked, you can rotate individual buttons as the orientation changes. Keep this presentation choice in your UIKit code and update the views on the main actor.
+When capture follows device orientation but the interface is locked, you can rotate individual buttons as the orientation changes. Keep this presentation choice in your app and update the views on the main actor.
 
 ## How outputs apply orientation
 
@@ -58,7 +64,7 @@ For streamed frames and depth, orientation and mirroring are metadata by default
 
 ### Physical buffer rotation
 
-Set `enablePhysicalBufferRotation` in ``FrameOutputOptions`` or ``DepthOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
+Set `rotatesBuffers` in ``FrameOutputOptions`` or ``DepthOutputOptions`` to request physically transformed buffers. Those samples report `.up` and `false`, meaning no additional presentation transform is needed.
 
 Physical transformation adds processing. If your processing library accepts orientation and mirroring flags, passing metadata can avoid that work. See <doc:NativeProcessing> for a Vision example.
 

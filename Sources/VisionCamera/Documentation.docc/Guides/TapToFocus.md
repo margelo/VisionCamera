@@ -4,6 +4,8 @@ Start a focus metering action at a specific point in the Camera.
 
 A "focus metering action" adjusts Auto-Exposure (AE), Auto-Focus (AF), and Auto-White-Balance (AWB) to bring a specific point in the Camera "into focus". This operation is also often called "3A metering".
 
+A metering point is a normalized capture-device coordinate. Focus and exposure use this point; automatic white balance adjusts the whole scene. The focus operation uses AVFoundation's point-of-interest API and does not configure a region size.
+
 ## Start a focus metering action
 
 First, create a ``MeteringPoint``. A ``PreviewView`` converts a point in the view to Camera coordinates:
@@ -19,7 +21,7 @@ func focusAtTap(
 	controller: CameraController
 ) async throws {
 	let point = try preview.meteringPoint(at: .init(x: x, y: y))
-	try await controller.focusTo(point: point, options: .init())
+	try await controller.focus(at: point, options: .init())
 }
 ```
 
@@ -29,8 +31,8 @@ You can also create a metering point directly from normalized Camera coordinates
 import VisionCamera
 
 func focusAtCenter(controller: CameraController) async throws {
-	let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
-	try await controller.focusTo(point: point, options: .init())
+	let point = MeteringPoint(location: .init(x: 0.5, y: 0.5))
+	try await controller.focus(at: point, options: .init())
 }
 ```
 
@@ -51,11 +53,11 @@ import VisionCamera
 
 func meterExposure(controller: CameraController, point: MeteringPoint) async throws {
 	guard controller.device.supportsExposureMetering else { return }
-	try await controller.focusTo(point: point, options: .init(modes: [.ae]))
+	try await controller.focus(at: point, options: .init(modes: [.ae]))
 }
 ```
 
-Now, only exposure is metered to the given point. Focus and white balance remain at their current positions.
+Only exposure is metered to the given point. This operation does not change the focus or white-balance mode.
 
 > Important: If you pass a custom `modes` array, each mode must be supported by the current device.
 
@@ -77,12 +79,12 @@ Use `.locked` to keep the metered values after the initial adjustment:
 import VisionCamera
 
 func lockOnSubject(controller: CameraController, point: MeteringPoint) async throws {
-	try await controller.focusTo(
-		point: point,
+	try await controller.focus(
+		at: point,
 		options: .init(
 			responsiveness: .steady,
 			adaptiveness: .locked,
-			autoResetAfter: .never
+			reset: .never
 		)
 	)
 }
@@ -90,7 +92,7 @@ func lockOnSubject(controller: CameraController, point: MeteringPoint) async thr
 
 ### Auto reset
 
-Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. Leaving `autoResetAfter` as `nil` uses the default 5 seconds.
+Use `.after(10)` to reset metering after 10 seconds, or `.never` to disable automatic reset. The default is `.after(5)`.
 
 ## Reset focus
 

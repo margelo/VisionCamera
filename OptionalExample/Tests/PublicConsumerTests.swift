@@ -26,7 +26,7 @@ final class PublicConsumerTests: XCTestCase {
     func testCoreConstructionDoesNotStartCapture() {
       let session = CameraSession()
       let preview = PreviewView()
-      preview.previewOutput = PreviewOutput()
+      preview.output = PreviewOutput()
       XCTAssertFalse(session.isRunning)
       XCTAssertTrue(session.session.inputs.isEmpty)
       #if !USE_VISIONCAMERALOCATION

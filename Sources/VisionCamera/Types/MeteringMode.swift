@@ -5,7 +5,7 @@
 /// - ``MeteringMode/af``: Auto-Focus - requires ``CameraDevice/supportsFocusMetering``
 /// - ``MeteringMode/awb``: Auto-White-Balance - requires ``CameraDevice/supportsWhiteBalanceMetering``
 ///
-/// See ``CameraController/focusTo(point:options:)``
+/// See ``CameraController/focus(at:options:)``
 /// See ``FocusOptions``
 public enum MeteringMode: CaseIterable, Sendable {
   /// Auto-Exposure - requires ``CameraDevice/supportsExposureMetering``.

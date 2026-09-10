@@ -40,7 +40,7 @@ enum ResizerTestImage {
     let format = try CMFormatDescription(imageBuffer: image)
     let timing = CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: .zero, decodeTimeStamp: .invalid)
     let sample = try CMSampleBuffer(imageBuffer: image, formatDescription: format, sampleTiming: timing)
-    return Frame(buffer: sample, metadata: MediaSampleMetadata(timestamp: .zero, orientation: orientation, isMirrored: isMirrored))
+    return Frame(sampleBuffer: sample, metadata: MediaSampleMetadata(timestamp: .zero, orientation: orientation, isMirrored: isMirrored))
   }
 
   static func values(_ result: GPUResizeResult) -> [Double] {

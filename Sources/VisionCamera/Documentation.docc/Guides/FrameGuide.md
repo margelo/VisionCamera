@@ -12,7 +12,7 @@ A frame's `orientation` describes the rotation needed for its intended presentat
 
 Consider both values as instructions for presenting the frame. By default, the Camera passes orientation and mirroring as metadata so consumers can apply the transform when processing or rendering. Physically transforming every buffer requires additional work.
 
-If you need transformed buffers, enable `FrameOutputOptions.enablePhysicalBufferRotation`. The resulting frame reports `.up` and `false`, indicating no further rotation or mirroring is needed. See <doc:Orientation>.
+If you need transformed buffers, enable `FrameOutputOptions.rotatesBuffers`. The resulting frame reports `.up` and `false`, indicating no further rotation or mirroring is needed. See <doc:Orientation>.
 
 ## Pixel formats
 
@@ -45,27 +45,27 @@ A row may contain padding. Use `bytesPerRow`, the frame dimensions, and the pixe
 
 Some frames store their pixels in multiple planes. On iOS, YUV 4:2:0 commonly uses one plane for Y and one for interleaved CbCr.
 
-Use `getPlanes()` to access each ``FramePlane``:
+Use `planes` to access each ``FramePlane``:
 
 ```swift
 import Foundation
 import VisionCamera
 
 func copyPlanes(frame: Frame) throws -> [Data] {
-	return try frame.getPlanes().map { plane in
+	return try frame.planes.map { plane in
 		try plane.withUnsafeBytes { bytes in Data(bytes) }
 	}
 }
 ```
 
-For a nonplanar frame, `getPlanes()` returns an empty array. Each plane has its own dimensions and row stride. A plane retains its native pixel buffer independently of the frame wrapper.
+For a nonplanar frame, `planes` returns an empty array. Each plane has its own dimensions and row stride. A plane retains its native pixel buffer independently of the frame wrapper.
 
 ## Frame lifetime
 
 A 4K BGRA frame is roughly 33 MB, so streaming at 60 FPS moves about 2 GB of image data per second. The capture pipeline reuses buffers to avoid allocating that memory for every frame.
 
-Release frames as soon as processing finishes. Swift's automatic reference counting handles this when no references remain. `dispose()` releases the frame wrapper's sample buffer earlier and makes `isValid` return `false`.
+Keep frame values only while processing them. Swift releases the native sample buffer when no frame values or native references retain it. ``Frame/isValid`` reflects the native sample buffer's validity.
 
-Native buffers and ``FramePlane`` objects you retained separately remain valid after the wrapper is disposed. They also keep the capture buffer in use. See <doc:NativeBuffers>.
+Native buffers and ``FramePlane`` values you retained separately remain valid after a frame value goes out of scope. They also keep the capture buffer in use. See <doc:NativeBuffers>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs/a-frame.mdx. -->

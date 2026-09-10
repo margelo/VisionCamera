@@ -14,7 +14,7 @@ import VisionCamera
 func prepareVideoCamera() async throws -> (CameraSession, any VideoOutput) {
 	let session = CameraSession()
 	let output = MovieFileVideoOutput()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -26,13 +26,13 @@ Request Camera permission first, and retain the returned session and output. See
 
 ### Enable audio
 
-By default, audio is disabled. To record audio from the microphone, set `enableAudio` to `true`:
+By default, audio is disabled. To record audio from the microphone, set `isAudioEnabled` to `true`:
 
 ```swift
 import VisionCamera
 
 func makeVideoOutputWithAudio() -> any VideoOutput {
-	return MovieFileVideoOutput(options: .init(enableAudio: true))
+	return MovieFileVideoOutput(options: .init(isAudioEnabled: true))
 }
 ```
 
@@ -46,23 +46,39 @@ With ``MovieFileVideoOutput``, an active recording stops when the input Camera d
 import VisionCamera
 
 func makePersistentVideoOutput() -> any VideoOutput {
-	return VideoFrameOutput(options: .init(enableAudio: true))
+	return VideoFrameOutput(options: .init(isAudioEnabled: true))
 }
 ```
 
-Retain and reconnect the same output when switching devices. ``VideoFrameOutput`` uses an `AVCaptureVideoDataOutput` and `AVAssetWriter` pipeline, which introduces additional processing. Use ``MovieFileVideoOutput`` when your app does not need recording across device changes. Both implement ``VideoOutput``.
+Retain and reconnect the same output when switching devices. ``VideoFrameOutput`` uses an `AVCaptureVideoDataOutput` and `AVAssetWriter` pipeline, which introduces additional processing. Use ``MovieFileVideoOutput`` when your app does not need recording across device changes. Both implement ``VideoOutput``. Their `makeRecorder()` methods return the concrete ``VideoRecorder`` and ``FrameRecorder`` types. Use `any VideoOutput` when the backend is chosen at runtime.
 
 ### File container format
 
-By default, VisionCamera records to a QuickTime container with a `.mov` extension. Set `fileType` to `.mp4` to use an MPEG-4 container:
+``MovieFileVideoOutput`` records QuickTime movies. Temporary files use a `.mov` extension; a custom destination path does not change the container. To record MPEG-4, use ``VideoFrameOutput`` with `fileType: .mp4`:
 
 ```swift
 import VisionCamera
 
 func makeMP4Output() -> any VideoOutput {
-	return MovieFileVideoOutput(options: .init(fileType: .mp4))
+	return VideoFrameOutput(fileType: .mp4)
 }
 ```
+
+## Select a codec
+
+Query the connected output for its native codecs, then select one before preparing the recorder:
+
+```swift
+import VisionCamera
+
+func selectH264(output: any VideoOutput) async throws {
+	if try await output.supportedVideoCodecs().contains(.h264) {
+		try await output.setVideoCodec(.h264)
+	}
+}
+```
+
+Codecs use AVFoundation's `AVVideoCodecType`, including HEVC, ProRes, and future codec identifiers. Availability depends on the device, selected format, container, and operating system. If no codec is selected, AVFoundation chooses the encoding settings. ProRes variants determine their own bit rates. ProRes RAW recording requires locked white balance before recorder preparation. After changing the camera or active format, recorder preparation rechecks codec availability.
 
 ## Prepare a recorder
 
@@ -76,7 +92,7 @@ func prepareRecorder(output: any VideoOutput) async throws -> any Recorder {
 }
 ```
 
-Recorder preparation runs on the output's queue and can throw if encoding settings, audio input, or the destination file cannot be prepared. ``VideoFrameOutput`` also needs a configured Camera connection to read its master clock.
+Recorder preparation runs on the output's queue and can throw if encoding settings, audio input, or the destination file cannot be prepared. Both backends require a configured Camera connection before recorder preparation.
 
 See <doc:RecorderGuide> to start, pause, resume, stop, or cancel the recording.
 

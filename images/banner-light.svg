@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="350" viewBox="0 0 1400 350" role="img" aria-labelledby="title description">
   <!-- Copyright © 2026 Marc Rousavy @ Margelo. Wordmark from react-native-vision-camera, MIT. -->
   <title id="title">VisionCamera</title>
-  <desc id="description">A native Swift camera framework. Built by Margelo.</desc>
+  <desc id="description">A Camera framework for SwiftUI and UIKit. Built by Margelo.</desc>
   <defs>
     <radialGradient id="cyan"><stop stop-color="#34d9d1" stop-opacity=".6"/><stop offset="1" stop-color="#34d9d1" stop-opacity="0"/></radialGradient>
     <radialGradient id="pink"><stop stop-color="#e567d8" stop-opacity=".6"/><stop offset="1" stop-color="#e567d8" stop-opacity="0"/></radialGradient>
@@ -30,6 +30,6 @@
 <path d="M610.128 1.7505C617.454 1.7505 623.013 3.38922 626.804 6.66668C630.596 9.94413 632.491 14.3141 632.491 19.7765C632.491 21.3831 632.363 22.829 632.106 24.1143C631.27 28.7413 629.278 32.822 626.129 36.3565C622.98 39.8268 618.9 42.333 613.887 43.8754L624.105 69.9986H600.584L592.005 45.5141L587.667 69.9986H566.268L578.317 1.7505H610.128ZM594.512 31.2476H602.994C605.051 31.2476 606.657 30.7977 607.814 29.898C609.035 28.9341 609.838 27.456 610.224 25.4638C610.288 25.1425 610.32 24.7248 610.32 24.2107C610.32 22.7969 609.871 21.7044 608.971 20.9332C608.071 20.0978 606.754 19.6801 605.019 19.6801H596.536L594.512 31.2476Z" fill="#151515" style="fill:#151515;fill-opacity:1;"/>
 <path d="M669.693 59.6843H646.943L641.738 69.9986H619.278L656.294 1.7505H680.971L693.792 69.9986H671.235L669.693 59.6843ZM667.379 43.5862L664.584 24.5963L655.04 43.5862H667.379Z" fill="#151515" style="fill:#151515;fill-opacity:1;"/>
 </svg>
-  <text x="85" y="250" fill="#151515" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="28" font-weight="500">A native Swift camera framework.</text>
+  <text x="85" y="250" fill="#151515" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="28" font-weight="500">A Camera framework for SwiftUI and UIKit.</text>
   <text x="85" y="285" fill="#151515" opacity=".7" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="23">Built by Margelo.</text>
 </svg>

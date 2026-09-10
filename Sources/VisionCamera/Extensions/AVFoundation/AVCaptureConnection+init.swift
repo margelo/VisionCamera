@@ -11,11 +11,8 @@ extension AVCaptureConnection {
   convenience init(input: AVCaptureDeviceInput, output: ResolvedCameraSessionConnection.Output) throws {
     let mediaType = output.mediaType.toAVMediaType()
     let targetPorts = input.ports.filter { $0.mediaType == mediaType }
-    guard !targetPorts.isEmpty else {
-      throw CameraError(
-        message:
-          "Output \"\(output)\" operates on mediaType \"\(output.mediaType)\", but Input \"\(input.device.uniqueID)\" does not have ports for that mediaType!"
-      )
+    guard let firstPort = targetPorts.first else {
+      throw ConfigurationError.inputPortUnavailable(deviceID: input.device.uniqueID, mediaType: output.mediaType.toAVMediaType())
     }
 
     switch output {
@@ -24,8 +21,7 @@ extension AVCaptureConnection {
       self.init(inputPorts: targetPorts, output: output.output)
     case .preview(let preview):
       // b) It's a preview AVCapturePreviewLayer
-      let port = targetPorts.first!
-      self.init(inputPort: port, videoPreviewLayer: preview.previewLayer)
+      self.init(inputPort: firstPort, videoPreviewLayer: preview.previewLayer)
     }
   }
 }

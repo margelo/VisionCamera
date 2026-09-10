@@ -10,7 +10,7 @@ The resizer retains the source pixel buffer and its Core Video texture wrappers 
 The shader samples Core Video textures directly, without a CPU copy of the input.
 
 The output is a shared Metal buffer. CPU reads can start when `resize` returns.
-The source Frame can be disposed at that point because the output owns a separate allocation.
+The source Frame can be released at that point because the output owns a separate allocation.
 The resizer reuses its command queue, texture cache, compute pipeline, and available output buffers.
 
 ## Bounded output storage

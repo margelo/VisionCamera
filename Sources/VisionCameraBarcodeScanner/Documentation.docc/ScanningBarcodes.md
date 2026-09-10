@@ -33,12 +33,10 @@ import VisionCameraBarcodeScanner
 func startScanning() async throws -> (FrameOutput, BarcodeScanner) {
   let scanner = try BarcodeScanner(options: .init(symbologies: [.qr, .ean13]))
   let output = FrameOutput(options: .init(
-    enablePreviewSizedOutputBuffers: true,
-    pixelFormat: .yuv,
-    dropFramesWhileBusy: true
+    pixelFormat: .pixelFormat(.yuv4208BitFull),
+    discardsLateFrames: true
   ))
-  await output.setOnFrameCallback { frame in
-    defer { frame.dispose() }
+  await output.setFrameHandler { frame in
     do {
       let barcodes = try scanner.scan(frame: frame)
       for barcode in barcodes {
@@ -62,7 +60,7 @@ To stop processing, cancel the current request and remove the callback:
 
 ```swift
 scanner.cancel()
-await output.setOnFrameCallback(onFrame: nil)
+await output.setFrameHandler(nil)
 ```
 
 Cancellation is cooperative. Vision may finish its current work before returning. The scanner discards a cancelled operation's results and throws `BarcodeScannerError.cancelled`. Removing the callback returns after any active callback finishes. Cancellation affects only the operation that was active when `cancel()` acquired its state lock; subsequent scans remain usable.
@@ -82,7 +80,7 @@ For a `CVPixelBuffer`, pass its EXIF orientation explicitly:
 let barcodes = try scanner.scan(pixelBuffer: pixelBuffer, orientation: .right)
 ```
 
-Do not modify or dispose an input during a scan. The scanner retains the input for the synchronous call and returns value snapshots. Results remain valid after you dispose a Frame, release an image, or reuse the scanner. The scanner does not retain a Frame's camera buffer between calls.
+Do not mutate or invalidate the native input during a scan. The scanner retains the input for the synchronous call and returns value snapshots. Results remain valid after you release a Frame, release an image, or reuse the scanner. The scanner does not retain a Frame's camera buffer between calls.
 
 ## Use the result coordinates
 

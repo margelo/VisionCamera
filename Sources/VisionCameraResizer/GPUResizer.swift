@@ -33,10 +33,12 @@ public final class GPUResizer {
   /// Resizes a Frame using its orientation and mirroring metadata.
   ///
   /// The source buffer stays retained through GPU completion. The returned result owns its output independently of the Frame.
-  /// Dispose the Frame after this method returns. Call this method only on the instance's serial owner queue.
-  /// - Throws: If the Frame is disposed, the input format is unsupported, the output pool is full, or Metal fails.
+  /// Release the Frame when processing finishes. Call this method only on the instance's serial owner queue.
+  /// - Throws: If the native sample is invalid or has no image, the input format is unsupported, the output pool is full, or Metal fails.
   public func resize(_ frame: Frame) throws -> GPUResizeResult {
-    return try resize(try frame.getPixelBuffer(), orientation: frame.orientation, isMirrored: frame.isMirrored)
+    guard frame.isValid else { throw MediaError.invalidSampleBuffer }
+    guard let pixelBuffer = frame.pixelBuffer else { throw MediaError.missingPixelBuffer }
+    return try resize(pixelBuffer, orientation: frame.orientation, isMirrored: frame.isMirrored)
   }
 
   /// Resizes a native full-range NV12 pixel buffer and waits for GPU completion.

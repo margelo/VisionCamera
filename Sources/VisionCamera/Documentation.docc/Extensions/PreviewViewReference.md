@@ -4,28 +4,31 @@
 
 ### Creating a preview view
 
-- ``init(previewOutput:)``
+- ``init(output:)``
 - ``init(frame:)``
 - ``init(coder:)``
 
 ### Configuring the preview
 
-- ``previewOutput``
+- ``output``
 - ``resizeMode``
 - ``gestureControllers``
 
 ### Observing preview events
 
-- ``onPreviewStarted``
-- ``onPreviewStopped``
+- ``didStartPreview``
+- ``didStopPreview``
+- ``onInterfaceOrientationChanged``
+- ``interfaceOrientation``
 
 ### Converting coordinates
 
-- ``convertCameraPointToViewPoint(cameraPoint:)``
-- ``convertViewPointToCameraPoint(viewPoint:)``
-- ``convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)``
-- ``meteringPoint(at:size:)``
+- ``point(fromCameraPoint:)``
+- ``cameraPoint(from:)``
+- ``convertedToViewCoordinates(_:)``
+- ``meteringPoint(at:)``
 
 ### Laying out the preview
 
 - ``layoutSubviews()``
+- ``didMoveToWindow()``

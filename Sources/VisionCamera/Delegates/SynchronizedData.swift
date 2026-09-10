@@ -5,5 +5,7 @@ import Foundation
 
 enum SynchronizedData {
   case video(CMSampleBuffer)
+  case audio(CMSampleBuffer)
   case depth(AVDepthData)
+  case metadata([AVMetadataObject])
 }

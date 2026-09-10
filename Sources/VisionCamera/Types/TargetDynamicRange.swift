@@ -5,7 +5,7 @@
 ///
 /// See ``Constraint``
 public struct TargetDynamicRange: Equatable, Sendable {
-  /// The target bit depth, either 8-bit SDR or 10-bit HDR.
+  /// The target bit depth, either 8-bit or 10-bit.
   public var bitDepth: TargetDynamicRangeBitDepth
   /// The color space to request for the video stream.
   public var colorSpace: TargetColorSpace
@@ -15,7 +15,7 @@ public struct TargetDynamicRange: Equatable, Sendable {
   /// Specifies the bit depth, color space, and component range to request during negotiation.
   ///
   /// - Parameters:
-  ///   - bitDepth: The target bit depth, either 8-bit SDR or 10-bit HDR.
+  ///   - bitDepth: The target bit depth, either 8-bit or 10-bit.
   ///   - colorSpace: The color space to request for the video stream.
   ///   - colorRange: The target range of YUV color components.
   public init(

@@ -6,7 +6,7 @@ Process native frames on the camera output's serial callback queue.
 
 Create a resizer for your model's tensor dimensions and channel encoding.
 Use a YUV `FrameOutput` to request full-range NV12 pixels.
-Keep `dropFramesWhileBusy` enabled to discard incoming frames when processing exceeds the frame budget.
+Keep `discardsLateFrames` enabled to discard incoming frames when processing exceeds the frame budget.
 
 ```swift
 import VisionCamera
@@ -20,9 +20,8 @@ let resizer = try GPUResizer(
 		pixelLayout: .planar
 	)
 )
-let output = FrameOutput(options: FrameOutputOptions(pixelFormat: .yuv))
-await output.setOnFrameCallback { frame in
-	defer { frame.dispose() }
+let output = FrameOutput(options: FrameOutputOptions(pixelFormat: .pixelFormat(.yuv4208BitFull)))
+await output.setFrameHandler { frame in
 	do {
 		let result = try resizer.resize(frame)
 		result.withUnsafeBytes { bytes in
@@ -49,7 +48,7 @@ Read <doc:BufferOwnership> before retaining results or submitting asynchronous G
 
 ## Stop processing
 
-Remove the callback through `await output.setOnFrameCallback(onFrame: nil)` when you no longer need frame processing.
+Remove the callback through `await output.setFrameHandler(nil)` when you no longer need frame processing.
 The current synchronous resize completes before the serial queue applies the callback change.
 The resizer does not schedule tasks, enqueue future frames, or provide cancellation of a command already committed to Metal.
 

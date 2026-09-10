@@ -4,6 +4,8 @@ Stream a Camera feed into a native preview.
 
 The ``PreviewOutput`` allows streaming a Camera feed into a preview, which may be connected to a ``PreviewView`` to display the Camera feed to the user.
 
+The SwiftUI ``Camera`` creates and connects its own preview output. For an app-owned session, display a retained output in ``CameraPreview``. See <doc:SwiftUICamera> and <doc:PreviewViewGuide>.
+
 ## Create a preview output
 
 ```swift
@@ -12,8 +14,8 @@ import VisionCamera
 @MainActor
 func addPreview(session: CameraSession) async throws -> PreviewView {
 	let output = PreviewOutput()
-	let view = PreviewView(previewOutput: output)
-	_ = try await session.configure(connections: [
+	let view = PreviewView(output: output)
+	_ = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	await session.start()
@@ -33,7 +35,7 @@ This preference is only a small bias in resolution negotiation. A preview can be
 import VisionCamera
 
 func preferRecordingResolution(video: any VideoOutput) -> [Constraint] {
-	[.resolutionBias(.init(resolutionBias: video))]
+	[.resolution(video)]
 }
 ```
 
@@ -41,6 +43,6 @@ See <doc:Constraints> for resolution negotiation.
 
 ## Orientation
 
-The preview follows the app's interface orientation. Setting `outputOrientation` on a preview output does not override that behavior. Photo, video, frame, and depth outputs can follow a separate orientation source. See <doc:Orientation>.
+The preview follows the app's interface orientation. Its `outputOrientation` property is read-only. Photo, video, frame, and depth outputs can follow a separate orientation source. See <doc:Orientation>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: preview-output. -->

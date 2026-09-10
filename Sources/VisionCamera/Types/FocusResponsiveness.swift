@@ -7,7 +7,7 @@
 ///   interest as fast as possible, possibly resetting focus.
 ///   Most desirable while not filming, or capturing photos.
 ///
-/// See ``CameraController/focusTo(point:options:)``
+/// See ``CameraController/focus(at:options:)``
 /// See ``FocusOptions``
 public enum FocusResponsiveness: CaseIterable, Sendable {
   /// Steadily focuses to the specified point of interest without disrupting. Most desirable for filming

@@ -28,12 +28,12 @@ enum SubjectAreaMonitor {
   /// Registers an observer for `subjectAreaDidChangeNotification` on the given device.
   ///
   /// Enables `isSubjectAreaChangeMonitoringEnabled` on the device if this is the
-  /// first observer. Returns a `ListenerSubscription`, which removes this observer
+  /// first observer. Returns a `ObservationToken`, which removes this observer
   /// and disables monitoring if it was the last one across all callers.
   static func addObserver(
     device: AVCaptureDevice,
     onSubjectAreaDidChange: @escaping () -> Void
-  ) -> ListenerSubscription {
+  ) -> ObservationToken {
     let deviceKey = device.uniqueID
     let listenerID = UUID()
 
@@ -55,7 +55,7 @@ enum SubjectAreaMonitor {
     entry.tokens[listenerID] = token
     entries[deviceKey] = entry
 
-    return ListenerSubscription {
+    return ObservationToken {
       removeObserver(deviceKey: deviceKey, listenerID: listenerID)
     }
   }

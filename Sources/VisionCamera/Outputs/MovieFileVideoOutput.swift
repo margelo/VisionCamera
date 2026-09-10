@@ -12,8 +12,8 @@ import Foundation
 /// It implements ``VideoOutput``. Use ``VideoFrameOutput`` for persistent recordings that continue across Camera switching.
 public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   private let queue = DispatchQueue(label: "com.margelo.camera.video")
+  private let recordingCoordinator = MovieFileRecordingCoordinator()
   private let options: VideoOutputOptions
-  private let fileType: RecorderFileType
   /// The media type of the content being streamed
   /// by this ``CameraOutput``.
   public let mediaType: MediaType = .video
@@ -21,7 +21,7 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   public let output: AVCaptureMovieFileOutput
   /// Whether the Camera Session must connect an audio input to this output.
   public var requiresAudioInput: Bool {
-    return options.enableAudio == true
+    return options.isAudioEnabled
   }
   /// Whether the Camera Session must select an active depth format for this output.
   public let requiresDepthFormat: Bool = false
@@ -36,6 +36,8 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   /// - A Frame output might not apply orientation and only pass it as a
   /// property via the `Frame` object, unless explicitly configured to
   /// physically rotate buffers.
+  ///
+  /// When disconnected, the requested orientation is applied and validated at the next session configuration.
   public var outputOrientation: CameraOrientation = .up {
     didSet {
       guard let connection = output.connection(with: .video) else { return }
@@ -48,8 +50,8 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -57,23 +59,22 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard let connection = output.connection(with: .video) else { return nil }
     return connection.inputStreamResolution
   }
 
   /// The stream type used when negotiating this output's target resolution.
-  public var streamType: StreamType = .video
+  public let streamType: StreamType = .video
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
-    return .closestTo(options.targetResolution)
+    return .closest(to: options.targetResolution)
   }
 
   /// Creates a Camera output with the given options.
   public init(options: VideoOutputOptions = .init()) {
     self.output = AVCaptureMovieFileOutput()
     self.options = options
-    self.fileType = options.fileType ?? .mov
     self.setMetadataTag(.libraryTag)
   }
 
@@ -95,81 +96,46 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) {
+  /// - Throws: If the connection does not support the requested orientation or mirroring.
+  public func configure(_ config: OutputConfiguration) throws {
     guard let connection = output.connection(with: .video) else {
       return
     }
-    try? connection.setOrientation(outputOrientation)
-    try? connection.setMirrorMode(config.mirrorMode)
-
-    if let targetBitRate = options.targetBitRate {
-      self.setBitRate(bitRate: Int(targetBitRate), for: connection)
-    }
+    try connection.setOrientation(outputOrientation)
+    try connection.setMirrorMode(config.mirrorMode)
   }
 
-  /// Get all supported ``VideoCodec``s this
+  /// Get all supported `AVVideoCodecType` values this
   /// ``VideoOutput`` currently can record in.
   ///
   /// This method must be called after the ``VideoOutput``
   /// has been attached to a Camera Session.
   ///
   /// - Throws: This method throws if you call it before this output
-  /// is attached to a Camera Session (via `configure(...)`)
+  /// is attached to a Camera Session (via ``CameraSession/configure(_:configuration:)``).
   ///
-  /// - Throws: If the output is not connected to a Camera Session.
-  public func getSupportedVideoCodecs() throws -> [VideoCodec] {
-    guard output.connection(with: .video) != nil else {
-      throw CameraError(
-        message:
-          "Cannot call `getSupportedVideoCodecs()` when VideoOutput is not yet connected to the CameraSession!"
-      )
+  /// The query runs on the output's serial queue.
+  public func supportedVideoCodecs() async throws -> [AVVideoCodecType] {
+    return try await queue.perform {
+      guard self.output.connection(with: .video) != nil else {
+        throw RecordingError.outputNotConnected
+      }
+      return self.output.availableVideoCodecTypes
     }
-    return output.availableVideoCodecTypes.map { VideoCodec(avCodec: $0) }
   }
 
-  /// Set the output settings for this video output.
-  /// This method must be called after the output has been
-  /// attached to the Camera Session, and before
-  /// ``MovieFileVideoOutput/makeRecorder(settings:)``.
+  /// Selects a supported native codec before creating a recorder.
   ///
-  /// Settings are applied on the output's serial queue. Unsupported codecs and incompatible codec/bit-rate settings throw.
-  public func setOutputSettings(settings: VideoOutputSettings) async throws {
-    return try await queue.perform {
+  /// - Throws: If the output is disconnected or the codec or bit rate is unsupported.
+  public func setVideoCodec(_ codec: AVVideoCodecType) async throws {
+    try await queue.perform {
       guard let connection = self.output.connection(with: .video) else {
-        throw CameraError(
-          message:
-            "Cannot set output settings when VideoOutput is not yet connected to the CameraSession!"
-        )
+        throw RecordingError.outputNotConnected
       }
-
-      if let codec = settings.codec {
-        if codec.isRawCodec {
-          guard self.options.targetBitRate == nil else {
-            throw CameraError(
-              message:
-                "Cannot set bit-rate when recording in a RAW codec! (\(codec))")
-          }
-        }
-
-        let avCodec = try codec.toAVVideoCodecType()
-        guard self.output.availableVideoCodecTypes.contains(avCodec) else {
-          throw CameraError(
-            message:
-              "Video codec \(codec) is not supported by this device! "
-              + "Supported codecs: \(self.output.availableVideoCodecTypes.map(\.rawValue))")
-        }
-
-        if let bitRate = self.options.targetBitRate {
-          self.setOutputSettings(
-            bitRate: Int(bitRate),
-            codec: avCodec,
-            for: connection)
-        } else {
-          self.setOutputSettings(
-            codec: avCodec,
-            for: connection)
-        }
+      guard self.output.availableVideoCodecTypes.contains(codec) else {
+        throw RecordingError.unsupportedCodec(codec)
       }
+      try self.applyEncodingSettings(codec: codec, for: connection)
     }
   }
 
@@ -177,56 +143,41 @@ public final class MovieFileVideoOutput: VideoOutput, NativeCameraOutput {
   /// instance with the given ``RecorderSettings``.
   ///
   /// The ``Recorder`` will record to the configured
-  /// file path, or to a temporary file if no path was provided.
-  /// The ``Recorder``'s file paths are filesystem paths,
-  /// not `file://` URLs.
+  /// file URL, or to a temporary file if no URL was provided.
   /// It can only record once.
   ///
   /// If you want to create a second recording,
   /// you must create a new ``Recorder``.
   ///
-  /// Creation runs on the output's serial queue. Invalid location metadata and file-system setup errors propagate to the caller. Connect this output to a Camera Session before starting the recorder.
-  public func makeRecorder(settings: RecorderSettings) async throws -> any Recorder {
+  /// Creation runs on the output's serial queue. Connect this output to a Camera Session first. Unsupported encoding settings, invalid metadata, and file-system errors throw.
+  public func makeRecorder(settings: RecorderSettings = .init()) async throws -> VideoRecorder {
     return try await queue.perform {
-      if let location = settings.location {
-        let metadataItem = try location.toAVMutableMetadataItem()
-        self.setMetadataTag(metadataItem)
+      try settings.validate()
+      guard let connection = self.output.connection(with: .video) else {
+        throw RecordingError.outputNotConnected
       }
+      try self.applyEncodingSettings(for: connection)
       return try VideoRecorder(
         videoOutput: self.output,
         queue: self.queue,
-        fileType: self.fileType,
+        coordinator: self.recordingCoordinator,
+        fileType: .mov,
         settings: settings)
     }
   }
 
-  private func setBitRate(bitRate: Int, for connection: AVCaptureConnection) {
-    let currentSettings = output.outputSettings(for: connection)
-    let currentCodec = currentSettings[AVVideoCodecKey] as? AVVideoCodecType ?? AVVideoCodecType.hevc
-
-    setOutputSettings(bitRate: bitRate, codec: currentCodec, for: connection)
-  }
-
-  private func setOutputSettings(bitRate: Int, codec: AVVideoCodecType, for connection: AVCaptureConnection) {
-    let supportedKeys = output.supportedOutputSettingsKeys(for: connection)
-    guard supportedKeys.contains(AVVideoCompressionPropertiesKey) else {
-      logger.error(
-        "Setting `AVVideoCompressionPropertiesKey` is not supported - cannot use custom bit-rate!")
-      return
+  private func applyEncodingSettings(codec: AVVideoCodecType? = nil, for connection: AVCaptureConnection) throws {
+    guard codec != nil || options.bitRate != nil else { return }
+    var settings: [String: Any] = codec.map { [AVVideoCodecKey: $0] } ?? output.outputSettings(for: connection)
+    if let bitRate = options.bitRate {
+      guard output.supportedOutputSettingsKeys(for: connection).contains(AVVideoCompressionPropertiesKey) else {
+        throw RecordingError.customBitRateUnsupported
+      }
+      try options.validateBitRate(for: codec ?? settings[AVVideoCodecKey] as? AVVideoCodecType)
+      var compression = settings[AVVideoCompressionPropertiesKey] as? [String: Any] ?? [:]
+      compression[AVVideoAverageBitRateKey] = bitRate
+      settings[AVVideoCompressionPropertiesKey] = compression
     }
-
-    let settings: [String: Any] = [
-      AVVideoCodecKey: codec,
-      AVVideoCompressionPropertiesKey: [
-        AVVideoAverageBitRateKey: bitRate
-          // ..the remaining AVVideoCompressionPropertiesKey values will be filled by AVFoundation
-      ],
-    ]
-    output.setOutputSettings(settings, for: connection)
-  }
-
-  private func setOutputSettings(codec: AVVideoCodecType, for connection: AVCaptureConnection) {
-    let settings: [String: Any] = [AVVideoCodecKey: codec]
-    output.setOutputSettings(settings, for: connection)
+    if !settings.isEmpty { output.setOutputSettings(settings, for: connection) }
   }
 }

@@ -1,27 +1,28 @@
 import AVFoundation
 import Foundation
 
-/// A ``FrameRenderer`` is an object that can render ``Frame``s into a given target.
+/// A renderer that displays native Camera Frames without copying their pixels.
 ///
-/// For example, when a ``FrameRendererView`` is connected to a FrameRenderer, it renders its Frames on screen.
+/// Connect it to a ``FrameRendererView`` to display Frames on screen. Calls using the same renderer
+/// must be serialized. Layer attachment and layout belong on the main actor.
 public final class FrameRenderer {
-  /// The sample-buffer display layer that receives rendered Frames. Attach or lay out this layer on the main actor.
+  /// The sample-buffer display layer that receives Frames.
   public let layer = AVSampleBufferDisplayLayer()
 
-  /// Creates a Frame renderer backed by an `AVSampleBufferDisplayLayer`.
+  /// Creates a renderer backed by a native sample-buffer display layer.
   public init() {}
 
-  /// Synchronously renders the given ``Frame``.
+  /// Enqueues a Frame for display without copying its pixels.
   ///
-  /// The sample buffer is enqueued without copying its pixels. Throws if the Frame is disposed or the display layer reports a rendering error. Calls that render through the same renderer must be serialized.
-  public func renderFrame(frame: Frame) throws {
-    guard let sampleBuffer = frame.sampleBuffer else {
-      throw CameraError(message: "Cannot render a disposed frame.")
-    }
+  /// Returns after enqueueing; the display layer presents the sample according to its timing.
+  /// - Throws: A ``MediaError`` if the sample is invalid or contains no image, or the display layer's
+  ///   underlying error when rendering fails.
+  public func render(_ frame: Frame) throws {
+    _ = try frame.validatedPixelBuffer()
     if layer.requiresFlushToResumeDecoding { layer.flush() }
-    layer.enqueue(sampleBuffer)
+    layer.enqueue(frame.sampleBuffer)
     if layer.status == .failed {
-      throw layer.error ?? CameraError(message: "Failed to render frame.")
+      throw layer.error ?? MediaError.frameRenderingFailed
     }
   }
 }

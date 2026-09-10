@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreImage
+import CoreMedia
 import UIKit
 import VisionCamera
 import XCTest
@@ -30,7 +31,7 @@ final class BarcodeScannerAdapterTests: XCTestCase {
     assertBounds(barcode.boundingBox, equals: fixture.orientedBounds(.downMirrored))
   }
 
-  func testFrameMetadataAndOwnedResultSurviveDisposalAndNextScan() throws {
+  func testFrameMetadataAndOwnedResultSurviveInvalidationAndNextScan() throws {
     try BarcodeRuntimeSupport.requireDetection()
     let fixture = try BarcodeFixture.generated(value: "WIFI:T:WPA;S:Test;P:example;;")
     let pixelBuffer = try fixture.pixelBuffer()
@@ -42,13 +43,13 @@ final class BarcodeScannerAdapterTests: XCTestCase {
       CMSampleBufferCreateReadyWithImageBuffer(
         allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: try XCTUnwrap(format), sampleTiming: &timing, sampleBufferOut: &sample),
       noErr)
-    let frame = Frame(buffer: try XCTUnwrap(sample), metadata: .init(timestamp: .zero, orientation: .right, isMirrored: true))
+    let frame = Frame(sampleBuffer: try XCTUnwrap(sample), metadata: .init(timestamp: .zero, orientation: .right, isMirrored: true))
     let scanner = try BarcodeScanner(options: .init(symbologies: [.qr]))
     let barcode = try XCTUnwrap(scanner.scan(frame: frame).first)
     let expected = try XCTUnwrap(scanner.scan(pixelBuffer: pixelBuffer, orientation: .rightMirrored).first)
     XCTAssertEqual(barcode.rawValue, fixture.value)
     assertBounds(barcode.boundingBox, equals: expected.boundingBox, accuracy: 1)
-    frame.dispose()
+    CMSampleBufferInvalidate(frame.sampleBuffer)
     XCTAssertThrowsError(try scanner.scan(frame: frame))
     _ = try scanner.scan(image: BarcodeFixture.generated(value: "another result").image)
     XCTAssertEqual(barcode.rawValue, fixture.value)
@@ -56,6 +57,22 @@ final class BarcodeScannerAdapterTests: XCTestCase {
       XCTAssertEqual(barcode.payloadData, expected.payloadData)
     } else {
       XCTAssertNil(barcode.payloadData)
+    }
+  }
+
+  func testInvalidatedFrameFailsBeforeStartingInference() throws {
+    let pixelBuffer = try BarcodeFixture.generated().pixelBuffer()
+    let sample = try CMSampleBuffer(
+      imageBuffer: pixelBuffer,
+      formatDescription: CMFormatDescription(imageBuffer: pixelBuffer),
+      sampleTiming: CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: .zero, decodeTimeStamp: .invalid))
+    let frame = Frame(sampleBuffer: sample, metadata: .init(timestamp: .zero, orientation: .up, isMirrored: false))
+    CMSampleBufferInvalidate(sample)
+    let scanner = try BarcodeScanner()
+    XCTAssertThrowsError(try scanner.scan(frame: frame)) { error in
+      guard case .invalidSampleBuffer? = error as? MediaError else {
+        return XCTFail("Expected invalid sample validation before Vision inference")
+      }
     }
   }
 

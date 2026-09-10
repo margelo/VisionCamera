@@ -1,14 +1,9 @@
-///
-/// AV+TargetStabilizationMode.swift
-/// VisionCamera
-/// Copyright © 2025 Marc Rousavy @ Margelo
-///
+// Copyright © 2025 Marc Rousavy @ Margelo
 
 import AVFoundation
-import Foundation
 
 extension TargetStabilizationMode {
-  func toAVCaptureVideoStabilizationMode() -> AVCaptureVideoStabilizationMode {
+  func toAVCaptureVideoStabilizationMode() -> AVCaptureVideoStabilizationMode? {
     switch self {
     case .off:
       return .off
@@ -21,23 +16,14 @@ extension TargetStabilizationMode {
     case .cinematicExtended:
       return .cinematicExtended
     case .cinematicExtendedEnhanced:
-      if #available(iOS 18.0, *) {
-        return .cinematicExtendedEnhanced
-      } else {
-        return .cinematicExtended
-      }
+      guard #available(iOS 18.0, *) else { return nil }
+      return .cinematicExtendedEnhanced
     case .previewOptimized:
-      if #available(iOS 17.0, *) {
-        return .previewOptimized
-      } else {
-        return .standard
-      }
+      guard #available(iOS 17.0, *) else { return nil }
+      return .previewOptimized
     case .lowLatency:
-      if #available(iOS 26.0, *) {
-        return .lowLatency
-      } else {
-        return .standard
-      }
+      guard #available(iOS 26.0, *) else { return nil }
+      return .lowLatency
     }
   }
 }

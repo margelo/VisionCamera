@@ -11,9 +11,9 @@ Each ``CameraDevice`` exposes whether it supports low light boost through `suppo
 ```swift
 import VisionCamera
 
-func enableLowLightBoost(controller: CameraController) async throws {
+func isLowLightBoostEnabled(controller: CameraController) async throws {
 	guard controller.device.supportsLowLightBoost else { return }
-	try await controller.configure(config: .init(enableLowLightBoost: true))
+	try await controller.configure( .init(isLowLightBoostEnabled: true))
 }
 ```
 
@@ -21,7 +21,7 @@ Enabling low light boost on an unsupported device throws an error.
 
 ## Binned formats
 
-Binned formats combine multiple neighboring sensor pixels into one larger effective pixel. This often improves low-light exposure too. If low-light performance is more important than maximum spatial detail, prefer a `.binned(.init(binned: true))` constraint.
+Binned formats combine multiple neighboring sensor pixels into one larger effective pixel. This often improves low-light exposure too. If low-light performance is more important than maximum spatial detail, prefer a `.binned(true)` constraint.
 
 ## Lower FPS
 

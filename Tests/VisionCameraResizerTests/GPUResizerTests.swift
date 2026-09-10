@@ -1,3 +1,4 @@
+import CoreMedia
 import CoreVideo
 import VisionCamera
 import VisionCameraResizer
@@ -88,7 +89,7 @@ final class GPUResizerTests: XCTestCase {
       let resizer = try GPUResizer(options: ResizerOptions(width: width, height: height))
       let frame = try ResizerTestImage.frame(input, orientation: orientation, isMirrored: mirrored)
       let result = try resizer.resize(frame)
-      frame.dispose()
+      CMSampleBufferInvalidate(frame.sampleBuffer)
       ResizerTestImage.assertLuma(result, expected)
       XCTAssertThrowsError(try resizer.resize(frame))
     }

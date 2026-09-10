@@ -6,11 +6,13 @@ Install VisionCamera, request Camera permission, and render a Camera preview in 
 
 VisionCamera is a Camera framework for iOS. It uses AVFoundation and provides an extensible API, allowing you to plug in native code at any point.
 
-The framework supports iOS 15.1 and later. Individual Camera features depend on the device and OS version.
+The framework supports iOS 15.1 and later. Start with SwiftUI and Swift Package Manager. UIKit and CocoaPods are equally functional, actively maintained alternatives. Individual Camera features depend on the device and OS version.
 
 ## Install the library
 
-### Swift Package Manager
+### Swift Package Manager (recommended)
+
+Use Xcode 26.2 or later. The package uses Swift 5 language mode.
 
 In Xcode, choose **File > Add Package Dependencies** and enter the repository URL:
 
@@ -50,7 +52,50 @@ Add `NSCameraUsageDescription`, and optionally `NSMicrophoneUsageDescription`, t
 <string>Record audio for videos.</string>
 ```
 
-## Render a Camera preview
+## Mount a SwiftUI Camera
+
+Request permission with ``VisionCamera/requestCameraPermission()`` and select a device with ``VisionCamera/defaultCamera(for:)``. Mount a ``Camera`` after permission is granted:
+
+```swift
+import SwiftUI
+import VisionCamera
+
+struct CameraScreen: View {
+	@Environment(\.scenePhase) private var scenePhase
+	@State private var device: CameraDevice?
+	@State private var message = "Requesting Camera access..."
+
+	var body: some View {
+		Group {
+			if let device {
+				Camera(device: device, isActive: scenePhase == .active)
+					.enableZoomGesture()
+					.enableTapToFocusGesture()
+			} else {
+				Text(message)
+			}
+		}
+		.task {
+			do {
+				guard try await VisionCamera.requestCameraPermission() else {
+					message = "Camera access was denied. Enable it in Settings."
+					return
+				}
+				device = VisionCamera.defaultCamera(for: .back)
+				if device == nil { message = "No Camera is available." }
+			} catch {
+				message = error.localizedDescription
+			}
+		}
+	}
+}
+```
+
+``Camera`` owns the session and preview for its mounted lifetime. It configures the session before starting and stops capture when removed. If navigation keeps the Camera mounted while hidden, include screen visibility in `isActive`. See <doc:SwiftUICamera> and <doc:Lifecycle>.
+
+Open `ExampleSwiftUI/VisionCameraSwiftUIExample.xcodeproj` for a runnable SwiftUI app using the local Swift package. Choose an iPhone destination and run. Camera capture requires a physical device.
+
+## Use UIKit
 
 Request permission with ``VisionCamera/requestCameraPermission()``. Create a ``CameraSession``, connect a ``PreviewOutput``, and display it in a ``PreviewView``:
 
@@ -61,17 +106,17 @@ import VisionCamera
 @MainActor
 func startCamera(in container: UIView) async throws -> CameraSession {
 	guard try await VisionCamera.requestCameraPermission() else {
-		throw CameraError(message: "Camera access was not granted.")
+		throw PermissionError.cameraAccessDenied(status: VisionCamera.cameraPermissionStatus)
 	}
 
 	let session = CameraSession()
 	let output = PreviewOutput()
-	let preview = PreviewView(previewOutput: output)
+	let preview = PreviewView(output: output)
 	preview.frame = container.bounds
 	preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 	container.addSubview(preview)
 
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		CameraSessionConnection(
 			input: .position(.back),
 			outputs: [CameraOutputConfiguration(output: output)])
@@ -83,11 +128,11 @@ func startCamera(in container: UIView) async throws -> CameraSession {
 
 Retain the returned session for as long as your Camera screen needs it. Stop the session when the screen goes out of view. See <doc:Lifecycle>.
 
-> Note: The bundled UIKit example demonstrates preview, photo capture, video recording, gestures, and screen lifecycle with a local development Pod.
+The UIKit example in `Example` uses a local development Pod. Run `bundle exec pod install` in that directory and open `VisionCameraExample.xcworkspace`.
 
 ## Add outputs
 
-The Camera can stream to a variety of outputs. To capture Photos, add a ``PhotoOutput`` to the same connection. To record Videos, add a ``MovieFileVideoOutput`` or ``VideoFrameOutput``.
+The Camera can stream to a variety of outputs. To capture Photos, pass a retained ``PhotoOutput`` to the SwiftUI Camera's `outputs` array or add it to a native session connection. To record Videos, use a ``MovieFileVideoOutput`` or ``VideoFrameOutput``. Keep outputs in a model owned by `@StateObject`, so view updates reuse the same native objects.
 
 See <doc:CameraOutputs> to learn more about outputs.
 

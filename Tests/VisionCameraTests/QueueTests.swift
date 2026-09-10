@@ -45,7 +45,7 @@ final class QueueTests: XCTestCase {
       withUnsafeCurrentTask { $0?.cancel() }
       try await queue.perform {
         XCTFail("Cancelled throwing work must not execute")
-        throw CameraError(message: "The cancelled operation ran")
+        throw NSError(domain: "VisionCameraTests.cancelled", code: 1)
       }
     }
 

@@ -25,6 +25,6 @@ extension AVCaptureSession {
     }
 
     // We didn't find it!
-    throw CameraError(message: "The given device \"\(device)\" is not yet attached to the `CameraSession` - cannot form a connection yet!")
+    throw ConfigurationError.inputNotConnected(deviceID: device.uniqueID)
   }
 }

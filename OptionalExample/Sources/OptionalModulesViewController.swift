@@ -21,7 +21,7 @@ final class OptionalModulesViewController: UIViewController {
   #if USE_VISIONCAMERA
     private let previewView = PreviewView()
     private let session = CameraSession()
-    private let frames = FrameOutput(options: .init(pixelFormat: .yuv))
+    private let frames = FrameOutput(options: .init(pixelFormat: .pixelFormat(.yuv4208BitFull)))
     private var configured = false
     private var cameraTask: Task<Void, Never>?
   #endif
@@ -65,7 +65,7 @@ final class OptionalModulesViewController: UIViewController {
     #if USE_VISIONCAMERA
       cameraTask?.cancel()
       Task {
-        await frames.setOnFrameCallback(onFrame: nil)
+        await frames.setFrameHandler(nil)
         await session.stop()
       }
     #endif
@@ -88,8 +88,8 @@ final class OptionalModulesViewController: UIViewController {
           try Task.checkCancellation()
           if !configured {
             let preview = PreviewOutput()
-            previewView.previewOutput = preview
-            _ = try await session.configure(connections: [
+            previewView.output = preview
+            _ = try await session.configure([
               CameraSessionConnection(
                 input: .position(.back),
                 outputs: [CameraOutputConfiguration(output: preview), CameraOutputConfiguration(output: frames)])
@@ -98,19 +98,18 @@ final class OptionalModulesViewController: UIViewController {
           }
           try Task.checkCancellation()
           let processor = try ExampleFrameProcessor()
-          await frames.setOnFrameCallback { [weak self] frame in
-            defer { frame.dispose() }
+          await frames.setFrameHandler { [weak self] frame in
             guard let message = processor.process(frame) else { return }
             DispatchQueue.main.async { [weak self] in self?.status.text = message }
           }
           try Task.checkCancellation()
           await session.start()
           if Task.isCancelled {
-            await frames.setOnFrameCallback(onFrame: nil)
+            await frames.setFrameHandler(nil)
             await session.stop()
           }
         } catch {
-          await frames.setOnFrameCallback(onFrame: nil)
+          await frames.setFrameHandler(nil)
           status.text = error.localizedDescription
         }
       }
