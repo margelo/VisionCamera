@@ -52,7 +52,7 @@ jobs:
           SIMULATOR_ID: ${{ steps.simulator.outputs.id }}
         run: >-
           xcodebuild
-          -scheme VisionCamera
+          -scheme VisionCamera-Package
           -configuration Debug
           -destination "platform=iOS Simulator,id=$SIMULATOR_ID"
           -destination-timeout 120

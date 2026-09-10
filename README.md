@@ -117,6 +117,14 @@ The repository includes two runnable apps with permissions, lifecycle handling, 
 
 Choose an iPhone destination and run the app. For a physical device, select your development team under **Signing & Capabilities**. Camera capture requires a physical device.
 
+### Optional modules
+
+Add **VisionCameraResizer** for GPU frame resizing, **VisionCameraBarcodeScanner** for ML barcode detection through Apple Vision, or **VisionCameraLocation** for explicit foreground location updates. Each is a separate SPM product and CocoaPod with the same Swift import. Core alone does not include their implementations.
+
+The barcode scanner requires iOS 16. Core, resizer, and location support iOS 15.1. Location permission requests occur only through explicit calls in the optional location module.
+
+See [optional installation and native usage](OPTIONAL_MODULES.md) and the [optional feature example](OptionalExample/README.md).
+
 ### Documentation
 
 Read the [guides and API reference](https://margelo.github.io/VisionCamera/documentation/visioncamera/) on the documentation website.

@@ -56,7 +56,7 @@ func connectRenderer(output: FrameOutput, renderer: FrameRenderer) async {
 
 The display layer retains an enqueued sample buffer, so the frame value can go out of scope after enqueueing.
 
-The processing owner also owns the frame callback. When processing ends, call `await output.setOnFrameCallback(nil)` on that owner before releasing it. Removing ``CameraFrameRenderer`` detaches the displayed layer. It does not replace or remove callbacks on outputs owned by your app.
+The processing owner also owns the frame callback. When processing ends, call `await output.setFrameHandler(nil)` on that owner before releasing it. Removing ``CameraFrameRenderer`` detaches the displayed layer. It does not replace or remove callbacks on outputs owned by your app.
 
 Use one delivery queue for a renderer. The renderer enqueues native sample buffers directly; it does not apply the frame's relative orientation and mirror metadata for a custom presentation. Choose your output's physical rotation policy accordingly, or use ``Camera`` or ``PreviewView`` for a normal Camera preview.
 

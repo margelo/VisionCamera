@@ -35,6 +35,16 @@ jobs:
         run: python3 scripts/check-documentation-examples.py
       - name: Package Xcode documentation archive
         run: tar -czf build/VisionCamera.doccarchive.tar.gz -C build/documentation/Build/Products/Release-iphoneos/VisionCamera VisionCamera.doccarchive
+      - name: Build and check optional module documentation
+        run: scripts/build-optional-documentation.sh
+      - name: Package optional documentation archives
+        run: tar -czf build/OptionalModules.doccarchives.tar.gz -C build/optional-documentation/Build/Products/Release-iphoneos VisionCameraResizer/VisionCameraResizer.doccarchive VisionCameraBarcodeScanner/VisionCameraBarcodeScanner.doccarchive VisionCameraLocation/VisionCameraLocation.doccarchive
+      - name: Upload optional documentation archives
+        uses: actions/upload-artifact@v7
+        with:
+          name: OptionalModules.doccarchives
+          path: build/OptionalModules.doccarchives.tar.gz
+          if-no-files-found: error
       - name: Upload Xcode documentation archive
         uses: actions/upload-artifact@v7
         with:
