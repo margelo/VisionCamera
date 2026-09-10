@@ -7,7 +7,7 @@ require 'uri'
 
 root = File.expand_path('..', __dir__)
 build = ARGV.fetch(0, File.join(root, 'build/documentation'))
-sources = File.join(root, 'Sources/VisionCamera') + '/'
+sources = File.join(root, 'Sources') + '/'
 graphs = Dir.glob(File.join(build, '**/symbol-graph/swift/**/*.symbols.json'))
 abort 'No Swift symbol graphs found. Run scripts/build-documentation.sh first.' if graphs.empty?
 

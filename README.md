@@ -101,6 +101,14 @@ func startCamera(in previewView: PreviewView) async throws -> CameraSession {
 Keep the returned session alive, and call `await session.stop()` when the Camera is no longer active.
 See the [UIKit example app](./Example/) for a full camera screen with permissions, lifecycle handling, photos, and both video recorders.
 
+### Optional modules
+
+Add **VisionCameraResizer** for GPU frame resizing, **VisionCameraBarcodeScanner** for ML barcode detection through Apple Vision, or **VisionCameraLocation** for explicit foreground location updates. Each is a separate SPM product and CocoaPod with the same Swift import. Core alone does not include their implementations.
+
+The barcode scanner requires iOS 16. Core, resizer, and location support iOS 15.1. Location permission requests occur only through explicit calls in the optional location module.
+
+See [optional installation and native usage](OPTIONAL_MODULES.md) and the [optional feature example](OptionalExample/README.md).
+
 ### Documentation
 
 The [guides](./Sources/VisionCamera/Documentation.docc/VisionCamera.md) and API reference are written with DocC, Apple's documentation compiler.

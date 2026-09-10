@@ -1,0 +1,65 @@
+name: Optional modules
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  barcode-host:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Test maintained Vision scanner on macOS
+        run: scripts/test-barcode-host.sh
+  consumers:
+    runs-on: macos-26
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        manager: [spm, pods]
+        selection: [core, resizer, barcode, location, combined]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Check optional example formatting
+        run: xcrun swift-format lint --strict --recursive OptionalExample
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.9'
+          bundler-cache: true
+      - name: Build and test installed public consumer
+        run: scripts/validate-consumer.sh '${{ matrix.manager }}' '${{ matrix.selection }}'
+      - name: Upload consumer test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: consumer-${{ matrix.manager }}-${{ matrix.selection }}
+          path: build/consumer-products/**/*.xcresult
+          if-no-files-found: ignore
+  pods:
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [VisionCameraResizer, VisionCameraBarcodeScanner, VisionCameraLocation]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.9'
+          bundler-cache: true
+      - name: Lint module and run behavior tests
+        run: bundle exec pod lib lint '${{ matrix.module }}.podspec' --include-podspecs=VisionCamera.podspec --platforms=ios --verbose
