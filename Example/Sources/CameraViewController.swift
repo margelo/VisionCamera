@@ -154,8 +154,9 @@ final class CameraViewController: UIViewController {
     videoOutput = camera.createVideoOutput(
       options: VideoOutputOptions(
         enableAudio: microphoneGranted,
-        enablePersistentRecorder: usesPersistentRecorder
+        enablePersistentRecorder: recordingMode.selectedSegmentIndex == 1
       ))
+    usesPersistentRecorder = videoOutput is CameraVideoFrameOutput
     if let orientation = orientationManager?.currentOrientation {
       videoOutput?.outputOrientation = orientation
     }
