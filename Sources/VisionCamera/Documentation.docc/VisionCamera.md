@@ -82,8 +82,16 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``CameraDevice``
 - ``CameraController``
 - ``CameraControllerConfiguration``
-- ``ListenerSubscription``
-- ``CameraError``
+- ``ObservationToken``
+- ``PermissionError``
+- ``ConfigurationError``
+- ``CameraSessionError``
+- ``CameraControlError``
+- ``CaptureError``
+- ``RecordingError``
+- ``MediaError``
+- ``PreviewError``
+- ``OrientationError``
 
 ### Output APIs
 
@@ -98,6 +106,7 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``DepthOutput``
 - ``ObjectOutput``
 - ``OutputSynchronizer``
+- ``SynchronizedFrameDrop``
 - ``NativeCameraOutput``
 
 ### Capture and media APIs
@@ -108,6 +117,8 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``CapturePhotoCallbacks``
 - ``Recorder``
 - ``RecorderSettings``
+- ``RecordingResult``
+- ``RecordingStatus``
 - ``Frame``
 - ``FramePlane``
 - ``Depth``

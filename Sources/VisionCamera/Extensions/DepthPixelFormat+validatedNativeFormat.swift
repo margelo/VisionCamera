@@ -4,9 +4,9 @@ import CoreVideo
 
 extension DepthPixelFormat {
   func validatedNativeFormat(availableDepthDataTypes: [OSType]) throws -> OSType {
-    let nativeFormat = try toCVPixelFormatType()
+    let nativeFormat = try cvPixelFormat
     guard availableDepthDataTypes.contains(nativeFormat) else {
-      throw CameraError(message: "The Depth frame cannot convert to Core Video pixel format \(nativeFormat).")
+      throw MediaError.unsupportedDepthPixelFormat(self)
     }
     return nativeFormat
   }

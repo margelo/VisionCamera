@@ -8,7 +8,7 @@ See <doc:DepthOutputGuide> for streaming depth frames.
 
 ## Orientation and mirroring
 
-`orientation` and `isMirrored` describe the transform needed to present the depth frame. By default, these values are metadata. Set `DepthOutputOptions.enablePhysicalBufferRotation` when you need physically transformed buffers instead.
+`orientation` and `isMirrored` describe the transform needed to present the depth frame. By default, these values are metadata. Set `DepthOutputOptions.rotatesBuffers` when you need physically transformed buffers instead.
 
 The same orientation rules apply to video frames and depth frames. See <doc:Orientation>.
 
@@ -18,18 +18,18 @@ A depth frame's `pixelFormat` describes the data in its buffer. Supported native
 
 Depth values represent distance in meters. Disparity represents the relative shift between views and has a different interpretation. Use AVFoundation's depth conversion instead of treating disparity values as distances.
 
-Inspect `depthDataAccuracy`, `depthDataQuality`, and `isDepthDataFiltered` to understand the available data. Accuracy depends on the capture system and configuration, not just whether the buffer stores depth or disparity.
+Inspect `accuracy`, `quality`, and `isFiltered` to understand the available data. Accuracy depends on the capture system and configuration, not just whether the buffer stores depth or disparity.
 
 ## Access depth data
 
-`getDepthData()` returns a retained native `AVDepthData`, and `getPixelBuffer()` returns its `CVPixelBuffer` map:
+`depthData` returns a retained native `AVDepthData`, and `pixelBuffer` returns its `CVPixelBuffer` map:
 
 ```swift
 import AVFoundation
 import VisionCamera
 
-func nativeDepth(_ depth: Depth) throws -> AVDepthData {
-	return try depth.getDepthData()
+func nativeDepth(_ depth: Depth) -> AVDepthData {
+	return depth.depthData
 }
 ```
 
@@ -46,22 +46,22 @@ func copyDepthBytes(_ depth: Depth) throws -> Data {
 
 ## Convert formats
 
-Use `convert(pixelFormat:)` or `convertAsync(pixelFormat:)` to convert a supported depth or disparity representation. For example, convert to 32-bit floating-point depth:
+Use `converted(to:)` to convert a supported depth or disparity representation. For example, convert to 32-bit floating-point depth:
 
 ```swift
 import VisionCamera
 
 func depth32(_ depth: Depth) async throws -> Depth {
-	return try await depth.convertAsync(pixelFormat: .depth32Bit)
+	return try await depth.converted(to: .depth32Bit)
 }
 ```
 
-The conversion returns a new depth wrapper. Unsupported conversion requests throw. `availableDepthPixelFormats` lists the representations available for this sample.
+The conversion returns a new depth wrapper. Unsupported conversion requests throw. `availablePixelFormats` lists the representations available for this sample.
 
 ## Calibration and lifetime
 
-When available, `cameraCalibrationData` provides camera calibration details through ``CameraCalibrationData``. Keep calibration data with the sample it describes.
+When available, `calibrationData` provides camera calibration details through ``CameraCalibrationData``. Keep calibration data with the sample it describes.
 
-Swift releases a depth frame when no references remain. Calling `dispose()` releases the wrapper's native depth data earlier. Independently retained `AVDepthData` and `CVPixelBuffer` references remain valid. See <doc:NativeBuffers>.
+Swift releases the native depth data when no depth values or native references retain it. Independently retained `AVDepthData` and `CVPixelBuffer` references remain valid. See <doc:NativeBuffers>.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs/a-depth-frame.mdx. -->

@@ -21,7 +21,7 @@ import Foundation
 /// let previewOutput = PreviewOutput()
 /// let photoOutput = PhotoOutput()
 /// let session = CameraSession()
-/// let controllers = try await session.configure(connections: [
+/// let controllers = try await session.configure([
 ///   CameraSessionConnection(
 ///     input: .position(.back),
 ///     outputs: [
@@ -53,13 +53,13 @@ public final class CameraSession {
   /// at the same time. Check ``VisionCamera/supportedMultiCamDeviceCombinations``
   /// for device combinations that can be used together.
   ///
-  /// - Parameter enableMultiCam: Whether to create an `AVCaptureMultiCamSession`.
-  /// - Throws: If `enableMultiCam` is `true`, but ``VisionCamera/supportsMultiCamSessions`` is `false`.
-  public convenience init(enableMultiCam: Bool) throws {
-    guard !enableMultiCam || VisionCamera.supportsMultiCamSessions else {
-      throw CameraError(message: "This device does not support multi-camera sessions.")
+  /// - Parameter isMultiCamEnabled: Whether to create an `AVCaptureMultiCamSession`.
+  /// - Throws: If `isMultiCamEnabled` is `true`, but ``VisionCamera/supportsMultiCamSessions`` is `false`.
+  public convenience init(isMultiCamEnabled: Bool) throws(ConfigurationError) {
+    guard !isMultiCamEnabled || VisionCamera.supportsMultiCamSessions else {
+      throw ConfigurationError.multiCamUnsupported
     }
-    self.init(session: enableMultiCam ? AVCaptureMultiCamSession() : AVCaptureSession())
+    self.init(session: isMultiCamEnabled ? AVCaptureMultiCamSession() : AVCaptureSession())
   }
 
   private init(session: AVCaptureSession) {
@@ -92,15 +92,15 @@ public final class CameraSession {
   ///
   /// - Note: Some supported combinations can contain a single virtual
   /// ``CameraDevice``, such as an iOS Dual- or Triple-Camera. Pass the
-  /// returned devices directly to ``CameraSession/configure(connections:config:)`` instead
+  /// returned devices directly to ``CameraSession/configure(_:configuration:)`` instead
   /// of expanding virtual devices via ``CameraDevice/physicalDevices``.
   ///
   /// - Parameter connections: The list of connections from one _input_ to
   /// multiple _outputs_. If this ``CameraSession`` was created
-  /// as a multi-cam session (see ``CameraSession/init(enableMultiCam:)``),
+  /// as a multi-cam session (see ``CameraSession/init(isMultiCamEnabled:)``),
   /// you can add multiple ``CameraSessionConnection``s.
-  /// - Parameter config: Configures session-wide configuration,
-  /// such as ``CameraSessionConfiguration/allowBackgroundAudioPlayback``.
+  /// - Parameter configuration: Configures session-wide configuration,
+  /// such as ``CameraSessionConfiguration/allowsBackgroundAudioPlayback``.
   ///
   /// - Returns: One ``CameraController`` per ``CameraSessionConnection``.
   ///
@@ -112,30 +112,26 @@ public final class CameraSession {
   /// be used together - see ``VisionCamera/supportedMultiCamDeviceCombinations``
   ///
   /// ```swift
-  /// let controllers = try await session.configure(connections: [
+  /// let controllers = try await session.configure([
   ///   CameraSessionConnection(
   ///     input: .device(device),
   ///     outputs: [CameraOutputConfiguration(output: previewOutput)],
-  ///     constraints: [.fps(FPSConstraint(fps: 60))]
+  ///     constraints: [.frameRate(60)]
   ///   )
   /// ])
   /// ```
   ///
   /// Configuration runs on the session's serial queue. Keep the returned Camera Controllers alive while using them, and replace them after reconfiguration.
-  public func configure(connections: [CameraSessionConnection], config: CameraSessionConfiguration? = nil) async throws -> [CameraController] {
+  public func configure(_ connections: [CameraSessionConnection], configuration: CameraSessionConfiguration = .init()) async throws -> [CameraController] {
     return try await Self.queue.perform {
       guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-        throw CameraError(message: "Camera Permission not yet granted!")
+        throw PermissionError.cameraAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .video))
       }
 
-      // Ensure multi-cam is enabled if we have multiple inputs
+      // A Multi-Cam session requires compatible formats even with one virtual Camera input.
       let isMultiCam = self.session is AVCaptureMultiCamSession
-      if connections.count > 1 {
-        guard isMultiCam else {
-          throw CameraError(
-            message: "Cannot add multiple inputs (\(connections)) to a single-cam CameraSession! "
-              + "Create your CameraSession as a multi-cam session (`CameraSession(enableMultiCam: true)`) to add multiple camera inputs.")
-        }
+      guard connections.count <= 1 || isMultiCam else {
+        throw ConfigurationError.multipleInputsRequireMultiCam(count: connections.count)
       }
 
       logger.info("Reconfiguring CameraSession with \(connections.count) connection(s)...")
@@ -180,16 +176,16 @@ public final class CameraSession {
       }
 
       // Haptics and System Sounds Playback
-      if let allowHapticsAndSystemSoundsPlayback = config?.allowHapticsAndSystemSoundsPlayback {
+      if let allowsHapticsAndSystemSoundsPlayback = configuration.allowsHapticsAndSystemSoundsPlayback {
         let audioSession = AVAudioSession.sharedInstance()
-        if audioSession.allowHapticsAndSystemSoundsDuringRecording != allowHapticsAndSystemSoundsPlayback {
-          try audioSession.setAllowHapticsAndSystemSoundsDuringRecording(allowHapticsAndSystemSoundsPlayback)
+        if audioSession.allowHapticsAndSystemSoundsDuringRecording != allowsHapticsAndSystemSoundsPlayback {
+          try audioSession.setAllowHapticsAndSystemSoundsDuringRecording(allowsHapticsAndSystemSoundsPlayback)
         }
       }
       // Background Audio Playback
       if #available(iOS 18.0, *) {
-        if let allowBackgroundAudioPlayback = config?.allowBackgroundAudioPlayback {
-          self.session.configuresApplicationAudioSessionToMixWithOthers = allowBackgroundAudioPlayback
+        if let allowsBackgroundAudioPlayback = configuration.allowsBackgroundAudioPlayback {
+          self.session.configuresApplicationAudioSessionToMixWithOthers = allowsBackgroundAudioPlayback
         }
       }
 
@@ -249,7 +245,7 @@ public final class CameraSession {
     // FPS
     if let fps = resolved.enabledConstraints.selectedFPS {
       guard let range = device.activeFormat.videoSupportedFrameRateRanges.first(where: { $0.contains(fps: fps) }) else {
-        throw CameraError(message: "The active capture format does not support the selected frame rate.")
+        throw ConfigurationError.frameRateUnsupported
       }
       let duration = try FPSConstraint(fps: fps).frameDuration(minimum: range.minFrameDuration, maximum: range.maxFrameDuration)
       if #available(iOS 18.0, *), device.isAutoVideoFrameRateEnabled {
@@ -265,7 +261,7 @@ public final class CameraSession {
         guard connection.inputPorts.contains(where: { ($0.input as? AVCaptureDeviceInput)?.device == device }) else { continue }
         guard connection.isVideoStabilizationSupported else { continue }
         guard let nativeMode = videoStabilizationMode.toAVCaptureVideoStabilizationMode() else {
-          throw CameraError(message: "The selected video stabilization mode is unavailable on this OS version.")
+          throw ConfigurationError.videoStabilizationUnavailable
         }
         connection.preferredVideoStabilizationMode = nativeMode
       }
@@ -276,7 +272,7 @@ public final class CameraSession {
         guard connection.inputPorts.contains(where: { ($0.input as? AVCaptureDeviceInput)?.device == device }) else { continue }
         guard connection.isVideoStabilizationSupported else { continue }
         guard let nativeMode = previewStabilizationMode.toAVCaptureVideoStabilizationMode() else {
-          throw CameraError(message: "The selected preview stabilization mode is unavailable on this OS version.")
+          throw ConfigurationError.previewStabilizationUnavailable
         }
         connection.preferredVideoStabilizationMode = nativeMode
       }
@@ -287,7 +283,7 @@ public final class CameraSession {
       guard let nativeColorSpace = dynamicRange.colorSpace.toAVCaptureColorSpace(),
         device.activeFormat.supportedColorSpaces.contains(nativeColorSpace)
       else {
-        throw CameraError(message: "The selected color space is unavailable for the active capture format.")
+        throw ConfigurationError.colorSpaceUnsupported
       }
       device.activeColorSpace = nativeColorSpace
       // Bit depth and component range follow activeFormat. Let AVFoundation manage its separate
@@ -300,9 +296,9 @@ public final class CameraSession {
       let outputConfig = OutputConfiguration(mirrorMode: outputConfiguration.mirrorMode)
       switch outputConfiguration.output {
       case .output(let output):
-        try output.configure(config: outputConfig)
+        try output.configure(outputConfig)
       case .preview(let preview):
-        try preview.configure(config: outputConfig)
+        try preview.configure(outputConfig)
       }
     }
   }
@@ -311,10 +307,10 @@ public final class CameraSession {
   /// Starts the ``CameraSession``.
   ///
   /// To avoid any runtime hiccups, it's good practice
-  /// to configure everything via ``CameraSession/configure(connections:config:)``
+  /// to configure everything via ``CameraSession/configure(_:configuration:)``
   /// before starting the ``CameraSession``.
   ///
-  /// Runs on the session's serial queue and returns after AVFoundation's synchronous start call completes. Session errors are delivered through ``CameraSession/addOnErrorListener(onError:)``.
+  /// Runs on the session's serial queue and returns after AVFoundation's synchronous start call completes. Session errors are delivered through ``CameraSession/observeErrors(_:)``.
   public func start() async {
     return await Self.queue.perform {
       if self.session.isRunning {
@@ -393,6 +389,9 @@ public final class CameraSession {
       if !containsInput {
         // 2.1. It doesn't exist yet - add it to the session..
         let deviceInput = try AVCaptureDeviceInput(device: device)
+        guard self.session.canAddInput(deviceInput) else {
+          throw ConfigurationError.inputRejected(deviceID: device.uniqueID)
+        }
         self.session.addInputWithNoConnections(deviceInput)
         // 2.2. Configure the input with initial settings
         if connection.initialZoom != nil || connection.initialExposureBias != nil {
@@ -408,7 +407,7 @@ public final class CameraSession {
       let containsAudioInput = self.session.inputs.contains { $0.isMicrophone }
       if !containsAudioInput {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-          throw CameraError(message: "Audio Permission not yet granted!")
+          throw PermissionError.microphoneAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .audio))
         }
         try self.session.addAudioInput()
       }
@@ -511,8 +510,8 @@ public final class CameraSession {
   /// Adds a listener to when the ``CameraSession``
   /// started running.
   ///
-  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
-  public func addOnStartedListener(onStarted: @escaping () -> Void) -> ListenerSubscription {
+  /// The callback runs on the main queue. Retain the returned token while observing. Cancel or release it when updates are no longer needed.
+  public func observeStarted(_ onStarted: @escaping () -> Void) -> ObservationToken {
     return self.session.addListener(for: AVCaptureSession.didStartRunningNotification) { _ in
       onStarted()
     }
@@ -521,8 +520,8 @@ public final class CameraSession {
   /// Adds a listener to when the ``CameraSession``
   /// stopped running.
   ///
-  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
-  public func addOnStoppedListener(onStopped: @escaping () -> Void) -> ListenerSubscription {
+  /// The callback runs on the main queue. Retain the returned token while observing. Cancel or release it when updates are no longer needed.
+  public func observeStopped(_ onStopped: @escaping () -> Void) -> ObservationToken {
     return self.session.addListener(for: AVCaptureSession.didStopRunningNotification) { _ in
       onStopped()
     }
@@ -532,8 +531,8 @@ public final class CameraSession {
   /// Adds a listener to when the ``CameraSession``
   /// encountered an error.
   ///
-  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
-  public func addOnErrorListener(onError: @escaping (any Error) -> Void) -> ListenerSubscription {
+  /// The callback runs on the main queue. Retain the returned token while observing. Cancel or release it when updates are no longer needed.
+  public func observeErrors(_ onError: @escaping (any Error) -> Void) -> ObservationToken {
     return self.session.addListener(for: AVCaptureSession.runtimeErrorNotification) {
       notification in
       if let errorAny = notification.userInfo?[AVCaptureSessionErrorKey],
@@ -541,11 +540,7 @@ public final class CameraSession {
       {
         onError(error)
       } else {
-        let unknownError = CameraError(
-          message:
-            "CameraSession encountered an Error, but the payload didn't contain an `AVCaptureSessionErrorKey`!"
-        )
-        onError(unknownError)
+        onError(CameraSessionError.missingRuntimeError)
       }
     }
   }
@@ -555,10 +550,10 @@ public final class CameraSession {
   /// was interrupted, for example when the phone overheated,
   /// or the user received a FaceTime call.
   ///
-  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
-  public func addOnInterruptionStartedListener(
-    onInterruptionStarted: @escaping (InterruptionReason) -> Void
-  ) -> ListenerSubscription {
+  /// The callback runs on the main queue. Retain the returned token while observing. Cancel or release it when updates are no longer needed.
+  public func observeInterruptionStarted(
+    _ onInterruptionStarted: @escaping (InterruptionReason) -> Void
+  ) -> ObservationToken {
     return self.session.addListener(for: AVCaptureSession.wasInterruptedNotification) {
       notification in
       if let reasonAny = notification.userInfo?[AVCaptureSessionInterruptionReasonKey],
@@ -577,9 +572,9 @@ public final class CameraSession {
   /// interruption has ended and the Camera continues
   /// to run again.
   ///
-  /// The callback runs on the main queue. Call ``ListenerSubscription/remove`` when updates are no longer needed.
-  public func addOnInterruptionEndedListener(onInterruptionEnded: @escaping () -> Void)
-    -> ListenerSubscription
+  /// The callback runs on the main queue. Retain the returned token while observing. Cancel or release it when updates are no longer needed.
+  public func observeInterruptionEnded(_ onInterruptionEnded: @escaping () -> Void)
+    -> ObservationToken
   {
     return self.session.addListener(for: AVCaptureSession.interruptionEndedNotification) { _ in
       onInterruptionEnded()

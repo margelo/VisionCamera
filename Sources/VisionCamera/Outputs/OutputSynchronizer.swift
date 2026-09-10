@@ -17,7 +17,7 @@ import Foundation
 ///
 /// When an output is connected to the ``OutputSynchronizer``
 /// you should no longer use its own frame callback, but instead
-/// use the ``OutputSynchronizer/setOnFramesCallback(onFrames:)`` provided here.
+/// use the ``OutputSynchronizer/setFrameHandler(_:)`` provided here.
 /// Releasing the synchronizer restores each output's original delegate.
 public final class OutputSynchronizer {
   private let delegate: SynchronizedOutputDelegate
@@ -43,33 +43,27 @@ public final class OutputSynchronizer {
       autoreleaseFrequency: .inherit,
       target: nil)
     self.outputs = outputs
-    let avOutputs = try outputs.map { output in
+    let avOutputs = try outputs.enumerated().map { index, output in
       guard let nativeOutput = output as? any NativeCameraOutput else {
-        throw CameraError(
-          message: "Output \(output) is not of type `NativeCameraOutput`!")
+        throw CaptureError.unsupportedSynchronizedOutput(index: index)
       }
       let dataOutput = nativeOutput.output
       guard
         dataOutput is AVCaptureVideoDataOutput || dataOutput is AVCaptureDepthDataOutput
           || dataOutput is AVCaptureMetadataOutput || dataOutput is AVCaptureAudioDataOutput
       else {
-        throw CameraError(message: "OutputSynchronizer requires video data, depth data, metadata, or audio data outputs.")
+        throw CaptureError.incompatibleSynchronizedOutput
       }
       return dataOutput
     }
     guard !avOutputs.isEmpty else {
-      throw CameraError(
-        message: "Cannot create OutputSynchronizer without any outputs!")
+      throw CaptureError.insufficientSynchronizedOutputs(count: avOutputs.count)
     }
     guard Set(avOutputs.map(ObjectIdentifier.init)).count == avOutputs.count else {
-      throw CameraError(message: "OutputSynchronizer requires distinct native outputs.")
+      throw CaptureError.duplicateSynchronizedOutputs
     }
-    let allConnected = avOutputs.allSatisfy { !$0.connections.isEmpty }
-    guard allConnected else {
-      throw CameraError(
-        message:
-          "Cannot create OutputSynchronizer when not all of the given outputs are connected to the Camera!"
-      )
+    if let index = avOutputs.firstIndex(where: { $0.connections.isEmpty }) {
+      throw CaptureError.synchronizedOutputNotConnected(index: index)
     }
     self.synchronizer = AVCaptureDataOutputSynchronizer(dataOutputs: avOutputs)
     self.delegate = SynchronizedOutputDelegate(outputs: outputs)
@@ -86,13 +80,13 @@ public final class OutputSynchronizer {
   /// Sets the callback for synchronized video, depth, metadata, and audio samples.
   ///
   /// Registration and callback delivery are serialized on this synchronizer's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFramesCallback(
-    onFrames: (([SynchronizedFrame]) -> Void)?
+  public func setFrameHandler(
+    _ onFrames: (([SynchronizedFrame]) -> Void)?
   ) async {
     await queue.perform {
       if let onFrames {
         self.delegate.onFrames = { frames in
-          let samples = frames.map { $0.toSynchronizedFrame() }
+          let samples = frames.map { $0.synchronizedFrame }
           onFrames(samples)
         }
       } else {
@@ -106,12 +100,12 @@ public final class OutputSynchronizer {
   /// Audio drops use ``MediaType/other(_:)`` with AVFoundation's audio media type.
   ///
   /// Registration and callback delivery are serialized on this synchronizer's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnFrameDroppedCallback(onFrameDropped: ((MediaType, FrameDroppedReason) -> Void)?) async {
+  public func setFrameDropHandler(_ onFrameDropped: ((SynchronizedFrameDrop) -> Void)?) async {
     await queue.perform {
       if let onFrameDropped {
         self.delegate.onFrameDropped = { mediaType, avReason in
           let reason = FrameDroppedReason(reason: avReason)
-          onFrameDropped(mediaType, reason)
+          onFrameDropped(SynchronizedFrameDrop(mediaType: mediaType, reason: reason))
         }
       } else {
         self.delegate.onFrameDropped = nil

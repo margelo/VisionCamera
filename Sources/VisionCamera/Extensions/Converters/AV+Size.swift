@@ -1,5 +1,5 @@
 ///
-/// Size+toCMVideoDimensions.swift
+/// CGSize+toCMVideoDimensions.swift
 /// VisionCamera
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
@@ -7,7 +7,7 @@
 import AVFoundation
 import Foundation
 
-extension Size {
+extension CGSize {
   init(dimensions: CMVideoDimensions) {
     self.init(width: Double(dimensions.width), height: Double(dimensions.height))
   }

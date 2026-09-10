@@ -31,7 +31,7 @@ final class PhotoAndRecordingSettingsTests: XCTestCase {
     XCTAssertEqual(PhotoContainerFormat(settings: heic), .heic)
     XCTAssertEqual(PhotoContainerFormat(avFileType: .tif), .tiff)
     XCTAssertEqual(PhotoContainerFormat(avFileType: .dng), .dng)
-    XCTAssertEqual(try PhotoContainerFormat.dng.toUTType().preferredFilenameExtension, "dng")
+    XCTAssertEqual(try PhotoContainerFormat.dng.uniformType.preferredFilenameExtension, "dng")
     if #available(iOS 26.0, *) {
       XCTAssertEqual(PhotoContainerFormat(avFileType: .dcm), .dcm)
     }
@@ -55,23 +55,22 @@ final class PhotoAndRecordingSettingsTests: XCTestCase {
   func testUnknownPhotoContainerCannotBeMislabeledForExport() {
     let format = PhotoContainerFormat(avFileType: AVFileType(rawValue: "future.photo-container"))
     XCTAssertEqual(format, .unknown)
-    XCTAssertThrowsError(try format.toUTType())
+    XCTAssertThrowsError(try format.uniformType)
   }
 
   func testRecorderLimitsRejectInvalidValuesWithoutNumericTraps() throws {
-    try RecorderSettings(maxDuration: 1.5, maxFileSize: Int64.max).validate()
-    for invalid in [Double.nan, .infinity, 0, -1, 0.0001, .greatestFiniteMagnitude] {
+    try RecorderSettings(maxDuration: CMTime(seconds: 1.5, preferredTimescale: 600), maxFileSize: Int64.max).validate()
+    for invalid in [CMTime.invalid, .positiveInfinity, .negativeInfinity, .zero, CMTime(value: -1, timescale: 600)] {
       XCTAssertThrowsError(try RecorderSettings(maxDuration: invalid).validate())
     }
     XCTAssertThrowsError(try RecorderSettings(maxFileSize: 0).validate())
     XCTAssertThrowsError(try RecorderSettings(maxFileSize: -1).validate())
-    XCTAssertThrowsError(try RecorderSettings(filePath: "file:///tmp/movie.mov").validate())
-    XCTAssertThrowsError(try RecorderSettings(filePath: "movie.mov").validate())
-    try RecorderSettings(filePath: "/tmp/movie.mov").validate()
+    XCTAssertThrowsError(try RecorderSettings(fileURL: URL(string: "https://example.com/movie.mov")!).validate())
+    try RecorderSettings(fileURL: URL(fileURLWithPath: "/tmp/movie.mov")).validate()
   }
 
   func testProResBitRatePolicyIncludesAllNativeVariants() throws {
-    let options = VideoOutputOptions(targetBitRate: 10_000_000)
+    let options = VideoOutputOptions(bitRate: 10_000_000)
     try options.validateBitRate(for: .h264)
     try options.validateBitRate(for: .hevc)
     let codecs: [AVVideoCodecType] = [.proRes422Proxy, .proRes422LT, .proRes422, .proRes422HQ, .proRes4444]
@@ -86,8 +85,8 @@ final class PhotoAndRecordingSettingsTests: XCTestCase {
       XCTAssertThrowsError(try options.validateBitRate(for: .proResRAW))
       XCTAssertThrowsError(try options.validateBitRate(for: .proResRAWHQ))
     }
-    XCTAssertThrowsError(try VideoOutputOptions(targetBitRate: 0).validateBitRate(for: .h264))
-    XCTAssertThrowsError(try VideoOutputOptions(targetBitRate: -1).validateBitRate(for: .hevc))
+    XCTAssertThrowsError(try VideoOutputOptions(bitRate: 0).validateBitRate(for: .h264))
+    XCTAssertThrowsError(try VideoOutputOptions(bitRate: -1).validateBitRate(for: .hevc))
   }
 
   func testVideoCodecSelectionRequiresConnectedOutput() async {

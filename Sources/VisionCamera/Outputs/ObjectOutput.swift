@@ -16,7 +16,7 @@ import Foundation
 /// let objectOutput = ObjectOutput(
 ///   options: ObjectOutputOptions(enabledObjectTypes: [.qr])
 /// )
-/// await objectOutput.setOnObjectsScannedCallback { objects in
+/// await objectOutput.setObjectHandler { objects in
 ///   for case let code as ScannedCode in objects {
 ///     print(code.value ?? "")
 ///   }
@@ -37,7 +37,7 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   public let requiresDepthFormat: Bool = false
   /// Metadata uses the unrotated capture-device coordinate system.
   ///
-  /// Use ``PreviewView/convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)`` to account
+  /// Use ``PreviewView/convertedToViewCoordinates(_:)`` to account
   /// for preview rotation, mirroring, and scaling when displaying detected objects.
   public let outputOrientation: CameraOrientation = .up
   /// The resolution that the underlying capture pipeline has resolved
@@ -45,8 +45,8 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -54,7 +54,7 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard let connection = output.connection(with: .metadataObject) else { return nil }
     return connection.inputStreamResolution
   }
@@ -79,9 +79,9 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   /// Metadata coordinates remain in the unrotated capture-device coordinate system.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) throws {
+  public func configure(_ config: OutputConfiguration) throws {
     guard config.mirrorMode != .on else {
-      throw CameraError(message: "Metadata uses unmirrored capture-device coordinates. Convert objects to preview coordinates when displaying them.")
+      throw ConfigurationError.metadataMirroringUnsupported
     }
     guard output.connection(with: .metadataObject) != nil else {
       return
@@ -90,7 +90,7 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
     let requestedTypes = Array(Set(options.enabledObjectTypes))
     let unsupportedTypes = requestedTypes.filter { !output.availableMetadataObjectTypes.contains($0) }
     guard unsupportedTypes.isEmpty else {
-      throw CameraError(message: "Metadata types are unavailable on this connection: \(unsupportedTypes.map(\.rawValue)).")
+      throw ConfigurationError.metadataTypesUnavailable
     }
     output.metadataObjectTypes = requestedTypes
   }
@@ -98,7 +98,7 @@ public final class ObjectOutput: CameraOutput, NativeCameraOutput {
   /// Sets the `onObjectsScanned` callback.
   ///
   /// Registration and callback delivery are serialized on this output's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnObjectsScannedCallback(onObjectsScanned: (([any ScannedObject]) -> Void)?) async {
+  public func setObjectHandler(_ onObjectsScanned: (([any ScannedObject]) -> Void)?) async {
     await queue.perform {
       if let onObjectsScanned {
         self.delegate.onMetadataObjects = { objects in

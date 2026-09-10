@@ -12,14 +12,14 @@
 ### Discovering cameras
 
 - ``cameraDevices``
-- ``getDefaultCamera(position:)``
-- ``getCameraForId(id:)``
+- ``defaultCamera(for:)``
+- ``camera(withID:)``
 - ``userPreferredCamera``
-- ``addOnCameraDevicesChangedListener(listener:)``
+- ``observeCameraDevices(_:)``
 - ``discoverySession``
 
 ### Configuring cameras
 
 - ``supportsMultiCamSessions``
 - ``supportedMultiCamDeviceCombinations``
-- ``resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+- ``resolve(_:for:outputs:requiresMultiCam:)``

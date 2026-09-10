@@ -21,20 +21,20 @@ public struct CameraSessionConnection {
   /// value for the ``CameraController``.
   ///
   /// This value can later be adjusted
-  /// via ``CameraController/setZoom(zoom:)``.
+  /// via ``CameraController/setZoom(_:)``.
   public var initialZoom: Double?
   /// Sets the initial ``CameraController/exposureBias``
   /// value for the ``CameraController``.
   ///
   /// This value can later be adjusted
-  /// via ``CameraController/setExposureBias(exposure:)``.
+  /// via ``CameraController/setExposureBias(_:)``.
   public var initialExposureBias: Double?
   /// A callback that will be called after the given ``CameraSessionConnection/constraints`` have
   /// been fully resolved, and a valid ``CameraSessionConfig`` has been
   /// constructed.
   ///
   /// This is equivalent to calling
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// with the ``CameraSessionConnection/input``, ``CameraSessionConnection/outputs`` and
   /// ``CameraSessionConnection/constraints`` listed here.
   ///

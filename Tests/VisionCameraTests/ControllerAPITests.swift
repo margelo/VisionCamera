@@ -15,11 +15,11 @@ final class ControllerAPITests: XCTestCase {
 
   func testMeteringCoordinatesRejectValuesOutsideTheCaptureDeviceSpace() throws {
     for coordinate in [0.0, 0.5, 1.0] {
-      XCTAssertNoThrow(try MeteringPoint(normalizedX: coordinate, normalizedY: coordinate).validate())
+      XCTAssertNoThrow(try MeteringPoint(location: CGPoint(x: coordinate, y: coordinate)).validate())
     }
     for coordinate in [-0.1, 1.1, .nan, .infinity, -.infinity] {
-      XCTAssertThrowsError(try MeteringPoint(normalizedX: coordinate, normalizedY: 0.5).validate())
-      XCTAssertThrowsError(try MeteringPoint(normalizedX: 0.5, normalizedY: coordinate).validate())
+      XCTAssertThrowsError(try MeteringPoint(location: CGPoint(x: coordinate, y: 0.5)).validate())
+      XCTAssertThrowsError(try MeteringPoint(location: CGPoint(x: 0.5, y: coordinate)).validate())
     }
   }
 
@@ -27,7 +27,7 @@ final class ControllerAPITests: XCTestCase {
     let options = FocusOptions()
     XCTAssertEqual(options.responsiveness, .snappy)
     XCTAssertEqual(options.adaptiveness, .continuous)
-    XCTAssertEqual(options.autoResetAfter, .after(5))
+    XCTAssertEqual(options.reset, .after(5))
     XCTAssertNil(options.modes)
     XCTAssertNoThrow(try FocusReset.never.validate())
     XCTAssertNoThrow(try FocusReset.after(0).validate())
@@ -60,19 +60,19 @@ final class ControllerAPITests: XCTestCase {
   func testMetadataCoordinatesCannotRequestMirroring() {
     let output = ObjectOutput(options: ObjectOutputOptions(enabledObjectTypes: [.qr]))
     XCTAssertEqual(output.outputOrientation, .up)
-    XCTAssertThrowsError(try output.configure(config: OutputConfiguration(mirrorMode: .on)))
+    XCTAssertThrowsError(try output.configure(OutputConfiguration(mirrorMode: .on)))
   }
 
   func testAudioMixingConfigurationPreservesExplicitAndUnspecifiedValues() {
     let unchanged = CameraSessionConfiguration()
-    XCTAssertNil(unchanged.allowHapticsAndSystemSoundsPlayback)
+    XCTAssertNil(unchanged.allowsHapticsAndSystemSoundsPlayback)
     if #available(iOS 18.0, *) {
-      XCTAssertNil(unchanged.allowBackgroundAudioPlayback)
-      var mixing = CameraSessionConfiguration(allowBackgroundAudioPlayback: true)
-      XCTAssertEqual(mixing.allowBackgroundAudioPlayback, true)
-      mixing.allowBackgroundAudioPlayback = false
-      XCTAssertEqual(mixing.allowBackgroundAudioPlayback, false)
-      mixing.allowBackgroundAudioPlayback = nil
+      XCTAssertNil(unchanged.allowsBackgroundAudioPlayback)
+      var mixing = CameraSessionConfiguration(allowsBackgroundAudioPlayback: true)
+      XCTAssertEqual(mixing.allowsBackgroundAudioPlayback, true)
+      mixing.allowsBackgroundAudioPlayback = false
+      XCTAssertEqual(mixing.allowsBackgroundAudioPlayback, false)
+      mixing.allowsBackgroundAudioPlayback = nil
       XCTAssertEqual(mixing, unchanged)
     }
   }

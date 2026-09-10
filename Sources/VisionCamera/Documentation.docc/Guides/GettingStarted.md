@@ -61,17 +61,17 @@ import VisionCamera
 @MainActor
 func startCamera(in container: UIView) async throws -> CameraSession {
 	guard try await VisionCamera.requestCameraPermission() else {
-		throw CameraError(message: "Camera access was not granted.")
+		throw PermissionError.cameraAccessDenied(status: VisionCamera.cameraPermissionStatus)
 	}
 
 	let session = CameraSession()
 	let output = PreviewOutput()
-	let preview = PreviewView(previewOutput: output)
+	let preview = PreviewView(output: output)
 	preview.frame = container.bounds
 	preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 	container.addSubview(preview)
 
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		CameraSessionConnection(
 			input: .position(.back),
 			outputs: [CameraOutputConfiguration(output: output)])

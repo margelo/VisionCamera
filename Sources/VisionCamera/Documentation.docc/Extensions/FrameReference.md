@@ -4,7 +4,7 @@
 
 ### Creating a frame
 
-- ``init(buffer:metadata:)``
+- ``init(sampleBuffer:metadata:)``
 
 ### Reading frame metadata
 
@@ -16,25 +16,19 @@
 - ``isMirrored``
 - ``pixelFormat``
 - ``metadata``
-- ``cameraIntrinsicMatrix``
+- ``intrinsicMatrix``
 
 ### Accessing pixel data
 
 - ``isPlanar``
-- ``hasPixelBuffer``
+- ``isValid``
+- ``byteCount``
 - ``pixelBuffer``
 - ``sampleBuffer``
-- ``getPixelBuffer()``
-- ``getPlanes()``
+- ``planes``
 - ``withUnsafeBytes(_:)``
-
-### Managing frame lifetime
-
-- ``isValid``
-- ``memorySize``
-- ``dispose()``
 
 ### Converting coordinates
 
-- ``convertCameraPointToFramePoint(cameraPoint:)``
-- ``convertFramePointToCameraPoint(framePoint:)``
+- ``point(fromCameraPoint:)``
+- ``cameraPoint(from:)``

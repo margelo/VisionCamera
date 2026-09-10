@@ -1,11 +1,11 @@
 import AVFoundation
 
 extension SynchronizedDataFrame {
-  /// Wraps each retained native sample in a synchronized frame.
-  func toSynchronizedFrame() -> SynchronizedFrame {
+  /// Wraps the retained video or depth sample and its metadata in a synchronized frame.
+  var synchronizedFrame: SynchronizedFrame {
     switch self.data {
     case .video(let buffer):
-      let frame = Frame(buffer: buffer, metadata: metadata)
+      let frame = Frame(sampleBuffer: buffer, metadata: metadata)
       return .frame(frame)
     case .audio(let buffer):
       return .audio(buffer)

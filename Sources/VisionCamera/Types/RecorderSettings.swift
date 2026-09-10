@@ -1,6 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 import CoreLocation
+import CoreMedia
+import Foundation
 
 /// Video Recorder settings for a ``Recorder``
 /// created by a ``VideoOutput``.
@@ -12,40 +14,39 @@ public struct RecorderSettings {
   /// Sets the given `CLLocation` to be embedded
   /// into the video metadata using the ISO-6709 standard.
   public var location: CLLocation?
-  /// The absolute path (including file name and extension) where
+  /// The file URL (including file name and extension) where
   /// the recording file should be written to, or `nil` to
   /// create a file in the device's temporary directory.
-  /// Pass a filesystem path, not a `file://` URL.
   ///
-  /// All parent directories in this ``RecorderSettings/filePath`` will
+  /// All parent directories of this ``RecorderSettings/fileURL`` will
   /// be automatically created if they do not yet exist.
   ///
   /// Defaults to `nil`.
-  public var filePath: String?
+  public var fileURL: URL?
   /// If set, the recording automatically stops once it reaches
-  /// this positive, finite duration, in seconds.
+  /// this duration.
   ///
   /// When the limit is reached, the recording is finalized
-  /// successfully, and the `onRecordingFinished` callback
+  /// successfully, and the `onFinished` callback
   /// passed to
-  /// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``
-  /// is invoked with the resulting file path, the same
-  /// behavior as calling ``Recorder/stopRecording()``.
+  /// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``
+  /// is invoked with the resulting video file, the same
+  /// behavior as calling ``Recorder/stop()``.
   ///
   /// The value must remain finite and positive when converted to a time at 600 ticks per second.
   /// Defaults to `nil`.
-  public var maxDuration: Double?
+  public var maxDuration: CMTime?
   /// If set, the recording automatically stops once the file
   /// reaches this positive size, in bytes.
   ///
   /// Encoder buffering can delay the file-size check. The finalized file may exceed the limit.
   ///
   /// When the limit is reached, the recording is finalized
-  /// successfully, and the `onRecordingFinished` callback
+  /// successfully, and the `onFinished` callback
   /// passed to
-  /// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``
-  /// is invoked with the resulting file path, the same
-  /// behavior as calling ``Recorder/stopRecording()``.
+  /// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``
+  /// is invoked with the resulting video file, the same
+  /// behavior as calling ``Recorder/stop()``.
   ///
   /// Defaults to `nil`.
   public var maxFileSize: Int64?
@@ -54,17 +55,17 @@ public struct RecorderSettings {
   ///
   /// - Parameters:
   ///   - location: Sets the given `CLLocation` to be embedded into the video metadata using the ISO-6709 standard.
-  ///   - filePath: The absolute path (including file name and extension) where the recording file should be written to, or `nil` to create a file in the device's temporary directory. Pass a filesystem path, not a `file://` URL.
-  ///   - maxDuration: If set, the recording automatically stops once it reaches this duration, in seconds.
+  ///   - fileURL: The destination file URL, or `nil` to create a file in the device's temporary directory.
+  ///   - maxDuration: A positive, finite recording duration limit, or `nil` for no limit.
   ///   - maxFileSize: If set, the recording automatically stops once the file reaches this size, in bytes.
   public init(
     location: CLLocation? = nil,
-    filePath: String? = nil,
-    maxDuration: Double? = nil,
+    fileURL: URL? = nil,
+    maxDuration: CMTime? = nil,
     maxFileSize: Int64? = nil
   ) {
     self.location = location
-    self.filePath = filePath
+    self.fileURL = fileURL
     self.maxDuration = maxDuration
     self.maxFileSize = maxFileSize
   }

@@ -14,10 +14,10 @@ import Foundation
 ///
 /// ```swift
 /// if try await VisionCamera.requestCameraPermission(),
-///    let device = VisionCamera.getDefaultCamera(position: .back) {
+///    let device = VisionCamera.defaultCamera(for: .back) {
 ///   let session = CameraSession()
 ///   let photoOutput = PhotoOutput()
-///   let controllers = try await session.configure(connections: [
+///   let controllers = try await session.configure([
 ///     CameraSessionConnection(
 ///       input: .device(device),
 ///       outputs: [CameraOutputConfiguration(output: photoOutput)]
@@ -43,7 +43,7 @@ public enum VisionCamera {
   /// - Returns: `true` if Camera permission has now been granted, `false` otherwise.
   ///
   /// - Throws: If `NSCameraUsageDescription` is missing from the app's Info.plist.
-  public static func requestCameraPermission() async throws -> Bool {
+  public static func requestCameraPermission() async throws(PermissionError) -> Bool {
     try Bundle.main.requireCameraUsageDescription()
     return await AVCaptureDevice.requestAccess(for: .video)
   }
@@ -52,7 +52,7 @@ public enum VisionCamera {
   /// - Returns: `true` if Microphone permission has now been granted, `false` otherwise.
   ///
   /// - Throws: If `NSMicrophoneUsageDescription` is missing from the app's Info.plist.
-  public static func requestMicrophonePermission() async throws -> Bool {
+  public static func requestMicrophonePermission() async throws(PermissionError) -> Bool {
     try Bundle.main.requireMicrophoneUsageDescription()
     return await AVCaptureDevice.requestAccess(for: .audio)
   }
@@ -61,7 +61,7 @@ public enum VisionCamera {
   /// ``CameraSession``s.
   ///
   /// Older phones may not be able to support this.
-  /// See ``CameraSession/init(enableMultiCam:)``
+  /// See ``CameraSession/init(isMultiCamEnabled:)``
   public static var supportsMultiCamSessions: Bool {
     return AVCaptureMultiCamSession.isMultiCamSupported
   }
@@ -85,21 +85,21 @@ public enum VisionCamera {
   /// Also, maximum available video resolution is often only available when
   /// using a lower photo resolution, and vice-versa.
   ///
-  /// The ``ResolutionBiasConstraint`` ``Constraint`` is optional, but
+  /// The ``Constraint/resolution(_:)`` ``Constraint`` is optional, but
   /// may rank the given ``CameraOutput``'s resolution above other
   /// ``Constraint``s.
   /// To give output resolutions the lowest priority, append a
-  /// ``ResolutionBiasConstraint`` for each output after your explicit constraints.
+  /// ``Constraint/resolution(_:)`` for each output after your explicit constraints.
   /// Resolution biases are not added automatically.
   ///
   /// ```swift
-  /// let config = try await VisionCamera.resolveConstraints(
-  ///   device: device,
-  ///   outputConfigurations: [CameraOutputConfiguration(output: photoOutput)],
-  ///   constraints: [
-  ///     .fps(FPSConstraint(fps: 30)),
-  ///     .resolutionBias(ResolutionBiasConstraint(resolutionBias: photoOutput))
-  ///   ]
+  /// let config = try await VisionCamera.resolve(
+  ///   [
+  ///     .frameRate(30),
+  ///     .resolution(photoOutput)
+  ///   ],
+  ///   for: device,
+  ///   outputs: [CameraOutputConfiguration(output: photoOutput)]
   /// )
   /// ```
   ///
@@ -110,10 +110,10 @@ public enum VisionCamera {
   ///   - requiresMultiCam: Whether the selected format must support simultaneous camera capture. Defaults to `false`.
   /// - Returns: The selected native formats and resolved constraint values, without configuring or starting a session.
   /// - Throws: An error if no format supports the outputs or a constraint cannot be evaluated, or `CancellationError` if canceled before resolution begins.
-  public static func resolveConstraints(
-    device: CameraDevice,
-    outputConfigurations: [CameraOutputConfiguration],
-    constraints: [Constraint],
+  public static func resolve(
+    _ constraints: [Constraint],
+    for device: CameraDevice,
+    outputs outputConfigurations: [CameraOutputConfiguration],
     requiresMultiCam: Bool = false
   ) async throws -> CameraSessionConfig {
     return try await queue.perform {

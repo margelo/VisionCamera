@@ -4,9 +4,11 @@
 
 ### Configuring video output
 
-- ``getSupportedVideoCodecs()``
+- ``supportedVideoCodecs()``
 - ``setVideoCodec(_:)``
 
 ### Creating a recording
 
+- ``Recording``
 - ``makeRecorder(settings:)``
+- ``makeRecorder()``

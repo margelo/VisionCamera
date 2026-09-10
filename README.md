@@ -80,17 +80,18 @@ import VisionCamera
 @MainActor
 func startCamera(in previewView: PreviewView) async throws -> CameraSession {
 	guard try await VisionCamera.requestCameraPermission() else {
-		throw CameraError(message: "Camera permission was denied.")
+		throw PermissionError.cameraAccessDenied(status: VisionCamera.cameraPermissionStatus)
 	}
 
 	let preview = PreviewOutput()
-	previewView.previewOutput = preview
+	previewView.output = preview
 
 	let session = CameraSession()
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		CameraSessionConnection(
 			input: .position(.back),
-			outputs: [CameraOutputConfiguration(output: preview)]
+			outputs: [CameraOutputConfiguration(output: preview)],
+			constraints: [.resolution(preview)]
 		)
 	])
 	await session.start()

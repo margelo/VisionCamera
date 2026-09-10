@@ -19,17 +19,13 @@ func installAsyncProcessor(
 	let worker = DispatchQueue(label: "com.example.camera.processing")
 	let availableSlot = DispatchSemaphore(value: 1)
 
-	await output.setOnFrameCallback { frame in
+	await output.setFrameHandler { frame in
 		guard availableSlot.wait(timeout: .now()) == .success else {
-			frame.dispose()
 			return
 		}
 
 		worker.async(execute: DispatchWorkItem {
-			defer {
-				frame.dispose()
-				availableSlot.signal()
-			}
+			defer { availableSlot.signal() }
 			do {
 				try process(frame)
 			} catch {
@@ -48,11 +44,11 @@ This pattern keeps the preview responsive while processing fewer frames. It does
 
 The `process` closure must finish using the frame before it returns. If another native API completes asynchronously, keep the frame until its completion callback and release the processing slot there instead.
 
-Do not dispose a frame while another operation is reading it. Do not keep borrowed pointers from `withUnsafeBytes` after the closure returns. See <doc:NativeBuffers>.
+The worker closure retains the frame while processing it. Do not keep borrowed pointers from `withUnsafeBytes` after the closure returns. See <doc:NativeBuffers>.
 
 ## Remove the callback
 
-Call `await output.setOnFrameCallback(nil)` to stop accepting frames. Removing the callback does not cancel work already running on your worker queue. Let that work finish and release its retained frame.
+Call `await output.setFrameHandler(nil)` to stop accepting frames. Removing the callback does not cancel work already running on your worker queue. Let that work finish and release its retained frame.
 
 For processing that fits within the frame budget, staying in the original callback avoids this additional queue. See <doc:NativeProcessing>.
 

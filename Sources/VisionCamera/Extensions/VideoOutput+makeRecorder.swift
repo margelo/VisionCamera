@@ -7,7 +7,7 @@ extension VideoOutput {
   ///
   /// - Returns: A prepared Recorder that can be started once.
   /// - Throws: An error if the recording pipeline cannot be prepared.
-  public func makeRecorder() async throws -> any Recorder {
+  public func makeRecorder() async throws -> Recording {
     return try await makeRecorder(settings: .init())
   }
 }

@@ -1,22 +1,21 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 import AVFoundation
+import CoreGraphics
 
-/// Represents any kind of scanned object.
-/// See ``ScannedCode``
-/// See ``ScannedFace``
-public final class MetadataObject: ScannedObject {
+/// A scanned metadata object without a more specific code or face representation.
+public struct MetadataObject: ScannedObject {
   /// The retained native AVFoundation metadata object.
   public let object: AVMetadataObject
 
-  /// Creates a MetadataObject that retains the given native AVFoundation metadata object.
+  /// Creates a value retaining a native metadata object.
   public init(object: AVMetadataObject) { self.object = object }
 
   /// The native metadata type, including types introduced by newer Apple SDKs.
   public var type: AVMetadataObject.ObjectType { object.type }
   /// The bounding box coordinates of this ``ScannedObject``.
   ///
-  /// Coordinates are in camera-space (`0.0` ... `1.0`), and can be
-  /// converted to view-space via the ``PreviewView``.
-  public var boundingBox: BoundingBox { BoundingBox(object.bounds) }
+  /// ``ObjectOutput`` delivers normalized Camera coordinates. Values converted through ``PreviewView``
+  /// use the preview view's coordinate system instead.
+  public var bounds: CGRect { object.bounds }
 }

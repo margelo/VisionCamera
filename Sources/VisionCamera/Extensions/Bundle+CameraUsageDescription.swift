@@ -1,15 +1,19 @@
 import Foundation
 
 extension Bundle {
-  func requireCameraUsageDescription() throws {
-    guard object(forInfoDictionaryKey: "NSCameraUsageDescription") != nil else {
-      throw CameraError(message: "Add NSCameraUsageDescription to Info.plist before requesting camera access.")
+  func requireCameraUsageDescription() throws(PermissionError) {
+    guard let description = object(forInfoDictionaryKey: "NSCameraUsageDescription") as? String,
+      !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else {
+      throw PermissionError.missingUsageDescription(key: "NSCameraUsageDescription")
     }
   }
 
-  func requireMicrophoneUsageDescription() throws {
-    guard object(forInfoDictionaryKey: "NSMicrophoneUsageDescription") != nil else {
-      throw CameraError(message: "Add NSMicrophoneUsageDescription to Info.plist before requesting microphone access.")
+  func requireMicrophoneUsageDescription() throws(PermissionError) {
+    guard let description = object(forInfoDictionaryKey: "NSMicrophoneUsageDescription") as? String,
+      !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else {
+      throw PermissionError.missingUsageDescription(key: "NSMicrophoneUsageDescription")
     }
   }
 }

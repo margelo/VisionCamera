@@ -9,16 +9,17 @@ The Camera uses a native normalized coordinate system with values between `0` an
 A ``PreviewView`` provides conversions to and from Camera coordinates:
 
 ```swift
+import CoreGraphics
 import VisionCamera
 
 @MainActor
-func cameraPoint(viewPoint: Point, preview: PreviewView) throws -> Point {
-	return try preview.convertViewPointToCameraPoint(viewPoint: viewPoint)
+func cameraPoint(viewPoint: CGPoint, preview: PreviewView) throws -> CGPoint {
+	return try preview.cameraPoint(from: viewPoint)
 }
 
 @MainActor
-func viewPoint(cameraPoint: Point, preview: PreviewView) throws -> Point {
-	return try preview.convertCameraPointToViewPoint(cameraPoint: cameraPoint)
+func viewPoint(cameraPoint: CGPoint, preview: PreviewView) throws -> CGPoint {
+	return try preview.point(fromCameraPoint: cameraPoint)
 }
 ```
 
@@ -26,7 +27,7 @@ View coordinates are measured in UIKit points relative to the preview's bounds. 
 
 ### Scanned objects
 
-Use `convertScannedObjectCoordinatesToViewCoordinates(scannedObject:)` to convert all coordinates in a ``ScannedObject``. See <doc:ScannedObjects>.
+Use `convertedToViewCoordinates()` to convert all coordinates in a ``ScannedObject``. See <doc:ScannedObjects>.
 
 ### Metering points
 
@@ -34,21 +35,22 @@ A ``MeteringPoint`` provides a convenient way to convert tap coordinates to Came
 
 ## Frame coordinates
 
-Frames use pixel coordinates in their native buffer dimensions. Use `convertFramePointToCameraPoint(framePoint:)` or `convertCameraPointToFramePoint(cameraPoint:)` to convert between frame pixels and normalized Camera coordinates.
+Frames use pixel coordinates in their native buffer dimensions. Use `cameraPoint(from:)` or `point(fromCameraPoint:)` to convert between frame pixels and normalized Camera coordinates.
 
 Putting the conversions together maps a detected point in a frame to the preview:
 
 ```swift
+import CoreGraphics
 import VisionCamera
 
 @MainActor
 func overlayPoint(
-	framePoint: Point,
+	framePoint: CGPoint,
 	frame: Frame,
 	preview: PreviewView
-) throws -> Point {
-	let cameraPoint = try frame.convertFramePointToCameraPoint(framePoint: framePoint)
-	return try preview.convertCameraPointToViewPoint(cameraPoint: cameraPoint)
+) throws -> CGPoint {
+	let cameraPoint = try frame.cameraPoint(from: framePoint)
+	return try preview.point(fromCameraPoint: cameraPoint)
 }
 ```
 
@@ -56,6 +58,6 @@ This is useful when your processing detects an object and you want to display an
 
 ## Depth coordinates
 
-``Depth`` provides `convertDepthPointToCameraPoint(depthPoint:)` and `convertCameraPointToDepthPoint(cameraPoint:)` for depth-map coordinates. Keep the depth map's dimensions and calibration in mind when comparing it with video pixels.
+``Depth`` provides `cameraPoint(from:)` and `point(fromCameraPoint:)` for depth-map coordinates. Keep the depth map's dimensions and calibration in mind when comparing it with video pixels.
 
 <!-- Adapted from react-native-vision-camera/docs/content/docs: coordinate-systems. -->

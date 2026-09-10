@@ -14,7 +14,11 @@ import Foundation
 /// - Physical: The 0.5x ultra-wide-angle Camera
 /// - Virtual: The Triple-Camera consisting of the 0.5x, the 1x, and the 3x Camera
 /// - TrueDepth Face ID: A virtual Camera consisting of a color, and a depth Camera
-public final class CameraDevice {
+///
+/// A Camera Device is a value that identifies a live AVFoundation device. Copies refer
+/// to the same hardware and compare equal when their ``id`` values match.
+/// Capabilities are read from the underlying device when accessed.
+public struct CameraDevice: Identifiable, Hashable {
   /// The underlying AVFoundation capture device.
   public let device: AVCaptureDevice
 
@@ -25,7 +29,7 @@ public final class CameraDevice {
 
   /// Get a list of all supported ``PixelFormat``s this
   /// ``CameraDevice`` can stream in.
-  public lazy var supportedPixelFormats: [PixelFormat] = {
+  public var supportedPixelFormats: [PixelFormat] {
     let videoFormats = device.formats
     let depthFormats = device.formats.flatMap { $0.supportedDepthDataFormats }
     let allFormats = videoFormats + depthFormats
@@ -33,7 +37,7 @@ public final class CameraDevice {
       allFormats
       .map { PixelFormat(mediaSubType: $0.formatDescription.mediaSubType) }
       .withoutDuplicates()
-  }()
+  }
 
   /// Get a list of all supported resolutions this ``CameraDevice``
   /// can produce for outputs of the given ``StreamType``.
@@ -55,16 +59,16 @@ public final class CameraDevice {
   /// See ``PhotoOutputOptions/targetResolution``
   /// See ``FrameOutputOptions/targetResolution``
   /// See ``DepthOutputOptions/targetResolution``
-  /// See ``ResolutionBiasConstraint``
+  /// See ``Constraint/resolution(_:)``
   ///
   /// ```swift
-  /// let resolutions = device.getSupportedResolutions(streamType: .photo)
+  /// let resolutions = device.supportedResolutions(for: .photo)
   /// ```
-  public func getSupportedResolutions(streamType: StreamType) -> [Size] {
+  public func supportedResolutions(for streamType: StreamType) -> [CGSize] {
     return device.formats
       .flatMap { $0.supportedResolutions(for: streamType) }
       .withoutDuplicates()
-      .map { Size(dimensions: $0) }
+      .map { CGSize(width: Int($0.width), height: Int($0.height)) }
   }
 
   /// Gets all available Frame Rate Ranges this
@@ -73,29 +77,29 @@ public final class CameraDevice {
   /// Frame Rates are expressed in FPS (Frames per Second),
   /// for example `60` refers to 60 FPS (= 16.666ms per Frame).
   ///
-  /// Use ``CameraDevice/supportsFPS(fps:)`` as a convenience
+  /// Use ``CameraDevice/supports(frameRate:)`` as a convenience
   /// method to find out if a given fixed frame rate is supported
   /// individually.
   ///
-  /// While a device may support a given FPS ``CameraRange``
+  /// While a device may support a given FPS `ClosedRange<Double>`
   /// individually, it is not guaranteed to be supported with all
   /// possible feature and output combinations.
   ///
-  /// The ``Constraint`` API (specifically ``FPSConstraint``)
-  /// internally negotiates the target ``FPSConstraint/fps``
-  /// with other enabled features (such as ``VideoStabilizationModeConstraint``)
+  /// The ``Constraint`` API (specifically ``Constraint/frameRate(_:)``)
+  /// internally negotiates the target ``Constraint/frameRate(_:)``
+  /// with other enabled features (such as ``Constraint/videoStabilization(_:)``)
   /// and all connected ``CameraOutput``s to find a best-matching
   /// supported combination on this device.
   ///
   /// Resolve the desired outputs and constraints with
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// before starting a session. Connected-output support is checked when configuring the session.
-  public lazy var supportedFPSRanges: [CameraRange] = {
+  public var supportedFrameRateRanges: [ClosedRange<Double>] {
     return device.formats
       .flatMap { $0.videoSupportedFrameRateRanges }
       .withoutDuplicates()
-      .map { CameraRange(range: $0) }
-  }()
+      .map { $0.minFrameRate...$0.maxFrameRate }
+  }
 
   /// Get a list of all ``DynamicRange``s this
   /// ``CameraDevice`` supports streaming at,
@@ -115,19 +119,19 @@ public final class CameraDevice {
   /// individually, it is not guaranteed to be supported with all
   /// possible feature and output combinations.
   ///
-  /// The ``Constraint`` API (specifically ``VideoDynamicRangeConstraint``)
+  /// The ``Constraint`` API (specifically ``Constraint/videoDynamicRange(_:)``)
   /// internally negotiates the target Dynamic Range with
-  /// other enabled features (such as ``ResolutionBiasConstraint`` or
-  /// ``FPSConstraint``) and all connected ``CameraOutput``s
+  /// other enabled features (such as ``Constraint/resolution(_:)`` or
+  /// ``Constraint/frameRate(_:)``) and all connected ``CameraOutput``s
   /// to find a best-matching supported combination on this device.
   ///
   /// Resolve the desired outputs and constraints with
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// before starting a session. Connected-output support is checked when configuring the session.
   ///
-  /// See ``VideoDynamicRangeConstraint/videoDynamicRange``
+  /// See ``Constraint/videoDynamicRange(_:)``
   /// See ``VideoOutput``
-  public lazy var supportedVideoDynamicRanges: [DynamicRange] = {
+  public var supportedVideoDynamicRanges: [DynamicRange] {
     return device.formats
       .flatMap { format in
         return format.supportedColorSpaces.map { colorSpace in
@@ -138,7 +142,7 @@ public final class CameraDevice {
         }
       }
       .withoutDuplicates()
-  }()
+  }
 
   /// Returns whether this ``CameraDevice``
   /// supports streaming to the given `output`.
@@ -149,7 +153,10 @@ public final class CameraDevice {
   /// For example, Depth Frame Outputs (``DepthOutput``)
   /// may not be supported on all ``CameraDevice``s - see
   /// ``CameraDevice/mediaTypes``.
-  public func supportsOutput(output: any CameraOutput) -> Bool {
+  public func supports(_ output: some CameraOutput) -> Bool {
+    if output is any NativePreviewViewOutput {
+      return device.hasMediaType(.video)
+    }
     guard let output = output as? any NativeCameraOutput else {
       // Not a NativeCameraOutput!
       return false
@@ -157,27 +164,27 @@ public final class CameraDevice {
     return device.formats.contains { $0.supportsOutput(output.output) }
   }
 
-  /// Gets whether the given `fps` is individually supported
-  /// by any of the ``CameraDevice/supportedFPSRanges`` on this ``CameraDevice``.
+  /// Gets whether the given `frameRate` is individually supported
+  /// by any of the ``CameraDevice/supportedFrameRateRanges`` on this ``CameraDevice``.
   ///
-  /// While a device may support a given FPS ``CameraRange``
+  /// While a device may support a given FPS `ClosedRange<Double>`
   /// individually, it is not guaranteed to be supported with all
   /// possible feature and output combinations.
   ///
-  /// The ``Constraint`` API (specifically ``FPSConstraint``)
-  /// internally negotiates the target ``FPSConstraint/fps``
-  /// with other enabled features (such as ``VideoStabilizationModeConstraint``)
+  /// The ``Constraint`` API (specifically ``Constraint/frameRate(_:)``)
+  /// internally negotiates the target ``Constraint/frameRate(_:)``
+  /// with other enabled features (such as ``Constraint/videoStabilization(_:)``)
   /// and all connected ``CameraOutput``s to find a best-matching
   /// supported combination on this device.
   ///
   /// Resolve the desired outputs and constraints with
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// before starting a session. Connected-output support is checked when configuring the session.
   ///
-  /// See ``CameraDevice/supportedFPSRanges``
-  public func supportsFPS(fps: Double) -> Bool {
-    return supportedFPSRanges.contains { range in
-      fps >= range.min && fps <= range.max
+  /// See ``CameraDevice/supportedFrameRateRanges``
+  public func supports(frameRate: Double) -> Bool {
+    return supportedFrameRateRanges.contains { range in
+      range.contains(frameRate)
     }
   }
 
@@ -190,14 +197,14 @@ public final class CameraDevice {
   /// possible feature and output combinations.
   ///
   /// The ``Constraint`` API (specifically
-  /// ``VideoStabilizationModeConstraint``) internally
-  /// negotiates the target ``VideoStabilizationModeConstraint/videoStabilizationMode``
-  /// with other enabled features (such as ``FPSConstraint``) and
+  /// ``Constraint/videoStabilization(_:)``) internally
+  /// negotiates the target ``Constraint/videoStabilization(_:)``
+  /// with other enabled features (such as ``Constraint/frameRate(_:)``) and
   /// all connected ``CameraOutput``s to find a best-matching
   /// supported combination on this device.
   ///
   /// Resolve the desired outputs and constraints with
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// before starting a session. Connected-output support is checked when configuring the session.
   public func supportsVideoStabilizationMode(videoStabilizationMode: TargetStabilizationMode) -> Bool {
     guard let stabilizationMode = videoStabilizationMode.toAVCaptureVideoStabilizationMode() else { return false }
@@ -213,14 +220,14 @@ public final class CameraDevice {
   /// possible feature and output combinations.
   ///
   /// The ``Constraint`` API (specifically
-  /// ``PreviewStabilizationModeConstraint``) internally
-  /// negotiates the target ``PreviewStabilizationModeConstraint/previewStabilizationMode``
-  /// with other enabled features (such as ``FPSConstraint``) and
+  /// ``Constraint/previewStabilization(_:)``) internally
+  /// negotiates the target ``Constraint/previewStabilization(_:)``
+  /// with other enabled features (such as ``Constraint/frameRate(_:)``) and
   /// all connected ``CameraOutput``s to find a best-matching
   /// supported combination on this device.
   ///
   /// Resolve the desired outputs and constraints with
-  /// ``VisionCamera/resolveConstraints(device:outputConfigurations:constraints:requiresMultiCam:)``
+  /// ``VisionCamera/resolve(_:for:outputs:requiresMultiCam:)``
   /// before starting a session. Connected-output support is checked when configuring the session.
   public func supportsPreviewStabilizationMode(previewStabilizationMode: TargetStabilizationMode) -> Bool {
     // Each output has its own connection, but the active format defines the same supported modes.
@@ -270,8 +277,9 @@ public final class CameraDevice {
   /// physical devices this virtual device is made of.
   ///
   /// For physical devices, this returns an empty array.
-  public lazy var physicalDevices: [CameraDevice] =
+  public var physicalDevices: [CameraDevice] {
     device.constituentDevices.map { CameraDevice(device: $0) }
+  }
 
   /// Gets whether this ``CameraDevice``
   /// is a virtual device, which consists of two or
@@ -315,11 +323,11 @@ public final class CameraDevice {
 
   /// Gets whether this ``CameraDevice``
   /// supports smoothly adjusting focus via
-  /// ``CameraControllerConfiguration/enableSmoothAutoFocus``.
+  /// ``CameraControllerConfiguration/isSmoothAutoFocusEnabled``.
   ///
   /// ```swift
-  /// try await controller.configure(config: CameraControllerConfiguration(
-  ///   enableSmoothAutoFocus: device.supportsSmoothAutoFocus
+  /// try await controller.configure(CameraControllerConfiguration(
+  ///   isSmoothAutoFocusEnabled: device.supportsSmoothAutoFocus
   /// ))
   /// ```
   public var supportsSmoothAutoFocus: Bool {
@@ -350,7 +358,7 @@ public final class CameraDevice {
 
   /// Whether the device has a torch for continuous illumination.
   ///
-  /// Use ``CameraController/setTorchMode(mode:)`` to select a native torch mode, or
+  /// Use ``CameraController/setTorchMode(_:)`` to select a native torch mode, or
   /// ``CameraController/setTorchModeOn(level:)`` to turn it on at a chosen brightness.
   public var hasTorch: Bool {
     return device.hasTorch
@@ -358,11 +366,11 @@ public final class CameraDevice {
 
   /// Whether this ``CameraDevice`` supports
   /// enabling low-light boost to improve exposure in
-  /// dark scenes via ``CameraControllerConfiguration/enableLowLightBoost``.
+  /// dark scenes via ``CameraControllerConfiguration/isLowLightBoostEnabled``.
   ///
   /// ```swift
-  /// try await controller.configure(config: CameraControllerConfiguration(
-  ///   enableLowLightBoost: device.supportsLowLightBoost
+  /// try await controller.configure(CameraControllerConfiguration(
+  ///   isLowLightBoostEnabled: device.supportsLowLightBoost
   /// ))
   /// ```
   public var supportsLowLightBoost: Bool {
@@ -411,14 +419,14 @@ public final class CameraDevice {
   /// Whether the ``CameraDevice`` supports
   /// distortion correction to correct stretched edges
   /// in wide-angle Cameras during Photo capture.
-  /// See ``CapturePhotoSettings/enableDistortionCorrection``
+  /// See ``CapturePhotoSettings/isDistortionCorrectionEnabled``
   public var supportsDistortionCorrection: Bool {
     return device.isGeometricDistortionCorrectionSupported
   }
 
   /// Gets whether this ``CameraDevice``
   /// supports metering auto-focus (``MeteringMode/af``)
-  /// via ``CameraController/focusTo(point:options:)``.
+  /// via ``CameraController/focus(at:options:)``.
   public var supportsFocusMetering: Bool {
     return device.isFocusPointOfInterestSupported
       && (device.isFocusModeSupported(.autoFocus) || device.isFocusModeSupported(.continuousAutoFocus))
@@ -433,14 +441,14 @@ public final class CameraDevice {
 
   /// Whether the device accepts an explicit lens position for manual focus.
   ///
-  /// See ``CameraController/setFocusLocked(lensPosition:)``.
+  /// See ``CameraController/lockFocus(at:)``.
   public var supportsCustomLensPosition: Bool {
     return device.isLockingFocusWithCustomLensPositionSupported
   }
 
   /// Gets whether this ``CameraDevice``
   /// supports metering auto-exposure (``MeteringMode/ae``)
-  /// via ``CameraController/focusTo(point:options:)``.
+  /// via ``CameraController/focus(at:options:)``.
   public var supportsExposureMetering: Bool {
     return device.isExposurePointOfInterestSupported
       && (device.isExposureModeSupported(.autoExpose) || device.isExposureModeSupported(.continuousAutoExposure))
@@ -455,14 +463,14 @@ public final class CameraDevice {
 
   /// Whether the device accepts an explicit exposure duration and ISO.
   ///
-  /// See ``CameraController/setExposureLocked(duration:iso:)``.
+  /// See ``CameraController/lockExposure(duration:iso:)``.
   public var supportsCustomExposure: Bool {
     return device.isExposureModeSupported(.custom)
   }
 
   /// Gets whether this ``CameraDevice``
   /// supports metering auto-white-balance (``MeteringMode/awb``)
-  /// via ``CameraController/focusTo(point:options:)``.
+  /// via ``CameraController/focus(at:options:)``.
   public var supportsWhiteBalanceMetering: Bool {
     return device.isWhiteBalanceModeSupported(.autoWhiteBalance)
       || device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance)
@@ -477,7 +485,7 @@ public final class CameraDevice {
 
   /// Whether the device accepts explicit red, green, and blue white-balance gains.
   ///
-  /// See ``CameraController/setWhiteBalanceLocked(whiteBalanceGains:)``.
+  /// See ``CameraController/lockWhiteBalance(gains:)``.
   public var supportsCustomWhiteBalanceGains: Bool {
     return device.isLockingWhiteBalanceWithCustomDeviceGainsSupported
   }
@@ -501,8 +509,8 @@ public final class CameraDevice {
   ///
   /// This checks frame rate, stabilization, and dynamic range against the selected format. It does not
   /// validate output connections, multi-camera hardware cost, or current system conditions. The session
-  /// validates connected outputs during ``CameraSession/configure(connections:config:)``.
-  public func isSessionConfigSupported(config: CameraSessionConfig) -> Bool {
+  /// validates connected outputs during ``CameraSession/configure(_:configuration:)``.
+  public func supports(_ config: CameraSessionConfig) -> Bool {
     let format = config.negotiatedFormat.format
     guard device.formats.contains(format) else { return false }
     if let depthFormat = config.negotiatedFormat.depthFormat,
@@ -526,5 +534,15 @@ public final class CameraDevice {
       else { return false }
     }
     return true
+  }
+
+  /// Returns whether two values identify the same Camera device.
+  public static func == (lhs: CameraDevice, rhs: CameraDevice) -> Bool {
+    lhs.id == rhs.id
+  }
+
+  /// Hashes the Camera's stable unique identifier.
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(id)
   }
 }

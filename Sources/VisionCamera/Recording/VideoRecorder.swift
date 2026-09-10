@@ -13,21 +13,31 @@ import Foundation
 public final class VideoRecorder: Recorder {
   private let videoOutput: AVCaptureMovieFileOutput
   private let queue: DispatchQueue
-  private let fileURL: URL
+  private let coordinator: MovieFileRecordingCoordinator
+  private let recordingID = UUID()
+  /// The file URL this recorder is recording, or will record, to.
+  public let fileURL: URL
   private let settings: RecorderSettings
+  private let locationMetadata: AVMetadataItem?
   private var isCancelled = false
+  private var hasStarted = false
   private var activeDelegate: VideoDelegate?
+  private var terminalStatus = RecordingStatus(isRecording: false, isPaused: false, duration: .invalid, fileSize: 0)
 
   init(
     videoOutput: AVCaptureMovieFileOutput,
     queue: DispatchQueue,
+    coordinator: MovieFileRecordingCoordinator,
     fileType: RecorderFileType,
     settings: RecorderSettings
   ) throws {
     self.videoOutput = videoOutput
     self.queue = queue
-    if let customFilePath = settings.filePath {
-      self.fileURL = URL(fileURLWithPath: customFilePath)
+    self.coordinator = coordinator
+    try settings.validate()
+    self.locationMetadata = try settings.location?.toAVMutableMetadataItem()
+    if let fileURL = settings.fileURL {
+      self.fileURL = fileURL
     } else {
       self.fileURL = try URL.createTempURL(fileType: fileType.toUTType())
     }
@@ -39,59 +49,82 @@ public final class VideoRecorder: Recorder {
     self.settings = settings
   }
 
-  /// Returns whether the output is currently recording.
-  public var isRecording: Bool {
-    return videoOutput.isRecording
-  }
-  /// Returns whether the current recording is paused.
-  public var isPaused: Bool {
-    guard #available(iOS 18.0, *) else {
-      return false
+  /// Reads this recorder's state and native file progress on the output's owning queue.
+  ///
+  /// Before this recorder starts, duration is invalid and file size is zero. After recording finishes,
+  /// this returns its final progress even when another recorder uses the same output.
+  /// - Returns: The current recording status.
+  public func status() async -> RecordingStatus {
+    return await queue.perform {
+      guard self.activeDelegate != nil else { return self.terminalStatus }
+      return self.currentStatus()
     }
-    return videoOutput.isRecordingPaused
   }
-  /// Returns the currently recorded duration, in seconds.
-  public var recordedDuration: Double {
-    return videoOutput.recordedDuration.seconds
+
+  private func currentStatus() -> RecordingStatus {
+    let isPaused: Bool
+    if #available(iOS 18.0, *) {
+      isPaused = videoOutput.isRecordingPaused
+    } else {
+      isPaused = false
+    }
+    return RecordingStatus(
+      isRecording: videoOutput.isRecording,
+      isPaused: isPaused,
+      duration: videoOutput.recordedDuration,
+      fileSize: videoOutput.recordedFileSize)
   }
-  /// Returns the currently recorded file size, in bytes.
-  public var recordedFileSize: Int64 {
-    return videoOutput.recordedFileSize
-  }
-  /// Returns the absolute filesystem path to the file this recorder is recording, or will record, to. This is a path such as `/var/mobile/.../video.mov`, not a `file://` URL.
-  public var filePath: String {
-    return fileURL.path
+
+  private func recordingDidFinish() {
+    let status = currentStatus()
+    terminalStatus = RecordingStatus(
+      isRecording: false, isPaused: false, duration: status.duration, fileSize: status.fileSize)
+    activeDelegate = nil
+    coordinator.release(for: recordingID)
   }
 
   /// Starts recording to the file selected when this recorder was created.
   ///
-  /// Returns once recording has successfully started. Read `filePath` for the filesystem path being recorded to, or use the path delivered to `onRecordingFinished` after finalization. Neither path is a `file://` URL.
+  /// Returns once recording has successfully started. Read ``fileURL`` for the destination, or use the ``RecordingResult`` delivered to `onFinished` after finalization.
   /// The recording continues after this method returns. Completion or failure is reported through the callbacks.
   /// Callbacks run on the recorder's owning serial queue. Move UIKit work to the main actor.
   ///
-  /// - Parameter onRecordingFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
-  /// - Parameter onRecordingError: Called when an unexpected error occurs while recording.
-  /// - Parameter onRecordingPaused: Called when recording pauses.
-  /// - Parameter onRecordingResumed: Called when recording resumes.
+  /// - Parameter onFinished: Called when recording finishes and the file has been written, including when a configured duration or file-size limit is reached.
+  /// - Parameter onError: Called when an unexpected error occurs while recording.
+  /// - Parameter onPaused: Called when recording pauses.
+  /// - Parameter onResumed: Called when recording resumes.
   /// - Throws: If the output is disconnected, a recording is already active, or recording fails to start.
-  public func startRecording(
-    onRecordingFinished: @escaping (_ filePath: String, _ reason: RecordingFinishedReason) -> Void,
-    onRecordingError: @escaping (_ error: Error) -> Void,
-    onRecordingPaused: (() -> Void)? = nil,
-    onRecordingResumed: (() -> Void)? = nil
+  public func start(
+    onFinished: @escaping (_ result: RecordingResult) -> Void,
+    onError: @escaping (_ error: Error) -> Void,
+    onPaused: (() -> Void)? = nil,
+    onResumed: (() -> Void)? = nil
   ) async throws {
+    try Task.checkCancellation()
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       queue.async(
         execute: DispatchWorkItem {
           guard self.videoOutput.connection(with: .video) != nil else {
-            continuation.resume(throwing: CameraError(message: "VideoOutput is not yet connected to the CameraSession!"))
+            continuation.resume(throwing: RecordingError.outputNotConnected)
+            return
+          }
+          guard !self.hasStarted else {
+            continuation.resume(throwing: RecordingError.alreadyStarted)
             return
           }
           guard self.activeDelegate == nil, !self.videoOutput.isRecording else {
-            continuation.resume(throwing: CameraError(message: "Active recording already in progress!"))
+            continuation.resume(throwing: RecordingError.recordingInProgress)
             return
           }
+          do {
+            try self.coordinator.reserve(for: self.recordingID)
+          } catch {
+            continuation.resume(throwing: error)
+            return
+          }
+          self.videoOutput.applyLocationMetadata(self.locationMetadata)
           var didStart = false
+          self.hasStarted = true
           self.isCancelled = false
           let delegate = VideoDelegate(
             queue: self.queue,
@@ -99,31 +132,31 @@ public final class VideoRecorder: Recorder {
               didStart = true
               continuation.resume()
             },
-            onRecordingPaused: onRecordingPaused,
-            onRecordingResumed: onRecordingResumed,
+            onRecordingPaused: onPaused,
+            onRecordingResumed: onResumed,
             onRecordingFinished: { url, reason in
-              self.activeDelegate = nil
-              if !didStart {
-                continuation.resume(throwing: CameraError(message: "Recording finished before it started."))
+              self.recordingDidFinish()
+              if self.isCancelled { try? FileManager.default.removeItem(at: url) }
+              guard didStart else {
+                continuation.resume(throwing: RecordingError.finishedBeforeStarting)
+                return
               }
-              if self.isCancelled {
-                try? FileManager.default.removeItem(at: url)
-              } else {
-                onRecordingFinished(url.path, reason)
+              if !self.isCancelled {
+                onFinished(RecordingResult(fileURL: url, reason: reason))
               }
             },
             onRecordingError: { error in
-              self.activeDelegate = nil
+              self.recordingDidFinish()
               if !didStart {
                 continuation.resume(throwing: error)
               } else if !self.isCancelled {
-                onRecordingError(error)
+                onError(error)
               }
               if self.isCancelled { try? FileManager.default.removeItem(at: self.fileURL) }
             })
           self.activeDelegate = delegate
           if let duration = self.settings.maxDuration {
-            self.videoOutput.maxRecordedDuration = CMTime(seconds: duration, preferredTimescale: 600)
+            self.videoOutput.maxRecordedDuration = duration
           } else {
             self.videoOutput.maxRecordedDuration = .invalid
           }
@@ -135,24 +168,25 @@ public final class VideoRecorder: Recorder {
 
   /// Requests the Video recording to be stopped.
   ///
-  /// Once the recording has actually stopped and the file is written, the `onRecordingFinished` callback passed to `startRecording` is called. Returning from this method does not mean the file is finalized. Stopping a recording that is already stopped has no effect.
-  public func stopRecording() async {
+  /// Once the recording has actually stopped and the file is written, the `onFinished` callback passed to `start` is called. Returning from this method does not mean the file is finalized. Stopping a recording that is already stopped has no effect.
+  public func stop() async {
     return await queue.perform {
+      guard self.activeDelegate != nil else { return }
       self.videoOutput.stopRecording()
     }
   }
 
   /// Requests the Video recording to be paused.
   /// Once the recording has actually been paused,
-  /// the `onRecordingPaused` callback passed to
-  /// ``VideoRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
+  /// the `onPaused` callback passed to
+  /// ``VideoRecorder/start(onFinished:onError:onPaused:onResumed:)`` will be called.
   ///
-  /// - Throws: On iOS versions earlier than iOS 18.
-  public func pauseRecording() async throws {
+  /// - Throws: If this recorder has no active recording, or on iOS versions earlier than iOS 18.
+  public func pause() async throws {
     return try await queue.perform {
+      guard self.activeDelegate != nil else { throw RecordingError.notRecording }
       guard #available(iOS 18.0, *) else {
-        throw CameraError(
-          message: "`pauseRecording()` is only available on iOS 18 or above!")
+        throw RecordingError.pauseRequiresIOS18
       }
       self.videoOutput.pauseRecording()
     }
@@ -161,15 +195,15 @@ public final class VideoRecorder: Recorder {
   /// Requests the currently paused Video recording
   /// to be resumed.
   /// Once the recording has actually been resumed,
-  /// the `onRecordingResumed` callback passed to
-  /// ``VideoRecorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)`` will be called.
+  /// the `onResumed` callback passed to
+  /// ``VideoRecorder/start(onFinished:onError:onPaused:onResumed:)`` will be called.
   ///
-  /// - Throws: On iOS versions earlier than iOS 18.
-  public func resumeRecording() async throws {
+  /// - Throws: If this recorder has no active recording, or on iOS versions earlier than iOS 18.
+  public func resume() async throws {
     return try await queue.perform {
+      guard self.activeDelegate != nil else { throw RecordingError.notRecording }
       guard #available(iOS 18.0, *) else {
-        throw CameraError(
-          message: "`resumeRecording()` is only available on iOS 18 or above!")
+        throw RecordingError.resumeRequiresIOS18
       }
       self.videoOutput.resumeRecording()
     }
@@ -179,12 +213,12 @@ public final class VideoRecorder: Recorder {
   /// the video file.
   ///
   /// Requests stopping, then deletes the file when AVFoundation finishes. Completion and error callbacks are suppressed for cancellation. Throws if no recording is active.
-  public func cancelRecording() async throws {
+  public func cancel() async throws {
     return try await queue.perform {
-      guard self.videoOutput.isRecording else {
-        throw CameraError(message: "Not currently recording!")
+      guard self.activeDelegate != nil, self.videoOutput.isRecording else {
+        throw RecordingError.notRecording
       }
-      // Mark as cancelled so the onRecordingFinished callback
+      // Mark as cancelled so the onFinished callback
       // deletes the file instead of notifying the caller
       self.isCancelled = true
       self.videoOutput.stopRecording()

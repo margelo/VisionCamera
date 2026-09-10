@@ -18,7 +18,7 @@ extension TargetColorSpace {
     }
   }
 
-  func resolve(supportedColorSpaces: [AVCaptureColorSpace]) throws(CameraError) -> ConstraintResolution<ColorSpace> {
+  func resolve(supportedColorSpaces: [AVCaptureColorSpace]) throws(ConfigurationError) -> ConstraintResolution<ColorSpace> {
     var penalty = 0
     var candidate: TargetColorSpace? = self
     while let current = candidate {
@@ -40,6 +40,6 @@ extension TargetColorSpace {
           resolvedValue: colorSpace)
       }
     }
-    throw CameraError(message: "The capture format does not report a supported color space that VisionCamera can configure.")
+    throw ConfigurationError.colorSpacesUnavailable
   }
 }

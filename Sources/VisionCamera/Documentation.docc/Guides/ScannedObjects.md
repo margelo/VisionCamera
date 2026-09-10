@@ -15,13 +15,13 @@ func inspect(objects: [any ScannedObject]) {
 	for object in objects {
 		switch object {
 		case let code as ScannedCode:
-			print("Code:", code.value ?? "", code.cornerPoints)
+			print("Code:", code.value ?? "", code.corners)
 		case let face as ScannedFace:
-			print("Face:", face.faceID)
+			print("Face:", face.id)
 			if let roll = face.rollAngle { print("Roll:", roll) }
 			if let yaw = face.yawAngle { print("Yaw:", yaw) }
 		default:
-			print("Object:", object.type, object.boundingBox)
+			print("Object:", object.type, object.bounds)
 		}
 	}
 }
@@ -39,7 +39,7 @@ Frame and depth samples keep the orientation and mirroring requested by their ou
 
 ## Coordinate conversions
 
-A scanned object's `boundingBox` describes its location in normalized Camera coordinates between `0` and `1`. A scanned code also exposes `cornerPoints`, and a scanned face can expose roll and yaw angles.
+A scanned object's `bounds` describes its location in normalized Camera coordinates between `0` and `1`. A scanned code also exposes `corners`, and a scanned face can expose roll and yaw angles.
 
 Convert the whole result to preview coordinates using ``PreviewView``:
 
@@ -51,7 +51,7 @@ func convertObject(
 	_ object: any ScannedObject,
 	to preview: PreviewView
 ) throws -> any ScannedObject {
-	return try preview.convertScannedObjectCoordinatesToViewCoordinates(scannedObject: object)
+	return try preview.convertedToViewCoordinates( object)
 }
 ```
 

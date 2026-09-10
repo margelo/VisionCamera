@@ -15,12 +15,12 @@ import Foundation
 /// ``CameraController``.
 ///
 /// ```swift
-/// let controllers = try await session.configure(connections: [
+/// let controllers = try await session.configure([
 ///   CameraSessionConnection(input: .device(device), outputs: [])
 /// ])
 /// await session.start()
 /// if let controller = controllers.first {
-///   try await controller.setZoom(zoom: controller.maxZoom)
+///   try await controller.setZoom(controller.maxZoom)
 /// }
 /// ```
 public final class CameraController {
@@ -90,11 +90,11 @@ public final class CameraController {
 
   /// Whether the device is currently applying low-light boost to captured images.
   ///
-  /// You can enable low light boost via ``CameraController/configure(config:)``.
+  /// You can enable low light boost via ``CameraController/configure(_:)``.
   ///
   /// ```swift
   /// if controller.device.supportsLowLightBoost {
-  ///   try await controller.configure(config: CameraControllerConfiguration(enableLowLightBoost: true))
+  ///   try await controller.configure(CameraControllerConfiguration(isLowLightBoostEnabled: true))
   /// }
   /// ```
   public var isLowLightBoostEnabled: Bool {
@@ -104,7 +104,7 @@ public final class CameraController {
   /// Gets whether smooth auto-focus is currently enabled.
   ///
   /// You can enable or disable smooth auto-focus via
-  /// ``CameraController/configure(config:)`` if the ``CameraDevice``
+  /// ``CameraController/configure(_:)`` if the ``CameraDevice``
   /// supports smooth auto-focus
   /// (see ``CameraDevice/supportsSmoothAutoFocus``).
   public var isSmoothAutoFocusEnabled: Bool {
@@ -114,7 +114,7 @@ public final class CameraController {
   /// Gets whether geometric distortion correction is currently enabled.
   ///
   /// You can enable or disable distortion correction via
-  /// ``CameraController/configure(config:)`` if the ``CameraDevice``
+  /// ``CameraController/configure(_:)`` if the ``CameraDevice``
   /// supports distortion correction (see
   /// ``CameraDevice/supportsDistortionCorrection``).
   public var isDistortionCorrectionEnabled: Bool {
@@ -122,19 +122,19 @@ public final class CameraController {
   }
 
   /// Represents the current zoom value.
-  /// Zoom can be set via ``CameraController/setZoom(zoom:)``.
+  /// Zoom can be set via ``CameraController/setZoom(_:)``.
   public var zoom: Double {
     return captureDevice.videoZoomFactor
   }
 
-  /// Represents the minimum value for the ``CameraController/setZoom(zoom:)``
-  /// parameter in ``CameraController/setZoom(zoom:)``.
+  /// Represents the minimum value for the ``CameraController/setZoom(_:)``
+  /// parameter in ``CameraController/setZoom(_:)``.
   public var minZoom: Double {
     return captureDevice.minAvailableVideoZoomFactor
   }
 
-  /// Represents the maximum value for the ``CameraController/setZoom(zoom:)``
-  /// parameter in ``CameraController/setZoom(zoom:)``.
+  /// Represents the maximum value for the ``CameraController/setZoom(_:)``
+  /// parameter in ``CameraController/setZoom(_:)``.
   public var maxZoom: Double {
     return captureDevice.maxAvailableVideoZoomFactor
   }
@@ -160,7 +160,7 @@ public final class CameraController {
 
   /// The native torch mode, including automatic illumination when the device supports it.
   ///
-  /// Set the mode with ``CameraController/setTorchMode(mode:)`` or turn the torch on at a chosen
+  /// Set the mode with ``CameraController/setTorchMode(_:)`` or turn the torch on at a chosen
   /// brightness with ``CameraController/setTorchModeOn(level:)``.
   public var torchMode: AVCaptureDevice.TorchMode {
     return captureDevice.torchMode
@@ -172,8 +172,8 @@ public final class CameraController {
   ///
   /// The ``CameraController/lensPosition`` changes over time (via continuous
   /// auto-focus/3A), when focused to a specific point (via
-  /// ``CameraController/focusTo(point:options:)``), or when locked to
-  /// a specific lens-position value (via ``CameraController/setFocusLocked(lensPosition:)``).
+  /// ``CameraController/focus(at:options:)``), or when locked to
+  /// a specific lens-position value (via ``CameraController/lockFocus(at:)``).
   public var lensPosition: Double {
     return Double(captureDevice.lensPosition)
   }
@@ -182,8 +182,8 @@ public final class CameraController {
   ///
   /// The ``CameraController/exposureDuration`` value changes over time (via
   /// continuous auto-focus/3A), when focused to a specific point (via
-  /// ``CameraController/focusTo(point:options:)``), or when locked to
-  /// a specific duration/ISO value (via ``CameraController/setExposureLocked(duration:iso:)``).
+  /// ``CameraController/focus(at:options:)``), or when locked to
+  /// a specific duration/ISO value (via ``CameraController/lockExposure(duration:iso:)``).
   public var exposureDuration: Double {
     return captureDevice.exposureDuration.seconds
   }
@@ -200,7 +200,7 @@ public final class CameraController {
   /// The default exposure bias is `0`.
   ///
   /// You can set exposure bias to a supported value via
-  /// ``CameraController/setExposureBias(exposure:)``.
+  /// ``CameraController/setExposureBias(_:)``.
   public var exposureBias: Double {
     return Double(captureDevice.exposureTargetBias)
   }
@@ -209,8 +209,8 @@ public final class CameraController {
   ///
   /// The ``CameraController/iso`` value changes over time (via continuous
   /// auto-focus/3A), when focused to a specific point (via
-  /// ``CameraController/focusTo(point:options:)``), or when locked to
-  /// a specific duration/ISO value (via ``CameraController/setExposureLocked(duration:iso:)``).
+  /// ``CameraController/focus(at:options:)``), or when locked to
+  /// a specific duration/ISO value (via ``CameraController/lockExposure(duration:iso:)``).
   public var iso: Double {
     return Double(captureDevice.iso)
   }
@@ -221,35 +221,32 @@ public final class CameraController {
   /// Like a diff-map, setting a value inside the `config`
   /// object to `nil`, causes the prop to be left at whatever
   /// its current value is.
-  public func configure(config: CameraControllerConfiguration) async throws {
+  public func configure(_ configuration: CameraControllerConfiguration) async throws {
     return try await captureDevice.withLock(queue) {
       let device = self.captureDevice
 
-      // `enableLowLightBoost={...}`
-      if let enableLowLightBoost = config.enableLowLightBoost {
+      // Low-light boost
+      if let enableLowLightBoost = configuration.isLowLightBoostEnabled {
         guard device.isLowLightBoostSupported else {
-          throw CameraError(
-            message: "This CameraDevice does not support `enableLowLightBoost`!")
+          throw CameraControlError.unsupportedFeature(.lowLightBoost)
         }
         device.automaticallyEnablesLowLightBoostWhenAvailable = enableLowLightBoost
       }
 
-      // `enableSmoothAutoFocus={...}`
-      if let enableSmoothAutoFocus = config.enableSmoothAutoFocus {
+      // Smooth autofocus
+      if let enableSmoothAutoFocus = configuration.isSmoothAutoFocusEnabled {
         guard device.isSmoothAutoFocusSupported else {
-          throw CameraError(
-            message: "This CameraDevice does not support `enableSmoothAutoFocus`!")
+          throw CameraControlError.unsupportedFeature(.smoothAutoFocus)
         }
         device.isSmoothAutoFocusEnabled = enableSmoothAutoFocus
       }
 
-      // `enableDistortionCorrection={...}`
-      if let enableDistortionCorrection = config.enableDistortionCorrection {
+      // Distortion correction
+      if let isDistortionCorrectionEnabled = configuration.isDistortionCorrectionEnabled {
         guard device.isGeometricDistortionCorrectionSupported else {
-          throw CameraError(
-            message: "This CameraDevice does not support `enableDistortionCorrection`!")
+          throw CameraControlError.unsupportedFeature(.distortionCorrection)
         }
-        device.isGeometricDistortionCorrectionEnabled = enableDistortionCorrection
+        device.isGeometricDistortionCorrectionEnabled = isDistortionCorrectionEnabled
       }
     }
   }
@@ -261,18 +258,16 @@ public final class CameraController {
   /// value. See ``CameraDevice/minZoom`` / ``CameraDevice/maxZoom``
   ///
   /// ```swift
-  /// try await controller.setZoom(zoom: 2)
+  /// try await controller.setZoom(2)
   /// ```
-  public func setZoom(zoom: Double) async throws {
+  public func setZoom(_ zoom: Double) async throws {
     return try await captureDevice.withLock(queue) {
       // 1. Ensure zoom is within valid range
       let device = self.captureDevice
       guard zoom >= device.minAvailableVideoZoomFactor && zoom <= device.maxAvailableVideoZoomFactor
       else {
-        throw CameraError(
-          message:
-            "`zoom` is not within the device's `minZoom` and `maxZoom` range! (Received: \(zoom), `device.minZoom`: \(device.minAvailableVideoZoomFactor), `device.maxZoom`: \(device.maxAvailableVideoZoomFactor)"
-        )
+        throw CameraControlError.valueOutOfRange(
+          parameter: .zoom, value: zoom, allowed: device.minAvailableVideoZoomFactor...device.maxAvailableVideoZoomFactor)
       }
       // 2. Clamp zoom to the active format's max zoom (might be slightly smaller than device max zoom)
       let clampedForFormat = min(zoom, device.activeFormat.videoMaxZoomFactor)
@@ -306,40 +301,40 @@ public final class CameraController {
   /// not support metering white-balance (see ``CameraDevice/supportsWhiteBalanceMetering``)
   ///
   /// ```swift
-  /// let point = MeteringPoint(normalizedX: 0.5, normalizedY: 0.5)
-  /// try await controller.focusTo(
-  ///   point: point,
+  /// let point = MeteringPoint(location: CGPoint(x: 0.5, y: 0.5))
+  /// try await controller.focus(
+  ///   at: point,
   ///   options: FocusOptions(responsiveness: .steady)
   /// )
   ///
   /// // Lock focus at a tap until it is reset.
   /// let tapPoint = try previewView.meteringPoint(at: CGPoint(x: tapX, y: tapY))
-  /// try await controller.focusTo(
-  ///   point: tapPoint,
+  /// try await controller.focus(
+  ///   at: tapPoint,
   ///   options: FocusOptions(
   ///     responsiveness: .snappy,
   ///     adaptiveness: .locked,
-  ///     autoResetAfter: .never
+  ///     reset: .never
   ///   )
   /// )
   /// ```
   ///
   /// This method returns once focusing has fully settled, or throws if focusing times out or is canceled. Calling this method again or ``CameraController/resetFocus()`` cancels the previous operation.
   ///
-  /// An omitted ``FocusOptions/autoResetAfter`` resets metering after 5 seconds. Use ``FocusReset/never`` to keep the selected behavior until you reset it.
-  public func focusTo(
-    point: MeteringPoint,
-    options: FocusOptions = FocusOptions()
+  /// An omitted ``FocusOptions/reset`` resets metering after 5 seconds. Use ``FocusReset/never`` to keep the selected behavior until you reset it.
+  public func focus(
+    at point: MeteringPoint,
+    options: FocusOptions = .init()
   ) async throws {
     return try await captureDevice.withLock(queue) { resolve, reject in
       try point.validate()
-      try options.autoResetAfter.validate()
+      try options.reset.validate()
       let responsiveness = options.responsiveness
       let adaptiveness = options.adaptiveness
-      let autoResetAfter = options.autoResetAfter
-      let modes = options.modes ?? self.getAllSupportedMeteringModes()
+      let reset = options.reset
+      let modes = options.modes ?? self.supportedMeteringModes
       guard !modes.isEmpty else {
-        throw CameraError(message: "MeteringModes cannot be empty!")
+        throw CameraControlError.emptyMeteringModes
       }
 
       // Cancel previous tasks
@@ -350,18 +345,18 @@ public final class CameraController {
       let task = MeteringTask(
         device: self.captureDevice,
         adaptiveness: adaptiveness,
-        autoReset: autoResetAfter.toAutoReset(),
+        autoReset: reset.toAutoReset(),
         on: self.queue)
       // AE
       if modes.contains(.ae) {
         try task.startMeteringAE(
-          to: point.toNormalizedPoint(),
+          to: point.location,
           responsiveness: responsiveness)
       }
       // AF
       if modes.contains(.af) {
         try task.startMeteringAF(
-          to: point.toNormalizedPoint(),
+          to: point.location,
           responsiveness: responsiveness)
       }
       // AWB
@@ -380,7 +375,7 @@ public final class CameraController {
   }
 
   /// Get a list of all [MeteringMode]s that are supported on this device.
-  private func getAllSupportedMeteringModes() -> [MeteringMode] {
+  private var supportedMeteringModes: [MeteringMode] {
     var modes: [MeteringMode] = []
     if device.supportsExposureMetering {
       modes.append(.ae)
@@ -395,9 +390,9 @@ public final class CameraController {
     return modes
   }
 
-  /// Cancels any current focus operations from ``CameraController/focusTo(point:options:)``,
+  /// Cancels any current focus operations from ``CameraController/focus(at:options:)``,
   /// resets back all 3A focus modes to continuously auto-focus if they
-  /// have been previously locked (e.g. via ``CameraController/setFocusLocked(lensPosition:)`` or
+  /// have been previously locked (e.g. via ``CameraController/lockFocus(at:)`` or
   /// ``CameraController/lockCurrentFocus()``, and similar), and
   /// resets the focus point of interest to be in the center.
   ///
@@ -437,16 +432,15 @@ public final class CameraController {
   /// substantially changes - e.g. when the user pans away
   /// from a scene previously in focus.
   ///
-  /// Returns a ``ListenerSubscription`` - call
-  /// ``ListenerSubscription/remove`` on it
+  /// Retain the returned ``ObservationToken`` while observing. Cancel or release it
   /// to stop receiving subject-area-change events. Multiple
   /// subscriptions can coexist; the device stops monitoring
   /// subject-area changes only once the last subscription is
   /// removed.
   ///
   /// When manually locking focus (e.g. via
-  /// ``CameraController/focusTo(point:options:)`` with ``FocusOptions/adaptiveness`` set to ``SceneAdaptiveness/locked``,
-  /// ``CameraController/setFocusLocked(lensPosition:)`` (or similar), or
+  /// ``CameraController/focus(at:options:)`` with ``FocusOptions/adaptiveness`` set to ``SceneAdaptiveness/locked``,
+  /// ``CameraController/lockFocus(at:)`` (or similar), or
   /// ``CameraController/lockCurrentFocus()`` (or similar)),
   /// it is useful to listen for subject area changes, to reset focus
   /// again via ``CameraController/resetFocus()``.
@@ -455,18 +449,18 @@ public final class CameraController {
   /// try await controller.lockCurrentExposure()
   /// try await controller.lockCurrentFocus()
   /// try await controller.lockCurrentWhiteBalance()
-  /// let subscription = controller.addSubjectAreaChangedListener {
+  /// let token = controller.observeSubjectAreaChanges {
   ///   Task {
   ///     do { try await controller.resetFocus() }
   ///     catch { print(error.localizedDescription) }
   ///   }
   /// }
   /// // Later, to stop listening:
-  /// subscription.remove()
+  /// token.cancel()
   /// ```
   ///
-  /// The listener runs on the device's subject-area notification delivery thread. Move UIKit work to the main actor.
-  public func addSubjectAreaChangedListener(onSubjectAreaChanged: @escaping () -> Void) -> ListenerSubscription {
+  /// The listener runs on the device's subject-area notification delivery thread. Dispatch UIKit work to the main queue.
+  public func observeSubjectAreaChanges(_ onSubjectAreaChanged: @escaping () -> Void) -> ObservationToken {
     return SubjectAreaMonitor.addObserver(
       device: captureDevice,
       onSubjectAreaDidChange: onSubjectAreaChanged)
@@ -477,12 +471,12 @@ public final class CameraController {
   /// Use `.auto` to let the device illuminate dark scenes when it supports automatic torch control.
   /// Setting `.off` succeeds when the device has no torch.
   /// - Throws: If the device does not support the requested mode.
-  public func setTorchMode(mode: AVCaptureDevice.TorchMode) async throws {
+  public func setTorchMode(_ mode: AVCaptureDevice.TorchMode) async throws {
     return try await captureDevice.withLock(queue) {
       let device = self.captureDevice
       if !device.hasTorch && mode == .off { return }
       guard device.isTorchModeSupported(mode) else {
-        throw CameraError(message: "This CameraDevice does not support torch mode \(mode.rawValue).")
+        throw CameraControlError.unsupportedFeature(.torch)
       }
       device.torchMode = mode
     }
@@ -500,7 +494,7 @@ public final class CameraController {
     try Self.validateTorchLevel(level)
     return try await captureDevice.withLock(queue) {
       guard self.captureDevice.isTorchModeSupported(.on) else {
-        throw CameraError(message: "This CameraDevice does not support turning on the torch.")
+        throw CameraControlError.unsupportedFeature(.torch)
       }
       try self.captureDevice.setTorchModeOn(level: level)
     }
@@ -514,13 +508,19 @@ public final class CameraController {
   /// value. See ``CameraDevice/minZoom`` / ``CameraDevice/maxZoom``
   ///
   /// ```swift
-  /// try await controller.startZoomAnimation(zoom: 2, rate: 3)
+  /// try await controller.rampZoom(to: 2, rate: 3)
   /// ```
   ///
   /// Returns when the device finishes ramping, including when the ramp is canceled. The target zoom must be within the controller's available zoom range, and the rate must be positive.
-  public func startZoomAnimation(zoom: Double, rate: Double) async throws {
+  public func rampZoom(to zoom: Double, rate: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
-      try Self.validateZoom(zoom, rate: rate, range: self.minZoom...self.maxZoom)
+      let allowed = Double(self.captureDevice.minAvailableVideoZoomFactor)...Double(self.captureDevice.maxAvailableVideoZoomFactor)
+      guard zoom.isFinite && allowed.contains(zoom) else {
+        throw CameraControlError.valueOutOfRange(parameter: .zoom, value: zoom, allowed: allowed)
+      }
+      guard rate.isFinite && rate > 0 && rate <= Double(Float.greatestFiniteMagnitude) else {
+        throw CameraControlError.invalidZoomRampRate(rate)
+      }
       if self.captureDevice.videoZoomFactor == zoom {
         // We are already exactly on our target value
         completion()
@@ -544,8 +544,8 @@ public final class CameraController {
   }
 
   /// Cancels any zoom animations previously
-  /// started with ``CameraController/startZoomAnimation(zoom:rate:)``.
-  public func cancelZoomAnimation() async throws {
+  /// started with ``CameraController/rampZoom(to:rate:)``.
+  public func cancelZoomRamp() async throws {
     return try await captureDevice.withLock(queue) {
       self.captureDevice.cancelVideoZoomRamp()
     }
@@ -561,18 +561,16 @@ public final class CameraController {
   /// - Throws: If the ``CameraController/device`` does not support this `exposure` bias value (see ``CameraDevice/minExposureBias`` / ``CameraDevice/maxExposureBias``)
   ///
   /// ```swift
-  /// try await controller.setExposureBias(exposure: 1)
+  /// try await controller.setExposureBias(1)
   /// ```
-  public func setExposureBias(exposure: Double) async throws {
+  public func setExposureBias(_ exposure: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
       // 1. Ensure exposureBias is within range
       let device = self.captureDevice
       let exposure = Float(exposure)
       guard exposure >= device.minExposureTargetBias && exposure <= device.maxExposureTargetBias else {
-        throw CameraError(
-          message:
-            "`exposure` is not within the device's `minExposureBias` and `maxExposureBias` range! (Received: \(exposure), `device.minExposureBias`: \(device.minExposureTargetBias), `device.maxExposureBias`: \(device.maxExposureTargetBias)"
-        )
+        throw CameraControlError.valueOutOfRange(
+          parameter: .exposureBias, value: Double(exposure), allowed: Double(device.minExposureTargetBias)...Double(device.maxExposureTargetBias))
       }
 
       // 2. Set Exposure Bias
@@ -589,15 +587,14 @@ public final class CameraController {
   ///
   /// - Throws: If ``CameraController/lensPosition`` is outside of `0.0` ... `1.0`.
   /// - Throws: If the ``CameraController/device`` does not support manual focus locking (see ``CameraDevice/supportsCustomLensPosition``)
-  public func setFocusLocked(lensPosition: Double) async throws {
+  public func lockFocus(at lensPosition: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
       guard self.captureDevice.isLockingFocusWithCustomLensPositionSupported else {
-        throw CameraError(message: "This CameraDevice does not support a custom lens position.")
+        throw CameraControlError.unsupportedFeature(.focusLock)
       }
       // 1. Ensure values are within valid range
       guard lensPosition >= 0 && lensPosition <= 1 else {
-        throw CameraError(
-          message: "`lensPosition` is not within 0.0 to 1.0 range! (Received: \(lensPosition))")
+        throw CameraControlError.valueOutOfRange(parameter: .lensPosition, value: lensPosition, allowed: 0...1)
       }
 
       // 2. Lock Focus
@@ -624,7 +621,7 @@ public final class CameraController {
   public func lockCurrentFocus() async throws {
     return try await captureDevice.withLock(queue) { completion in
       guard self.captureDevice.isFocusModeSupported(.locked) else {
-        throw CameraError(message: "This CameraDevice does not support locking focus.")
+        throw CameraControlError.unsupportedFeature(.focusLock)
       }
       self.captureDevice.setFocusModeLocked(lensPosition: AVCaptureDevice.currentLensPosition) {
         _ in
@@ -633,26 +630,26 @@ public final class CameraController {
     }
   }
 
-  /// Represents the minimum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
+  /// Represents the minimum value for the ``CameraController/lockExposure(duration:iso:)``
+  /// parameter in ``CameraController/lockExposure(duration:iso:)`` for the active format.
   public var minExposureDuration: Double {
     return captureDevice.activeFormat.minExposureDuration.seconds
   }
 
-  /// Represents the maximum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
+  /// Represents the maximum value for the ``CameraController/lockExposure(duration:iso:)``
+  /// parameter in ``CameraController/lockExposure(duration:iso:)`` for the active format.
   public var maxExposureDuration: Double {
     return captureDevice.activeFormat.maxExposureDuration.seconds
   }
 
-  /// Represents the minimum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
+  /// Represents the minimum value for the ``CameraController/lockExposure(duration:iso:)``
+  /// parameter in ``CameraController/lockExposure(duration:iso:)`` for the active format.
   public var minISO: Double {
     return Double(captureDevice.activeFormat.minISO)
   }
 
-  /// Represents the maximum value for the ``CameraController/setExposureLocked(duration:iso:)``
-  /// parameter in ``CameraController/setExposureLocked(duration:iso:)`` for the active format.
+  /// Represents the maximum value for the ``CameraController/lockExposure(duration:iso:)``
+  /// parameter in ``CameraController/lockExposure(duration:iso:)`` for the active format.
   public var maxISO: Double {
     return Double(captureDevice.activeFormat.maxISO)
   }
@@ -665,28 +662,28 @@ public final class CameraController {
   ///
   /// - Throws: If `duration` or ``CameraController/iso`` are not valid values.
   /// - Throws: If the ``CameraController/device`` does not support manual exposure locking (see ``CameraDevice/supportsCustomExposure``)
-  public func setExposureLocked(duration: Double, iso: Double) async throws {
+  public func lockExposure(duration: Double, iso: Double) async throws {
     return try await captureDevice.withLock(queue) { completion in
+      guard self.captureDevice.isExposureModeSupported(.custom) else {
+        throw CameraControlError.unsupportedFeature(.exposureLock)
+      }
       let device = self.captureDevice
       guard device.isExposureModeSupported(.custom) else {
-        throw CameraError(message: "This CameraDevice does not support custom exposure.")
+        throw CameraControlError.unsupportedFeature(.exposureLock)
       }
       // 1. Ensure values are within valid range
       guard
         duration >= device.activeFormat.minExposureDuration.seconds
           && duration <= device.activeFormat.maxExposureDuration.seconds
       else {
-        throw CameraError(
-          message:
-            "`duration` is not within the currently selected Format's `minExposureDuration` and `maxExposureDuration` range! (Received: \(duration), `activeFormat.minExposureDuration`: \(device.activeFormat.minExposureDuration.seconds), `activeFormat.maxExposureDuration`: \(device.activeFormat.maxExposureDuration.seconds)"
-        )
+        throw CameraControlError.valueOutOfRange(
+          parameter: .exposureDuration, value: duration,
+          allowed: device.activeFormat.minExposureDuration.seconds...device.activeFormat.maxExposureDuration.seconds)
       }
       let iso = Float(iso)
       guard iso >= device.activeFormat.minISO && iso <= device.activeFormat.maxISO else {
-        throw CameraError(
-          message:
-            "`iso` is not within the currently selected Format's `minISO` and `maxISO` range! (Received: \(iso), `activeFormat.minISO`: \(device.activeFormat.minISO), `activeFormat.maxISO`: \(device.activeFormat.maxISO)"
-        )
+        throw CameraControlError.valueOutOfRange(
+          parameter: .iso, value: Double(iso), allowed: Double(device.activeFormat.minISO)...Double(device.activeFormat.maxISO))
       }
 
       // 2. Set the Exposure Duration/ISO
@@ -714,7 +711,7 @@ public final class CameraController {
   public func lockCurrentExposure() async throws {
     return try await captureDevice.withLock(queue) {
       guard self.captureDevice.isExposureModeSupported(.locked) else {
-        throw CameraError(message: "This CameraDevice does not support locking exposure.")
+        throw CameraControlError.unsupportedFeature(.exposureLock)
       }
       self.captureDevice.exposureMode = .locked
     }
@@ -723,8 +720,8 @@ public final class CameraController {
   /// Converts native temperature and tint values into gains for this device.
   ///
   /// Clamp each returned gain to `1...device.maxWhiteBalanceGain` before locking white balance.
-  public func convertWhiteBalanceTemperatureAndTintValues(
-    whiteBalanceTemperatureAndTint: AVCaptureDevice.WhiteBalanceTemperatureAndTintValues
+  public func whiteBalanceGains(
+    for whiteBalanceTemperatureAndTint: AVCaptureDevice.WhiteBalanceTemperatureAndTintValues
   ) -> AVCaptureDevice.WhiteBalanceGains {
     return captureDevice.deviceWhiteBalanceGains(for: whiteBalanceTemperatureAndTint)
   }
@@ -738,33 +735,27 @@ public final class CameraController {
   ///
   /// - Throws: If one of the channels in ``CameraController/whiteBalanceGains`` is out-of-range.
   /// - Throws: If the ``CameraController/device`` does not support manual white-balance locking (see ``CameraDevice/supportsCustomWhiteBalanceGains``)
-  public func setWhiteBalanceLocked(whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains) async throws {
+  public func lockWhiteBalance(gains whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains) async throws {
     return try await captureDevice.withLock(queue) { completion in
+      guard self.captureDevice.isLockingWhiteBalanceWithCustomDeviceGainsSupported else {
+        throw CameraControlError.unsupportedFeature(.whiteBalanceLock)
+      }
       // 1. Ensure values are within valid range
       let device = self.captureDevice
       guard device.isLockingWhiteBalanceWithCustomDeviceGainsSupported else {
-        throw CameraError(message: "This CameraDevice does not support custom white-balance gains.")
+        throw CameraControlError.unsupportedFeature(.whiteBalanceLock)
       }
       let redGain = whiteBalanceGains.redGain
       let greenGain = whiteBalanceGains.greenGain
       let blueGain = whiteBalanceGains.blueGain
       guard redGain >= 1 && redGain <= device.maxWhiteBalanceGain else {
-        throw CameraError(
-          message:
-            "`whiteBalanceGains.redGain` is not within the range of `1` to `device.maxWhiteBalanceGain`! (Received: \(redGain), min: 1.0, `device.maxWhiteBalanceGain`: \(device.maxWhiteBalanceGain)"
-        )
+        throw CameraControlError.valueOutOfRange(parameter: .redGain, value: Double(redGain), allowed: 1...Double(device.maxWhiteBalanceGain))
       }
       guard greenGain >= 1 && greenGain <= device.maxWhiteBalanceGain else {
-        throw CameraError(
-          message:
-            "`whiteBalanceGains.greenGain` is not within the range of `1` to `device.maxWhiteBalanceGain`! (Received: \(greenGain), min: 1.0, `device.maxWhiteBalanceGain`: \(device.maxWhiteBalanceGain)"
-        )
+        throw CameraControlError.valueOutOfRange(parameter: .greenGain, value: Double(greenGain), allowed: 1...Double(device.maxWhiteBalanceGain))
       }
       guard blueGain >= 1 && blueGain <= device.maxWhiteBalanceGain else {
-        throw CameraError(
-          message:
-            "`whiteBalanceGains.blueGain` is not within the range of `1` to `device.maxWhiteBalanceGain`! (Received: \(blueGain), min: 1.0, `device.maxWhiteBalanceGain`: \(device.maxWhiteBalanceGain)"
-        )
+        throw CameraControlError.valueOutOfRange(parameter: .blueGain, value: Double(blueGain), allowed: 1...Double(device.maxWhiteBalanceGain))
       }
 
       // 2. Lock White Balance Gains
@@ -795,7 +786,7 @@ public final class CameraController {
   public func lockCurrentWhiteBalance() async throws {
     return try await captureDevice.withLock(queue) { completion in
       guard self.captureDevice.isWhiteBalanceModeSupported(.locked) else {
-        throw CameraError(message: "This CameraDevice does not support locking white balance.")
+        throw CameraControlError.unsupportedFeature(.whiteBalanceLock)
       }
       self.captureDevice.setWhiteBalanceModeLocked(with: AVCaptureDevice.currentWhiteBalanceGains) {
         _ in

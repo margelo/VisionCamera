@@ -15,9 +15,9 @@ public protocol OrientationManager: AnyObject {
   ///
   /// - Parameter onChanged: Receives orientation changes. Interface updates run on the main queue; device updates run on the manager's serial queue.
   /// - Throws: An error if device orientation is requested when accelerometer data is unavailable.
-  func startOrientationUpdates(onChanged: @escaping (_ orientation: CameraOrientation) -> Void) throws
+  func startUpdates(_ onChanged: @escaping (_ orientation: CameraOrientation) -> Void) throws
   /// Stops listening to orientation changes.
   ///
   /// Removal is submitted to the manager's owning queue. An update already in flight may still be delivered.
-  func stopOrientationUpdates()
+  func stopUpdates()
 }

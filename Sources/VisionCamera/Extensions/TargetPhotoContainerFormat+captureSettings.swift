@@ -6,7 +6,7 @@ extension TargetPhotoContainerFormat {
   func captureSettings(for output: AVCapturePhotoOutput) throws -> AVCapturePhotoSettings {
     if self == .dng {
       guard let rawFormat = output.bestRawPixelFormat else {
-        throw CameraError(message: "This photo output does not support RAW capture in its current configuration.")
+        throw CaptureError.rawCaptureUnsupported
       }
       return AVCapturePhotoSettings(rawPixelFormatType: rawFormat)
     }
@@ -28,13 +28,13 @@ extension TargetPhotoContainerFormat {
       codec = availableCodecs.contains(.hevc) ? .hevc : .jpeg
       quality = value
     case .dng:
-      throw CameraError(message: "RAW capture does not use a processed photo format.")
+      throw CaptureError.rawHasNoProcessedFormat
     }
     guard quality.isFinite, (0.0...1.0).contains(quality) else {
-      throw CameraError(message: "Photo compression quality must be from 0.0 to 1.0.")
+      throw CaptureError.invalidQuality(quality)
     }
     guard availableCodecs.contains(codec) else {
-      throw CameraError(message: "Photo codec \(codec.rawValue) is not supported by this output.")
+      throw CaptureError.codecUnsupported
     }
     return [
       AVVideoCodecKey: codec,

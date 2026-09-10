@@ -72,7 +72,7 @@ final class SynchronizedOutputDelegate: NSObject, AVCaptureDataOutputSynchronize
 
   private func metadata(at timestamp: CMTime, from output: AVCaptureOutput, mediaType: AVMediaType) throws -> MediaSampleMetadata {
     guard let connection = output.connection(with: mediaType) else {
-      throw CameraError(message: "The synchronized output has no \(mediaType.rawValue) connection.")
+      throw ConfigurationError.outputNotConnected
     }
     return metadata(
       at: timestamp, from: output,

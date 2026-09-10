@@ -2,10 +2,10 @@
 
 extension MeteringPoint {
   func validate() throws {
-    guard normalizedX.isFinite, normalizedY.isFinite,
-      (0...1).contains(normalizedX), (0...1).contains(normalizedY)
+    guard location.x.isFinite, location.y.isFinite,
+      (0...1).contains(location.x), (0...1).contains(location.y)
     else {
-      throw CameraError(message: "Metering coordinates must be finite values within 0...1.")
+      throw CameraControlError.invalidMeteringPoint
     }
   }
 }

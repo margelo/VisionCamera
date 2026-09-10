@@ -12,8 +12,7 @@ import Foundation
 ///
 /// ```swift
 /// let depthOutput = DepthOutput()
-/// await depthOutput.setOnDepthFrameCallback { depth in
-///   defer { depth.dispose() }
+/// await depthOutput.setDepthHandler { depth in
 ///   print(depth.width, depth.height)
 /// }
 /// ```
@@ -47,7 +46,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
     didSet {
       orientationState.setOrientation(outputOrientation)
       guard let connection = output.connection(with: .depthData) else { return }
-      if options.enablePhysicalBufferRotation {
+      if options.rotatesBuffers {
         // TODO: Should we apply that within the CameraSession's DispatchQueue? Batch it?
         try? connection.setOrientation(outputOrientation)
       }
@@ -58,8 +57,8 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -67,7 +66,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard let connection = output.connection(with: .depthData) else { return nil }
     return connection.inputStreamResolution
   }
@@ -76,7 +75,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   public let streamType: StreamType = .depthVideo
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
-    return .closestTo(options.targetResolution)
+    return .closest(to: options.targetResolution)
   }
 
   /// Creates a Camera output with the given options.
@@ -94,25 +93,25 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
     // Set up our `delegate`
     output.setDelegate(delegate, callbackQueue: queue)
     // Configure `videoSettings`
-    output.alwaysDiscardsLateDepthData = options.dropFramesWhileBusy
-    output.isFilteringEnabled = options.enableFiltering
+    output.alwaysDiscardsLateDepthData = options.discardsLateFrames
+    output.isFilteringEnabled = options.isFilteringEnabled
     if #available(iOS 26.0, *), output.isDeferredStartSupported {
       // Deferred start allows the Session to delay this output's startup in favor
       // of preview-related outputs to make preview appear faster.
-      output.isDeferredStartEnabled = options.allowDeferredStart
+      output.isDeferredStartEnabled = options.allowsDeferredStart
     }
   }
 
   /// Applies mirroring and orientation settings to this output's current connection.
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
-  public func configure(config: OutputConfiguration) throws {
+  public func configure(_ config: OutputConfiguration) throws {
     orientationState.setMirrorMode(config.mirrorMode)
 
     guard let connection = output.connection(with: .depthData) else {
       return
     }
-    if options.enablePhysicalBufferRotation {
+    if options.rotatesBuffers {
       // Pipeline should physically rotate buffers on the `connection`
       try connection.setOrientation(outputOrientation)
       try connection.setMirrorMode(config.mirrorMode)
@@ -132,7 +131,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// every time the Camera produces a new ``Depth``.
   ///
   /// Registration and callback delivery are serialized on this output's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnDepthFrameCallback(onDepthFrame: ((Depth) -> Void)?) async {
+  public func setDepthHandler(_ onDepthFrame: ((Depth) -> Void)?) async {
     await queue.perform {
       if let onDepthFrame {
         self.delegate.onDepthFrame = { [weak self] (depth, timestamp, bufferOrientation, isBufferMirrored) in
@@ -160,7 +159,7 @@ public final class DepthOutput: CameraOutput, NativeCameraOutput {
   /// than a frame interval.
   ///
   /// Registration and callback delivery are serialized on this output's owning queue. Pass `nil` to remove the callback. This method returns after registration is applied. Move UIKit work to the main actor.
-  public func setOnDepthFrameDroppedCallback(onDepthFrameDropped: ((FrameDroppedReason) -> Void)?) async {
+  public func setDepthDropHandler(_ onDepthFrameDropped: ((FrameDroppedReason) -> Void)?) async {
     await queue.perform {
       if let onDepthFrameDropped {
         self.delegate.onDepthFrameDropped = { avReason in

@@ -25,21 +25,12 @@
 ///
 /// ```swift
 /// let constraints: [Constraint] = [
-///   .resolutionBias(ResolutionBiasConstraint(resolutionBias: photoOutput)),
-///   .resolutionBias(ResolutionBiasConstraint(resolutionBias: videoOutput)),
+///   .resolution(photoOutput),
+///   .resolution(videoOutput),
 /// ]
 /// ```
-public struct ResolutionBiasConstraint {
+struct ResolutionBiasConstraint {
   /// The output whose target resolution should influence format negotiation.
-  public var resolutionBias: any CameraOutput
+  let resolutionBias: any CameraOutput
 
-  /// Creates a resolution preference based on an output's target resolution.
-  ///
-  /// - Parameters:
-  ///   - resolutionBias: The output whose target resolution should influence format negotiation.
-  public init(
-    resolutionBias: any CameraOutput
-  ) {
-    self.resolutionBias = resolutionBias
-  }
 }

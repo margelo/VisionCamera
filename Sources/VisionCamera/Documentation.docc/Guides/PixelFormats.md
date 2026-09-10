@@ -39,8 +39,10 @@ import CoreVideo
 import VisionCamera
 
 func inspectFormat(frame: Frame) throws {
-	let pixelBuffer = try frame.getPixelBuffer()
-	print(frame.pixelFormat, CVPixelBufferGetPixelFormatType(pixelBuffer))
+	guard let pixelBuffer = frame.pixelBuffer else {
+		throw MediaError.missingPixelBuffer
+	}
+	print(frame.pixelFormat as Any, CVPixelBufferGetPixelFormatType(pixelBuffer))
 }
 ```
 

@@ -30,7 +30,7 @@ public protocol NativeCameraOutput: AnyObject, ResolutionNegotiationParticipant 
 
   /// Represents the actual `AVCaptureOutput` that should be added to the `AVCaptureSession`.
   ///
-  /// It will be manually connected to the selected input in ``CameraSession/configure(connections:config:)``.
+  /// It will be manually connected to the selected input in ``CameraSession/configure(_:configuration:)``.
   var output: Output { get }
   /// Whether this native output requires an audio input attached to its `AVCaptureOutput`.
   ///
@@ -44,5 +44,5 @@ public protocol NativeCameraOutput: AnyObject, ResolutionNegotiationParticipant 
   ///
   /// The native output is expected to apply orientation and mirroring settings here. ``CameraSession`` calls this method on its serial configuration queue.
   /// - Throws: If the connected input cannot support this output's requested configuration.
-  func configure(config: OutputConfiguration) throws
+  func configure(_ config: OutputConfiguration) throws
 }

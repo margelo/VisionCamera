@@ -6,7 +6,7 @@ extension AVCapturePhotoSettings {
   func applyQualityPrioritization(_ priority: QualityPrioritization?) throws {
     if AVCapturePhotoOutput.isBayerRAWPixelFormat(rawPhotoPixelFormatType) {
       guard priority == nil || priority == .speed else {
-        throw CameraError(message: "Bayer RAW capture supports only speed quality prioritization.")
+        throw CaptureError.rawRequiresSpeedPrioritization
       }
       photoQualityPrioritization = .speed
     } else if let priority {

@@ -10,33 +10,28 @@
 
 - ``width``
 - ``height``
-- ``size``
+- ``dimensions``
 - ``timestamp``
 - ``orientation``
 - ``isMirrored``
-- ``isRawPhoto``
+- ``isRaw``
 - ``containerFormat``
 - ``metadata``
 - ``depth``
 - ``calibrationData``
-- ``memorySize``
 
 ### Creating an image
 
-- ``toImage()``
-- ``toImageAsync()``
+- ``image()``
 
 ### Saving a photo
 
-- ``getFileData()``
-- ``getFileDataAsync()``
-- ``saveToFileAsync(path:)``
-- ``saveToTemporaryFileAsync()``
+- ``encodedData()``
+- ``write(to:options:)``
+- ``writeToTemporaryFile()``
 
 ### Accessing native data
 
 - ``photo``
 - ``pixelBuffer``
-- ``hasPixelBuffer``
-- ``getPixelBuffer()``
 - ``withUnsafeBytes(_:)``

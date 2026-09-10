@@ -6,65 +6,73 @@ A ``Recorder`` records video and audio data to a file. It is usually created by 
 
 ## Set a maximum duration or file size
 
-To stop automatically when a duration or file size is reached, use `maxDuration` in seconds or `maxFileSize` in bytes:
+To stop automatically when a duration or file size is reached, use a `CMTime` for `maxDuration` or an integer byte count for `maxFileSize`:
 
 ```swift
 import VisionCamera
 
 func prepareLimitedRecorder(output: any VideoOutput) async throws -> any Recorder {
 	return try await output.makeRecorder(settings: .init(
-		maxDuration: 30,
+		maxDuration: .init(seconds: 30, preferredTimescale: 600),
 		maxFileSize: 50_000_000
 	))
 }
 ```
 
-When a limit is reached, the `onRecordingFinished` callback receives a corresponding ``RecordingFinishedReason``.
+When a limit is reached, the `onFinished` callback receives a ``RecordingResult`` with the corresponding ``RecordingFinishedReason``.
 
 ## Start recording
 
-`startRecording` takes callbacks for recording events:
+`start` takes callbacks for recording events:
 
 ```swift
 import Foundation
 import VisionCamera
 
 func beginRecording(recorder: any Recorder) async throws {
-	try await recorder.startRecording(
-		onRecordingFinished: { filePath, reason in
-			let url = URL(fileURLWithPath: filePath)
-			print("Saved video:", url, "Reason:", reason)
+	try await recorder.start(
+		onFinished: { result in
+			print("Saved video:", result.fileURL, "Reason:", result.reason)
 		},
-		onRecordingError: { error in
+		onError: { error in
 			print("Recording failed:", error)
 		},
-		onRecordingPaused: { print("Recording paused") },
-		onRecordingResumed: { print("Recording resumed") }
+		onPaused: { print("Recording paused") },
+		onResumed: { print("Recording resumed") }
 	)
 }
 ```
 
-The method returns when recording starts. An error before recording starts is thrown to the caller. Later failures arrive through `onRecordingError`. Callbacks run on the recording backend's queue. Dispatch UIKit changes to the main queue.
+The method returns when recording starts. An error before recording starts is thrown to the caller. Later failures arrive through `onError`. Callbacks run on the recording backend's queue. Dispatch UIKit changes to the main queue.
 
 ### Inspect progress
 
-As a recording progresses, inspect `recordedDuration` and `recordedFileSize`. The recorder also exposes `isRecording`, `isPaused`, and `filePath`.
+Read a ``RecordingStatus`` snapshot with `try await recorder.status()`. The snapshot includes `isRecording`, `isPaused`, `duration`, and `fileSize`. The query runs on the recorder's queue, including any file-system work needed to read the file size.
 
-File paths are plain filesystem paths. Use `URL(fileURLWithPath:)` when an API expects a URL. Encoder buffering can cause the file size on disk to lag behind captured data.
+```swift
+import VisionCamera
+
+func printProgress(recorder: any Recorder) async throws {
+	let status = try await recorder.status()
+	print(status.duration.seconds, "seconds,", status.fileSize, "bytes")
+}
+```
+
+The recorder's `fileURL` is its destination. Encoder buffering can cause the file size on disk to lag behind captured data. A file that has not been created yet reports zero bytes. Other file-system errors propagate to the caller.
 
 ## Pause and resume
 
-Call `pauseRecording()` or `resumeRecording()` to pause or resume. The corresponding callback reports the transition:
+Call `pause()` or `resume()` to pause or resume. The corresponding callback reports the transition:
 
 ```swift
 import VisionCamera
 
 func pause(recorder: any Recorder) async throws {
-	try await recorder.pauseRecording()
+	try await recorder.pause()
 }
 
 func resume(recorder: any Recorder) async throws {
-	try await recorder.resumeRecording()
+	try await recorder.resume()
 }
 ```
 
@@ -72,27 +80,27 @@ The default movie-file backend requires iOS 18 or later for pausing and resuming
 
 ## Stop recording
 
-To finish a recording, call `stopRecording()`:
+To finish a recording, call `stop()`:
 
 ```swift
 import VisionCamera
 
 func finish(recorder: any Recorder) async {
-	await recorder.stopRecording()
+	await recorder.stop()
 }
 ```
 
-This method returns once the stop is requested. It can take additional frames, or longer under thermal pressure, before the video file is finalized. Wait for `onRecordingFinished` before reading or sharing the completed file.
+This method returns once the stop is requested. It can take additional frames, or longer under thermal pressure, before the video file is finalized. Wait for `onFinished` before reading or sharing the completed file.
 
 ## Cancel recording
 
-To cancel a recording, call `cancelRecording()`. Cancellation deletes the file and suppresses recording completion callbacks:
+To cancel a recording, call `cancel()`. Cancellation deletes the file and suppresses recording completion callbacks:
 
 ```swift
 import VisionCamera
 
 func cancel(recorder: any Recorder) async throws {
-	try await recorder.cancelRecording()
+	try await recorder.cancel()
 }
 ```
 

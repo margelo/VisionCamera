@@ -37,7 +37,7 @@ import VisionCamera
 
 func disconnectCamera(session: CameraSession) async throws {
 	await session.stop()
-	_ = try await session.configure(connections: [])
+	_ = try await session.configure([])
 }
 ```
 

@@ -51,10 +51,7 @@ enum ConstraintResolver {
       case is any NativePreviewViewOutput:
         return nil
       default:
-        throw CameraError(
-          message:
-            "Connection output \"\(output)\" is not of type `NativeCameraOutput` or `NativePreviewViewOutput`!"
-        )
+        throw ConfigurationError.unsupportedOutput(outputType: String(describing: type(of: output)))
       }
     }
     return try resolveConstraints(
@@ -80,7 +77,7 @@ enum ConstraintResolver {
     }
 
     // Hard requirements: filter out formats that are not possible at all.
-    let formats = try filterFormats(device.formats, outputs: outputs, isMultiCam: isMultiCam)
+    let formats = try filterFormats(device.formats, deviceID: device.uniqueID, outputs: outputs, isMultiCam: isMultiCam)
 
     // Evaluate all formats and pick the one with the lowest total penalty.
     // This is a single pass - format selection and enabled constraints
@@ -91,7 +88,7 @@ enum ConstraintResolver {
         .map({ try evaluate($0, constraints: constraints) })
         .min(by: { $0.totalPenalty < $1.totalPenalty })
     else {
-      throw CameraError(message: "The given `device` does not have any `formats`!")
+      throw ConfigurationError.noFormats(deviceID: device.uniqueID)
     }
     logger.debug("Selected Format: \(best.format)")
 
@@ -114,7 +111,7 @@ enum ConstraintResolver {
   private static func evaluate(
     _ format: AVCaptureDevice.Format,
     constraints: [InternalConstraint]
-  ) throws(CameraError) -> FormatEvaluation {
+  ) throws(ConfigurationError) -> FormatEvaluation {
     var totalPenalty = 0.0
 
     // First-match-wins accumulators (priority order = array order)
@@ -161,12 +158,13 @@ enum ConstraintResolver {
   /// These are hard requirements, not soft constraints/biases.
   private static func filterFormats(
     _ formats: [AVCaptureDevice.Format],
+    deviceID: String,
     outputs: [any NativeCameraOutput],
     isMultiCam: Bool
-  ) throws(CameraError) -> [AVCaptureDevice.Format] {
+  ) throws(ConfigurationError) -> [AVCaptureDevice.Format] {
     var formats = formats
     guard !formats.isEmpty else {
-      throw CameraError(message: "The given `device` does not have any `formats`!")
+      throw ConfigurationError.noFormats(deviceID: deviceID)
     }
 
     // 1. If we need a Depth Output, filter out formats without depth support
@@ -174,10 +172,7 @@ enum ConstraintResolver {
     if needsDepth {
       formats = formats.filter { !$0.supportedDepthDataFormats.isEmpty }
       guard !formats.isEmpty else {
-        throw CameraError(
-          message:
-            "The given `device` does not have any `formats` that have `supportedDepthDataFormats`. Does this device support depth?"
-        )
+        throw ConfigurationError.depthCaptureUnsupported(deviceID: deviceID)
       }
     }
 
@@ -185,10 +180,7 @@ enum ConstraintResolver {
     if isMultiCam {
       formats = formats.filter { $0.isMultiCamSupported }
       guard !formats.isEmpty else {
-        throw CameraError(
-          message:
-            "The given `device` does not have any `formats` that support multi-cam sessions! Does this `device` support multi-cam?"
-        )
+        throw ConfigurationError.multiCamCaptureUnsupported(deviceID: deviceID)
       }
     }
 
@@ -197,9 +189,7 @@ enum ConstraintResolver {
       outputs.allSatisfy { format.supportsOutput($0.output) }
     }
     guard !formats.isEmpty else {
-      throw CameraError(
-        message:
-          "The given `device` does not have any `formats` that support the attached Outputs!")
+      throw ConfigurationError.incompatibleOutputs(deviceID: deviceID)
     }
 
     return formats

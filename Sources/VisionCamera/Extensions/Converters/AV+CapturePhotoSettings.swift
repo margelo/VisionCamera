@@ -20,55 +20,55 @@ extension CapturePhotoSettings {
       guard connection.videoScaleAndCropFactor == 1,
         connection.deviceInput?.device.videoZoomFactor == 1
       else {
-        throw CameraError(message: "Bayer RAW capture requires a device zoom factor and connection scale factor of 1.")
+        throw CaptureError.rawRequiresUnitZoom
       }
     }
-    if let flashMode {
+    do {
       let nativeFlashMode = flashMode.toAVCaptureDeviceFlashMode()
       guard output.supportedFlashModes.contains(nativeFlashMode) else {
-        throw CameraError(message: "The requested flash mode is not supported by this photo output.")
+        throw CaptureError.flashModeUnsupported
       }
       settings.flashMode = nativeFlashMode
     }
-    if enableShutterSound == false {
+    if isShutterSoundEnabled == false {
       guard #available(iOS 18.0, *), output.isShutterSoundSuppressionSupported else {
-        throw CameraError(message: "Shutter sound suppression is not supported by this photo output.")
+        throw CaptureError.shutterSoundSuppressionUnsupported
       }
       settings.isShutterSoundSuppressionEnabled = true
     }
-    if let enableDepthData {
-      if enableDepthData {
+    if let isDepthDataEnabled {
+      if isDepthDataEnabled {
         guard !isRAW, output.isDepthDataDeliverySupported, output.isDepthDataDeliveryEnabled else {
-          throw CameraError(message: "Depth capture requires a processed format and PhotoOutputOptions.enableDepthDataDelivery.")
+          throw CaptureError.depthDataUnsupported
         }
       }
-      settings.isDepthDataDeliveryEnabled = enableDepthData
-      settings.embedsDepthDataInPhoto = enableDepthData
+      settings.isDepthDataDeliveryEnabled = isDepthDataEnabled
+      settings.embedsDepthDataInPhoto = isDepthDataEnabled
     }
-    if let enableRedEyeReduction {
-      guard !enableRedEyeReduction || (!isRAW && output.isAutoRedEyeReductionSupported) else {
-        throw CameraError(message: "Red-eye reduction is not supported by this photo output.")
+    if let isRedEyeReductionEnabled {
+      guard !isRedEyeReductionEnabled || (!isRAW && output.isAutoRedEyeReductionSupported) else {
+        throw CaptureError.redEyeReductionUnsupported
       }
-      settings.isAutoRedEyeReductionEnabled = enableRedEyeReduction
+      settings.isAutoRedEyeReductionEnabled = isRedEyeReductionEnabled
     }
-    if let enableDistortionCorrection {
-      guard !enableDistortionCorrection || (!isRAW && output.isContentAwareDistortionCorrectionSupported) else {
-        throw CameraError(message: "Distortion correction is not supported by this photo format and output.")
+    if let isDistortionCorrectionEnabled {
+      guard !isDistortionCorrectionEnabled || (!isRAW && output.isContentAwareDistortionCorrectionSupported) else {
+        throw CaptureError.distortionCorrectionUnsupported
       }
-      settings.isAutoContentAwareDistortionCorrectionEnabled = enableDistortionCorrection
+      settings.isAutoContentAwareDistortionCorrectionEnabled = isDistortionCorrectionEnabled
     }
-    if let enableVirtualDeviceFusion {
-      guard !enableVirtualDeviceFusion || (!isRAW && output.isVirtualDeviceFusionSupported) else {
-        throw CameraError(message: "Virtual device fusion is not supported by this photo format and output.")
+    if let isVirtualDeviceFusionEnabled {
+      guard !isVirtualDeviceFusionEnabled || (!isRAW && output.isVirtualDeviceFusionSupported) else {
+        throw CaptureError.virtualDeviceFusionUnsupported
       }
-      settings.isAutoVirtualDeviceFusionEnabled = enableVirtualDeviceFusion
+      settings.isAutoVirtualDeviceFusionEnabled = isVirtualDeviceFusionEnabled
     }
     if let size = options.previewImageTargetSize {
       guard let width = Int(exactly: size.width), let height = Int(exactly: size.height), width > 0, height > 0 else {
-        throw CameraError(message: "Preview image dimensions must be positive whole pixels.")
+        throw CaptureError.invalidPreviewDimensions
       }
       guard let format = settings.availablePreviewPhotoPixelFormatTypes.first else {
-        throw CameraError(message: "The selected photo format does not support preview images.")
+        throw CaptureError.previewImagesUnsupported
       }
       settings.previewPhotoFormat = [
         kCVPixelBufferPixelFormatTypeKey as String: format,

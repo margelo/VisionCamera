@@ -3,7 +3,7 @@
 import AVFoundation
 
 extension TargetDynamicRange {
-  func resolve(for format: AVCaptureDevice.Format) throws(CameraError) -> ConstraintResolution<DynamicRange> {
+  func resolve(for format: AVCaptureDevice.Format) throws(ConfigurationError) -> ConstraintResolution<DynamicRange> {
     return try resolve(
       mediaSubType: format.formatDescription.mediaSubType,
       supportedColorSpaces: format.supportedColorSpaces)
@@ -12,7 +12,7 @@ extension TargetDynamicRange {
   func resolve(
     mediaSubType: CMFormatDescription.MediaSubType,
     supportedColorSpaces: [AVCaptureColorSpace]
-  ) throws(CameraError) -> ConstraintResolution<DynamicRange> {
+  ) throws(ConfigurationError) -> ConstraintResolution<DynamicRange> {
     let actualBitDepth = mediaSubType.bitDepth
     let bitDepthPenalty = self.bitDepth.penalty(to: actualBitDepth)
     let colorSpaceResolution = try self.colorSpace.resolve(supportedColorSpaces: supportedColorSpaces)

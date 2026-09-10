@@ -57,12 +57,12 @@ final class AppleFormatTests: XCTestCase {
 
   func testDepthFormatsRoundTripAndRejectUnavailableConversion() throws {
     for format in DepthPixelFormat.allCases where format != .unknown {
-      let native = try format.toCVPixelFormatType()
+      let native = try format.cvPixelFormat
       XCTAssertEqual(DepthPixelFormat(osType: native), format)
       XCTAssertEqual(try format.validatedNativeFormat(availableDepthDataTypes: [native]), native)
       XCTAssertThrowsError(try format.validatedNativeFormat(availableDepthDataTypes: []))
     }
-    XCTAssertThrowsError(try DepthPixelFormat.unknown.toCVPixelFormatType())
+    XCTAssertThrowsError(try DepthPixelFormat.unknown.cvPixelFormat)
     XCTAssertEqual(DepthPixelFormat(osType: 0x6675_7472), .unknown)
   }
 

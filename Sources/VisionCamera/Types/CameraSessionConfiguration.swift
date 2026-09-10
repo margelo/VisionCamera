@@ -6,13 +6,13 @@ public struct CameraSessionConfiguration: Equatable, Sendable {
   ///
   /// Haptics can affect stabilization or focus, and sounds may be captured in recordings.
   /// A `nil` value leaves the shared audio-session setting unchanged.
-  public var allowHapticsAndSystemSoundsPlayback: Bool?
+  public var allowsHapticsAndSystemSoundsPlayback: Bool?
   /// Whether AVFoundation mixes recording audio with audio playing in other apps.
   ///
   /// This controls automatic configuration of the app's shared audio session. Other apps' audio may
   /// be captured in the recording. A `nil` value leaves the current setting unchanged.
   @available(iOS 18.0, *)
-  public var allowBackgroundAudioPlayback: Bool? {
+  public var allowsBackgroundAudioPlayback: Bool? {
     get { backgroundAudioPlayback }
     set { backgroundAudioPlayback = newValue }
   }
@@ -20,23 +20,23 @@ public struct CameraSessionConfiguration: Equatable, Sendable {
 
   /// Creates changes to haptics and system-sound playback during audio recording.
   ///
-  /// - Parameter allowHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
-  public init(allowHapticsAndSystemSoundsPlayback: Bool? = nil) {
-    self.allowHapticsAndSystemSoundsPlayback = allowHapticsAndSystemSoundsPlayback
+  /// - Parameter allowsHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
+  public init(allowsHapticsAndSystemSoundsPlayback: Bool? = nil) {
+    self.allowsHapticsAndSystemSoundsPlayback = allowsHapticsAndSystemSoundsPlayback
     self.backgroundAudioPlayback = nil
   }
 
   /// Creates changes to haptics, system-sound playback, and mixing with other apps' audio.
   ///
   /// - Parameters:
-  ///   - allowHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
-  ///   - allowBackgroundAudioPlayback: Whether AVFoundation mixes the shared audio session with other apps. A `nil` value leaves the current setting unchanged.
+  ///   - allowsHapticsAndSystemSoundsPlayback: Whether recording allows haptics and system sounds. A `nil` value leaves the current setting unchanged.
+  ///   - allowsBackgroundAudioPlayback: Whether AVFoundation mixes the shared audio session with other apps. A `nil` value leaves the current setting unchanged.
   @available(iOS 18.0, *)
   public init(
-    allowHapticsAndSystemSoundsPlayback: Bool? = nil,
-    allowBackgroundAudioPlayback: Bool?
+    allowsHapticsAndSystemSoundsPlayback: Bool? = nil,
+    allowsBackgroundAudioPlayback: Bool?
   ) {
-    self.allowHapticsAndSystemSoundsPlayback = allowHapticsAndSystemSoundsPlayback
-    self.backgroundAudioPlayback = allowBackgroundAudioPlayback
+    self.allowsHapticsAndSystemSoundsPlayback = allowsHapticsAndSystemSoundsPlayback
+    self.backgroundAudioPlayback = allowsBackgroundAudioPlayback
   }
 }

@@ -6,14 +6,14 @@ A Camera's frame rate is configured per ``CameraSessionConnection`` and affects 
 
 ## Get available FPS ranges
 
-Each ``CameraDevice`` lists the FPS ranges it supports individually via `supportedFPSRanges`. You can also check whether a fixed FPS value is individually supported:
+Each ``CameraDevice`` lists the FPS ranges it supports individually via `supportedFrameRateRanges`. You can also check whether a fixed FPS value is individually supported:
 
 ```swift
 import VisionCamera
 
 func inspectFrameRates(device: CameraDevice) {
-	print(device.supportedFPSRanges)
-	print("Supports 60 FPS:", device.supportsFPS(fps: 60))
+	print(device.supportedFrameRateRanges)
+	print("Supports 60 FPS:", device.supports(frameRate: 60))
 }
 ```
 
@@ -25,11 +25,11 @@ A device supporting a given FPS individually does not guarantee support with eve
 import VisionCamera
 
 func configure60FPS(session: CameraSession, output: any CameraOutput) async throws {
-	_ = try await session.configure(connections: [
+	_ = try await session.configure([
 		.init(
 			input: .position(.back),
 			outputs: [.init(output: output)],
-			constraints: [.fps(.init(fps: 60))])
+			constraints: [.frameRate(60)])
 	])
 }
 ```

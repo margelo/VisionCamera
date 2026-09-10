@@ -8,9 +8,9 @@ final class NativeAudioOutputFixture: CameraOutput, NativeCameraOutput {
   let requiresAudioInput = true
   let requiresDepthFormat = false
   let outputOrientation: CameraOrientation = .up
-  let currentResolution: Size? = nil
+  let currentResolution: CGSize? = nil
   let streamType: StreamType = .video
   let targetResolution: ResolutionRule = .any
 
-  func configure(config: OutputConfiguration) {}
+  func configure(_ config: OutputConfiguration) {}
 }

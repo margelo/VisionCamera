@@ -23,14 +23,14 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// Whether the Camera Session must connect an audio input to this output.
   public let requiresAudioInput: Bool = false
   /// Whether the Camera Session must select an active depth format for this output.
-  public var requiresDepthFormat: Bool { options.enableDepthDataDelivery }
+  public var requiresDepthFormat: Bool { options.isDepthDataDeliveryEnabled }
   /// The underlying AVFoundation output connected to the Camera Session.
   public let output: AVCapturePhotoOutput
 
   /// Get whether this ``PhotoOutput`` supports
   /// capturing depth data alongside with a normal ``Photo``,
   /// e.g. for portrait effects matte.
-  /// See ``CapturePhotoSettings/enableDepthData``
+  /// See ``CapturePhotoSettings/isDepthDataEnabled``
   public var supportsDepthDataDelivery: Bool {
     return output.isDepthDataDeliverySupported
   }
@@ -58,8 +58,8 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected `CGSize` may differ from the requested
+  /// `CGSize` (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -67,26 +67,26 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  public var currentResolution: Size? {
+  public var currentResolution: CGSize? {
     guard output.connection(with: .video) != nil else { return nil }
-    // Reads back what `configure(config:)` pinned via
+    // Reads back what `configure(_:)` pinned via
     // `output.maxPhotoDimensions = format.supportedMaxPhotoDimensions.nearest(...)`.
     if #available(iOS 16.0, *) {
       let dims = output.maxPhotoDimensions
-      return Size(width: Double(dims.width), height: Double(dims.height))
+      return CGSize(width: Int(dims.width), height: Int(dims.height))
     }
     guard let device = output.connections.first?.deviceInput?.device else {
       return nil
     }
     let dims = device.activeFormat.highResolutionStillImageDimensions
-    return Size(width: Double(dims.width), height: Double(dims.height))
+    return CGSize(width: Int(dims.width), height: Int(dims.height))
   }
 
   /// The stream type used when negotiating this output's target resolution.
   public let streamType: StreamType = .photo
   /// The resolution rule negotiated with the other outputs and the connection's ordered ``Constraint``s.
   public var targetResolution: ResolutionRule {
-    return .closestTo(options.targetResolution)
+    return .closest(to: options.targetResolution)
   }
 
   /// Creates a Camera output with the given options.
@@ -109,22 +109,22 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   ///
   /// ``CameraSession`` calls this method within its configuration batch. Native output integrations must call it on the owning session's configuration queue.
   /// - Throws: If the connected output cannot apply the requested format, depth delivery, or capture options.
-  public func configure(config: OutputConfiguration) throws {
+  public func configure(_ config: OutputConfiguration) throws {
     guard let connection = output.connection(with: .video) else {
       return
     }
     try connection.setOrientation(outputOrientation)
     try connection.setMirrorMode(config.mirrorMode)
     if options.containerFormat == .dng {
-      guard !options.enableDepthDataDelivery else {
-        throw CameraError(message: "RAW photo capture cannot deliver depth data.")
+      guard !options.isDepthDataDeliveryEnabled else {
+        throw CaptureError.depthDataUnavailableForRawPhoto
       }
       // ProRAW support depends on the connected device and active format.
       output.isAppleProRAWEnabled = output.isAppleProRAWSupported
     }
-    if options.enableDepthDataDelivery {
+    if options.isDepthDataDeliveryEnabled {
       guard output.isDepthDataDeliverySupported else {
-        throw CameraError(message: "Depth photo delivery is not supported by this configuration.")
+        throw CaptureError.depthDataUnsupported
       }
       output.isDepthDataDeliveryEnabled = true
     }
@@ -164,12 +164,13 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
     settings: CapturePhotoSettings = .init(),
     callbacks: CapturePhotoCallbacks = .init()
   ) async throws -> Photo {
-    try await withCheckedThrowingContinuation { continuation in
+    try Task.checkCancellation()
+    return try await withCheckedThrowingContinuation { continuation in
       queue.async(
         execute: DispatchWorkItem {
           do {
             guard self.output.connection(with: .video) != nil else {
-              throw CameraError(message: "PhotoOutput is not yet connected to the CameraSession!")
+              throw CaptureError.outputNotConnected
             }
             let captureSettings = try settings.toAVCapturePhotoSettings(for: self.output, withOptions: self.options)
             let id = captureSettings.uniqueID
@@ -178,10 +179,10 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
               queue: self.queue,
               onCaptured: { photo, metadata in
                 if self.options.previewImageTargetSize != nil,
-                  let onPreviewImageAvailable = callbacks.onPreviewImageAvailable,
+                  let didReceivePreviewImage = callbacks.didReceivePreviewImage,
                   let preview = photo.previewCGImageRepresentation()
                 {
-                  onPreviewImageAvailable(UIImage(cgImage: preview, scale: 1, orientation: metadata.uiImageOrientation))
+                  didReceivePreviewImage(UIImage(cgImage: preview, scale: 1, orientation: metadata.uiImageOrientation))
                 }
                 let result = Photo(photo: photo, metadata: metadata, containerFormat: resultingFormat)
                 continuation.resume(returning: result)
@@ -205,21 +206,21 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// let file = try await photoOutput.capturePhotoToFile(settings: CapturePhotoSettings(flashMode: .on))
   /// ```
   ///
-  /// The returned ``PhotoFile`` contains a filesystem path. Capture callbacks run on this output's serial capture queue. File encoding and writing can throw.
+  /// The returned ``PhotoFile`` contains the captured file URL. Capture callbacks run on this output's serial capture queue. File encoding and writing can throw.
   public func capturePhotoToFile(
     settings: CapturePhotoSettings = .init(),
     callbacks: CapturePhotoCallbacks = .init()
   ) async throws -> PhotoFile {
     let photo = try await capturePhoto(settings: settings, callbacks: callbacks)
-    let filePath = try await photo.saveToTemporaryFileAsync()
+    let fileURL = try await photo.writeToTemporaryFile()
     return PhotoFile(
-      filePath: filePath,
+      fileURL: fileURL,
       width: photo.width,
       height: photo.height,
       orientation: photo.orientation,
       isMirrored: photo.isMirrored,
       timestamp: photo.timestamp,
-      isRawPhoto: photo.isRawPhoto,
+      isRaw: photo.isRaw,
       containerFormat: photo.containerFormat)
   }
 
@@ -233,17 +234,18 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
   /// settings you expect to be used for ``PhotoOutput/capturePhoto(settings:callbacks:)``
   /// later on.
   ///
-  /// It is perfectly fine to not call ``PhotoOutput/prepareSettings(settings:)``
+  /// It is perfectly fine to not call ``PhotoOutput/prepareSettings(_:)``
   /// when using Photo capture, but ``PhotoOutput/capturePhoto(settings:callbacks:)`` may
   /// allocate buffers that cause higher latency on initial calls when aiming for quality.
   ///
   /// ```swift
-  /// try await photoOutput.prepareSettings(settings: [
-  ///   CapturePhotoSettings(flashMode: .off, enableDistortionCorrection: true),
-  ///   CapturePhotoSettings(flashMode: .on, enableDistortionCorrection: false)
+  /// try await photoOutput.prepareSettings([
+  ///   CapturePhotoSettings(flashMode: .off, isDistortionCorrectionEnabled: true),
+  ///   CapturePhotoSettings(flashMode: .on, isDistortionCorrectionEnabled: false)
   /// ])
   /// ```
-  public func prepareSettings(settings: [CapturePhotoSettings]) async throws {
+  public func prepareSettings(_ settings: [CapturePhotoSettings]) async throws {
+    try Task.checkCancellation()
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       queue.async(
         execute: DispatchWorkItem {
@@ -257,7 +259,7 @@ public final class PhotoOutput: CameraOutput, NativeCameraOutput {
               } else if prepared {
                 continuation.resume()
               } else {
-                continuation.resume(throwing: CameraError(message: "Settings preparation was cancelled."))
+                continuation.resume(throwing: CaptureError.settingsPreparationCancelled)
               }
             }
           } catch {

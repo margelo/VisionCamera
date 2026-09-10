@@ -1,28 +1,28 @@
 import AVFoundation
 
 extension Constraint {
-  func evaluate(for format: AVCaptureDevice.Format) throws(CameraError) -> ConstraintEvaluation {
+  func evaluate(for format: AVCaptureDevice.Format) throws(ConfigurationError) -> ConstraintEvaluation {
     switch self {
-    case .fps(let fpsConstraint):
-      let r = try fpsConstraint.resolve(for: format)
+    case .frameRate(let frameRate):
+      let r = try FPSConstraint(fps: frameRate).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .fps(r.resolvedValue))
-    case .videoStabilizationMode(let videoStab):
-      let r = videoStab.resolve(for: format)
+    case .videoStabilization(let videoStab):
+      let r = VideoStabilizationModeConstraint(videoStabilizationMode: videoStab).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .videoStabilizationMode(r.resolvedValue))
-    case .previewStabilizationMode(let previewStab):
-      let r = previewStab.resolve(for: format)
+    case .previewStabilization(let previewStab):
+      let r = PreviewStabilizationModeConstraint(previewStabilizationMode: previewStab).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .previewStabilizationMode(r.resolvedValue))
-    case .resolutionBias(let resolutionBias):
-      let r = try resolutionBias.resolve(for: format)
+    case .resolution(let resolutionBias):
+      let r = try ResolutionBiasConstraint(resolutionBias: resolutionBias).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .formatOnly)
     case .videoDynamicRange(let dynamicRange):
-      let r = try dynamicRange.resolve(for: format)
+      let r = try VideoDynamicRangeConstraint(videoDynamicRange: dynamicRange).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .videoDynamicRange(r.resolvedValue))
     case .pixelFormat(let pixelFormat):
-      let r = pixelFormat.resolve(for: format)
+      let r = PixelFormatConstraint(pixelFormat: pixelFormat).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .formatOnly)
     case .binned(let binned):
-      let r = binned.resolve(for: format)
+      let r = BinnedConstraint(binned: binned).resolve(for: format)
       return ConstraintEvaluation(penalty: r.penalty, resolved: .formatOnly)
     }
   }

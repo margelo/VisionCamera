@@ -4,7 +4,7 @@
 
 ### Configuring camera behavior
 
-- ``configure(config:)``
+- ``configure(_:)``
 - ``device``
 - ``isConnected``
 - ``isSuspended``
@@ -15,26 +15,26 @@
 - ``minZoom``
 - ``maxZoom``
 - ``displayableZoomFactor``
-- ``setZoom(zoom:)``
-- ``startZoomAnimation(zoom:rate:)``
-- ``cancelZoomAnimation()``
+- ``setZoom(_:)``
+- ``rampZoom(to:rate:)``
+- ``cancelZoomRamp()``
 
 ### Focusing
 
 - ``focusMode``
 - ``lensPosition``
 - ``isSmoothAutoFocusEnabled``
-- ``focusTo(point:options:)``
+- ``focus(at:options:)``
 - ``resetFocus()``
-- ``setFocusLocked(lensPosition:)``
+- ``lockFocus(at:)``
 - ``lockCurrentFocus()``
-- ``addSubjectAreaChangedListener(onSubjectAreaChanged:)``
+- ``observeSubjectAreaChanges(_:)``
 
 ### Adjusting exposure
 
 - ``exposureMode``
 - ``exposureBias``
-- ``setExposureBias(exposure:)``
+- ``setExposureBias(_:)``
 - ``exposureDuration``
 - ``minExposureDuration``
 - ``maxExposureDuration``
@@ -42,7 +42,7 @@
 - ``iso``
 - ``minISO``
 - ``maxISO``
-- ``setExposureLocked(duration:iso:)``
+- ``lockExposure(duration:iso:)``
 - ``lockCurrentExposure()``
 - ``isLowLightBoostEnabled``
 
@@ -50,15 +50,15 @@
 
 - ``whiteBalanceMode``
 - ``whiteBalanceGains``
-- ``convertWhiteBalanceTemperatureAndTintValues(whiteBalanceTemperatureAndTint:)``
-- ``setWhiteBalanceLocked(whiteBalanceGains:)``
+- ``whiteBalanceGains(for:)``
+- ``lockWhiteBalance(gains:)``
 - ``lockCurrentWhiteBalance()``
 
 ### Controlling the torch
 
 - ``torchMode``
 - ``torchLevel``
-- ``setTorchMode(mode:)``
+- ``setTorchMode(_:)``
 - ``setTorchModeOn(level:)``
 
 ### Accessing native controls

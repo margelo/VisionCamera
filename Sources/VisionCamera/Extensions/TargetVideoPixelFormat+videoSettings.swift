@@ -9,7 +9,7 @@ extension TargetVideoPixelFormat {
       return [:]
     case .pixelFormat(let pixelFormat):
       guard availablePixelFormats.contains(pixelFormat.rawValue) else {
-        throw CameraError(message: "The connected FrameOutput does not support Core Video pixel format \(pixelFormat.rawValue).")
+        throw ConfigurationError.pixelFormatUnavailable
       }
       return [kCVPixelBufferPixelFormatTypeKey as String: pixelFormat.rawValue]
     }

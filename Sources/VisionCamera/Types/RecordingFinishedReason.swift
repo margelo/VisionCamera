@@ -1,8 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
 /// Describes why a ``Recorder``'s recording finished, and was delivered
-/// to the `onRecordingFinished` callback passed to
-/// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``.
+/// to the `onFinished` callback passed to
+/// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``.
 ///
 /// In all cases, the resulting video file is fully written and usable - this type
 /// only communicates _why_ the recording ended, so the caller can react
@@ -10,13 +10,13 @@
 /// recording).
 ///
 /// - ``RecordingFinishedReason/stopped``: The recording was stopped via a
-///   ``Recorder/stopRecording()`` call.
+///   ``Recorder/stop()`` call.
 /// - ``RecordingFinishedReason/maxDurationReached``: The recording automatically stopped because it
 ///   reached the configured ``RecorderSettings/maxDuration`` limit.
 /// - ``RecordingFinishedReason/maxFileSizeReached``: The recording automatically stopped because it
 ///   reached the configured ``RecorderSettings/maxFileSize`` limit.
 public enum RecordingFinishedReason: CaseIterable, Sendable {
-  /// The recording was stopped via a ``Recorder/stopRecording()`` call.
+  /// The recording was stopped via a ``Recorder/stop()`` call.
   case stopped
   /// The recording automatically stopped because it reached the configured ``RecorderSettings/maxDuration``
   /// limit.

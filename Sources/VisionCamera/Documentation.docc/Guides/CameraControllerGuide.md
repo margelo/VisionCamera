@@ -12,7 +12,7 @@ The session's configuration method returns one controller per configured connect
 import VisionCamera
 
 func configureController(session: CameraSession, output: any CameraOutput) async throws -> CameraController? {
-	let controllers = try await session.configure(connections: [
+	let controllers = try await session.configure([
 		.init(input: .position(.back), outputs: [.init(output: output)])
 	])
 	return controllers.first
@@ -30,7 +30,7 @@ import VisionCamera
 
 func brighten(controller: CameraController) async throws {
 	let exposure = min(1, controller.device.maxExposureBias)
-	try await controller.setExposureBias(exposure: exposure)
+	try await controller.setExposureBias( exposure)
 }
 ```
 

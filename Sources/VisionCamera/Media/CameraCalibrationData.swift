@@ -1,83 +1,34 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
-//
-//  CameraCalibrationData.swift
-//  VisionCamera
-//
-//  Created by Marc Rousavy on 29.10.25.
-//
-
 import AVFoundation
-import Foundation
+import CoreGraphics
+import simd
 
-/// Camera Calibration Data is per-frame data
-/// used to counter-apply any transformations applied
-/// by the Camera/ISP.
+/// Per-sample Camera calibration data for distortion correction and 3D projection.
 ///
-/// It can be useful to undo any distortion correction,
-/// or compute scenery in 3D space.
-///
-/// See ``Depth/cameraCalibrationData``
-/// See ``Photo/calibrationData``
-public final class CameraCalibrationData {
-  /// The retained native AVFoundation calibration data.
+/// The value retains AVFoundation's calibration data. Matrices use native SIMD storage rather than
+/// flattened arrays, and dimensions and points use Core Graphics coordinates.
+public struct CameraCalibrationData {
+  /// The retained native calibration data, including lens-distortion lookup tables.
   public let calibrationData: AVCameraCalibrationData
 
-  /// Creates a CameraCalibrationData that retains the given native AVFoundation calibration data.
+  /// Creates a value retaining the native calibration data.
   public init(calibrationData: AVCameraCalibrationData) {
     self.calibrationData = calibrationData
   }
 
-  /// The size of one pixel at ``CameraCalibrationData/intrinsicMatrixReferenceDimensions`` in millimeters.
-  public var pixelSize: Double {
-    return Double(calibrationData.pixelSize)
-  }
-
-  /// The reference frame dimensions used in calculating a camera's principal point.
-  public var intrinsicMatrixReferenceDimensions: Size {
-    let cgSize = calibrationData.intrinsicMatrixReferenceDimensions
-    return Size(cgSize)
-  }
-
-  /// A ``Point`` describing the offset of the lens' distortion center
-  /// from the top left in ``CameraCalibrationData/intrinsicMatrixReferenceDimensions``.
-  public var lensDistortionCenter: Point {
-    let cgPoint = calibrationData.lensDistortionCenter
-    return Point(cgPoint)
-  }
-
-  /// Gets the Camera intrinsic matrix, which maps 3D Camera coordinates
-  /// to 2D Pixel coordinates.
+  /// The size of one pixel at the reference dimensions, in millimeters.
+  public var pixelSize: Float { calibrationData.pixelSize }
+  /// The image dimensions used to calculate the intrinsic matrix and distortion center.
+  public var referenceDimensions: CGSize { calibrationData.intrinsicMatrixReferenceDimensions }
+  /// The lens-distortion center, measured from the reference image's top-left corner.
+  public var distortionCenter: CGPoint { calibrationData.lensDistortionCenter }
+  /// The column-major matrix mapping 3D Camera coordinates into 2D pixel coordinates.
   ///
-  /// The returned SIMD value has three columns and three rows.
-  /// Its origin is the top-left of the Frame.
+  /// The first two diagonal elements contain focal lengths; the third column contains the principal point.
+  public var intrinsicMatrix: simd_float3x3 { calibrationData.intrinsicMatrix }
+  /// The column-major matrix mapping world coordinates into Camera coordinates.
   ///
-  /// ```
-  /// K = [ fx   0  cx ]
-  ///     [  0  fy  cy ]
-  ///     [  0   0   1 ]
-  /// ```
-  /// - `fx`, `fy`: focal length in pixels
-  /// - `cx`, `cy`: principal point in pixels
-  ///
-  /// ```swift
-  /// let matrix = calibrationData.cameraIntrinsicMatrix
-  /// let fx = matrix[0, 0]
-  /// let fy = matrix[1, 1]
-  /// ```
-  public var cameraIntrinsicMatrix: simd_float3x3 { calibrationData.intrinsicMatrix }
-
-  /// Gets the Camera extrinsic matrix, which maps world space
-  /// to camera space.
-  ///
-  /// The returned SIMD value has four columns and three rows.
-  ///
-  /// ```
-  /// K = [ r11 r12 r13 tx ]
-  ///     [ r21 r22 r23 ty ]
-  ///     [ r31 r32 r33 tz ]
-  /// ```
-  /// - `r`: Rotation/orientation
-  /// - `t`: Translation/position (in millimeters)
-  public var cameraExtrinsicsMatrix: simd_float4x3 { calibrationData.extrinsicMatrix }
+  /// The first three columns describe rotation and the fourth contains translation in millimeters.
+  public var extrinsicMatrix: simd_float4x3 { calibrationData.extrinsicMatrix }
 }

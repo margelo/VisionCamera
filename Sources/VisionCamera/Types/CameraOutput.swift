@@ -1,5 +1,7 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+import CoreGraphics
+
 /// The common interface for all outputs that can be connected to a ``CameraSession``.
 ///
 /// Conform to this protocol and ``NativeCameraOutput`` to create custom outputs. This is useful for building
@@ -27,8 +29,8 @@ public protocol CameraOutput: AnyObject {
   /// or `nil` if the output has not yet been connected to a
   /// ``CameraSession``.
   ///
-  /// The selected ``Size`` may differ from the requested
-  /// ``Size`` (e.g. from ``PhotoOutputOptions/targetResolution``),
+  /// The selected size may differ from the requested
+  /// size (e.g. from ``PhotoOutputOptions/targetResolution``),
   /// as the ``CameraSession`` negotiates resolutions across
   /// attached ``CameraOutput``s, connected ``CameraDevice``
   /// capabilities, and enabled ``Constraint``s.
@@ -36,5 +38,5 @@ public protocol CameraOutput: AnyObject {
   /// For outputs that are not pixel-based (e.g. metadata-only outputs),
   /// this reports the resolution of the upstream video stream feeding
   /// the output, or `nil` if no video input is attached.
-  var currentResolution: Size? { get }
+  var currentResolution: CGSize? { get }
 }

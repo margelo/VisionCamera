@@ -4,176 +4,123 @@ import AVFoundation
 import Foundation
 import UIKit
 
-/// Represents a captured ``Photo`` in memory.
+/// A captured Photo in memory.
 ///
-/// Photos can be captured with a ``PhotoOutput``, and can be saved to a file using ``Photo/saveToTemporaryFileAsync()``.
-///
-/// To display the photo to the user, use ``Photo/toImageAsync()`` and display the returned `UIImage` in a `UIImageView`.
-///
-/// The Photo retains its native image data until it is deallocated. Release references when you are no longer using it.
-///
-/// ```swift
-/// let photo = try await photoOutput.capturePhoto(settings: .init())
-/// let image = try await photo.toImageAsync()
-/// // Assign to a UIImageView on the main actor.
-/// imageView.image = image
-///
-/// let path = try await photo.saveToTemporaryFileAsync()
-/// ```
-public final class Photo {
-  /// The retained native `AVCapturePhoto` containing the image and capture metadata.
+/// ``PhotoOutput`` produces Photos. Each value retains its native capture result, so copies share the
+/// image data without copying pixels. Use ``Photo/image()`` to display the Photo or ``Photo/write(to:options:)``
+/// to encode it to a file. Release retained Photos when they are no longer needed.
+public struct Photo {
+  /// The retained native capture result, including image data and capture metadata.
   public let photo: AVCapturePhoto
-  /// The timestamp, orientation, and mirroring metadata associated with this media sample.
+  /// The orientation, mirroring, and timing metadata associated with this capture.
   public let metadata: MediaSampleMetadata
-  /// Get the ``PhotoContainerFormat`` of
-  /// this ``Photo``.
+  /// The container format used when encoding this Photo.
   public let containerFormat: PhotoContainerFormat
   private static let processingQueue = DispatchQueue(label: "com.margelo.camera.photo-processing", qos: .userInitiated)
   private static let fileQueue = DispatchQueue(label: "com.margelo.camera.photo-files", qos: .utility)
 
-  /// Creates a Photo that retains an existing `AVCapturePhoto`, its metadata, and its container format.
+  /// Creates a Photo that retains a native capture result and its metadata.
   public init(photo: AVCapturePhoto, metadata: MediaSampleMetadata, containerFormat: PhotoContainerFormat) {
     self.photo = photo
     self.metadata = metadata
     self.containerFormat = containerFormat
   }
 
-  /// An estimate of the Photo's native memory usage in bytes, including its image, preview, and depth buffers.
-  public var memorySize: Int { photo.memorySize }
-  /// Represents the timestamp this ``Photo`` was
-  /// captured at, using the system's host clock, in seconds.
-  public var timestamp: Double { photo.timestamp.seconds }
-  /// Gets whether this ``Photo`` is mirrored alongside the
-  /// vertical axis.
+  /// The native capture timestamp on the system's host clock.
+  public var timestamp: CMTime { photo.timestamp }
+  /// Whether the Photo's pixels must be interpreted as mirrored along the vertical axis.
   public var isMirrored: Bool { metadata.isMirrored }
-  /// Gets the ``CameraOrientation`` this ``Photo`` was
-  /// captured in.
-  ///
-  /// ``CameraOrientation`` will be applied lazily via EXIF
-  /// flags, or when converting the ``Photo`` to an
-  /// `UIImage`.
+  /// The capture orientation, applied as metadata when encoding or displaying the Photo.
   public var orientation: CameraOrientation { metadata.orientation }
-  /// Gets whether this ``Photo`` is a RAW photo (i.e.
-  /// no processing has been applied), or a processed photo (e.g.
-  /// JPEG).
-  /// See ``Photo/containerFormat``
-  public var isRawPhoto: Bool { photo.isRawPhoto }
-  /// The retained native pixel buffer, if AVFoundation included one in the Photo.
+  /// Whether this capture contains RAW sensor data rather than a processed image.
+  public var isRaw: Bool { photo.isRawPhoto }
+  /// The native pixel buffer, if AVFoundation included one with this capture.
+  ///
+  /// A separately retained buffer remains alive after the Photo goes out of scope.
   public var pixelBuffer: CVPixelBuffer? { photo.pixelBuffer }
-  /// Get whether this Photo has a native pixel buffer attached to it. See ``Photo/getPixelBuffer()``.
-  public var hasPixelBuffer: Bool { pixelBuffer != nil }
-  /// Get the width of this ``Photo``, in pixels.
-  public var width: Double { Double(size.width) }
-  /// Get the height of this ``Photo``, in pixels.
-  public var height: Double { Double(size.height) }
-
-  /// Get the associated ``Depth`` data
-  /// for this ``Photo`` if it has one.
-  /// See ``CapturePhotoSettings/enableDepthData``
+  /// The Photo's width in pixels.
+  public var width: Int { Int(dimensions.width) }
+  /// The Photo's height in pixels.
+  public var height: Int { Int(dimensions.height) }
+  /// The native image dimensions for the RAW or processed capture result.
+  public var dimensions: CMVideoDimensions {
+    isRaw ? photo.resolvedSettings.rawPhotoDimensions : photo.resolvedSettings.photoDimensions
+  }
+  /// The captured depth data, if depth delivery was enabled and supported for this Photo.
   public var depth: Depth? {
     photo.depthData.map { Depth(depthData: $0, metadata: metadata) }
   }
-
-  /// The width and height of the Photo, in pixels.
-  public var size: CMVideoDimensions {
-    isRawPhoto ? photo.resolvedSettings.rawPhotoDimensions : photo.resolvedSettings.photoDimensions
-  }
-
-  /// Get the associated ``CameraCalibrationData``
-  /// for this ``Photo`` if calibration data delivery
-  /// was enabled.
-  ///
-  /// Native captures can include calibration data when configured for constituent photo delivery.
+  /// Camera calibration data attached to this Photo, if available.
   public var calibrationData: CameraCalibrationData? {
     photo.cameraCalibrationData.map { CameraCalibrationData(calibrationData: $0) }
   }
 
-  /// Get the Photo's native `CVPixelBuffer` without copying its pixels.
-  ///
-  /// The returned buffer remains valid independently of the Photo while the caller retains it.
-  /// - Throws: If the Photo has no pixel buffer.
-  public func getPixelBuffer() throws -> CVPixelBuffer {
-    guard let pixelBuffer else { throw CameraError(message: "This photo does not contain a pixel buffer.") }
-    return pixelBuffer
-  }
-
   /// Provides scoped, read-only access to the Photo's non-planar pixel buffer.
   ///
-  /// The buffer is locked for the duration of `body` and unlocked even if `body` throws. The pointer must not escape the closure. Copy the bytes into `Data` to keep them beyond the closure.
-  /// - Throws: If the Photo has no pixel buffer, it is planar, locking fails, or `body` throws.
+  /// The buffer stays locked throughout `body` and is unlocked even if `body` throws. The pointer must
+  /// not escape the closure. Copy it into `Data` to keep the bytes beyond the closure.
+  /// - Throws: A ``MediaError`` if the Photo has no accessible non-planar buffer, or the error thrown by `body`.
   public func withUnsafeBytes<Result>(_ body: (UnsafeRawBufferPointer) throws -> Result) throws -> Result {
-    let pixelBuffer = try getPixelBuffer()
+    guard let pixelBuffer else { throw MediaError.missingPixelBuffer }
     return try pixelBuffer.withReadOnlyBytes(body)
   }
 
-  /// Gets the raw file data of the ``Photo`` after
-  /// processing and including EXIF flags.
+  /// Encodes this Photo, including EXIF metadata, on a shared serial processing queue.
   ///
-  /// Returns owned `Data` that remains valid after this Photo is released.
-  public func getFileData() throws -> Data {
-    guard let data = photo.fileDataRepresentation() else {
-      throw CameraError(message: "Failed to get the photo's file data.")
+  /// The returned `Data` owns its bytes independently of the Photo.
+  /// - Throws: ``MediaError/photoDataUnavailable`` if AVFoundation cannot encode the Photo,
+  ///   or `CancellationError` if cancelled before encoding begins.
+  public func encodedData() async throws -> Data {
+    try await Self.processingQueue.perform { try encodedRepresentation() }
+  }
+
+  /// Encodes this Photo and writes it to a file on a shared serial file queue.
+  ///
+  /// Parent directories must exist. By default, writing replaces an existing file atomically. Pass
+  /// `Data.WritingOptions.withoutOverwriting` to require a new destination.
+  /// - Parameters:
+  ///   - url: A file URL including the destination filename and extension.
+  ///   - options: Foundation's file-writing options. Defaults to an atomic write.
+  /// - Throws: ``MediaError/invalidFileURL(_:)`` for a non-file URL, an encoding error, the underlying
+  ///   file-system error, or `CancellationError` if cancelled before writing begins.
+  public func write(to url: URL, options: Data.WritingOptions = .atomic) async throws {
+    guard url.isFileURL else { throw MediaError.invalidFileURL(url) }
+    try await Self.fileQueue.perform {
+      try encodedRepresentation().write(to: url, options: options)
     }
+  }
+
+  /// Encodes this Photo to a new temporary file and returns its file URL.
+  ///
+  /// The extension follows ``Photo/containerFormat``. Encoding and writing run on a shared serial queue.
+  /// The caller is responsible for removing the temporary file when it is no longer needed.
+  /// - Throws: A format or encoding error, the underlying file-system error, or cancellation before writing begins.
+  public func writeToTemporaryFile() async throws -> URL {
+    try await Self.fileQueue.perform {
+      let fileType = try containerFormat.uniformType
+      let url = try URL.createTempURL(fileType: fileType)
+      try encodedRepresentation().write(to: url, options: .atomic)
+      return url
+    }
+  }
+
+  /// Creates a UIKit image carrying this Photo's orientation and mirroring metadata.
+  ///
+  /// Conversion runs on a shared serial processing queue. RAW Photos may not have a processed image
+  /// representation; use ``Photo/encodedData()`` to retain their RAW capture data.
+  /// - Throws: ``MediaError/photoImageUnavailable(isRaw:)`` if no image representation is available,
+  ///   or cancellation before conversion begins.
+  public func image() async throws -> UIImage {
+    try await Self.processingQueue.perform {
+      guard let cgImage = photo.cgImageRepresentation() else {
+        throw MediaError.photoImageUnavailable(isRaw: isRaw)
+      }
+      return UIImage(cgImage: cgImage, scale: 1, orientation: metadata.uiImageOrientation)
+    }
+  }
+
+  private func encodedRepresentation() throws(MediaError) -> Data {
+    guard let data = photo.fileDataRepresentation() else { throw .photoDataUnavailable }
     return data
-  }
-
-  /// Asynchronously gets the raw file data of
-  /// the ``Photo`` after processing
-  /// and including EXIF flags.
-  ///
-  /// Encoding runs on the shared serial Photo processing queue. Returns owned `Data` that remains valid after this Photo is released.
-  public func getFileDataAsync() async throws -> Data {
-    try await Self.processingQueue.perform { try self.getFileData() }
-  }
-
-  /// Asynchronously saves this Photo to a file at the given `path`, using this ``Photo/containerFormat``.
-  ///
-  /// - Parameter path: The full filesystem path, including filename and extension. Parent directories must exist. An existing file at this path is overwritten. This must be a filesystem path, not a `file://` URL.
-  ///
-  /// Encoding and writing run on the shared serial Photo file queue. Encoding and file-writing errors propagate to the caller.
-  public func saveToFileAsync(path: String) async throws {
-    try await Self.fileQueue.perform {
-      try self.getFileData().write(to: URL(fileURLWithPath: path))
-    }
-  }
-
-  /// Asynchronously saves this ``Photo`` to
-  /// a temporary file using this ``Photo/containerFormat``,
-  /// and returns the path it was saved at.
-  ///
-  /// The returned value is a filesystem path, not a `file://` URL.
-  ///
-  /// Encoding and writing run on the shared serial Photo file queue. Encoding and file-writing errors propagate to the caller.
-  public func saveToTemporaryFileAsync() async throws -> String {
-    try await Self.fileQueue.perform {
-      let fileType = try self.containerFormat.toUTType()
-      let file = try URL.createTempURL(fileType: fileType)
-      try self.getFileData().write(to: file)
-      return file.path
-    }
-  }
-
-  /// Converts this ``Photo`` to an `UIImage`,
-  /// possibly applying ``Photo/orientation`` and ``Photo/isMirrored``
-  /// settings.
-  /// - Throws: If the ``Photo`` is a raw photo (see ``Photo/isRawPhoto``)
-  /// - Throws: If the ``Photo``'s Image data cannot be accessed
-  public func toImage() throws -> UIImage {
-    guard let cgImage = photo.cgImageRepresentation() else {
-      if isRawPhoto { throw CameraError(message: "Raw photos cannot be converted to UIImage.") }
-      throw CameraError(message: "Failed to get the photo's image data.")
-    }
-    return UIImage(cgImage: cgImage, scale: 1, orientation: metadata.uiImageOrientation)
-  }
-
-  /// Asynchronously converts this ``Photo`` to an `UIImage`,
-  /// possibly applying ``Photo/orientation`` and ``Photo/isMirrored``
-  /// settings.
-  /// - Throws: If the ``Photo`` is a raw photo (see ``Photo/isRawPhoto``)
-  /// - Throws: If the ``Photo``'s Image data cannot be accessed
-  ///
-  /// Conversion runs on the shared serial Photo processing queue. Conversion errors propagate to the caller.
-  public func toImageAsync() async throws -> UIImage {
-    try await Self.processingQueue.perform { try self.toImage() }
   }
 }

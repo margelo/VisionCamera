@@ -1,5 +1,8 @@
 // Copyright © 2025 Marc Rousavy @ Margelo
 
+import CoreMedia
+import Foundation
+
 /// Represents an instance that can record videos to
 /// a file.
 ///
@@ -8,64 +11,58 @@
 /// To record multiple videos, you will need to create
 /// multiple ``Recorder`` instances.
 public protocol Recorder: AnyObject {
-  /// Returns whether the output is currently recording.
-  var isRecording: Bool { get }
-  /// Returns whether the current recording is paused.
-  var isPaused: Bool { get }
-  /// The currently recorded duration, in seconds.
-  var recordedDuration: Double { get }
-  /// The currently recorded file size, in bytes.
+  /// Reads the recording state, duration, and file size on the recorder's owning queue.
   ///
-  /// Encoder buffering can cause the on-disk size to lag behind captured data.
-  var recordedFileSize: Int64 { get }
-  /// The absolute filesystem path to the file that this Recorder is recording, or will record, to.
-  ///
-  /// For example, `/var/mobile/.../video.mov`. This is a filesystem path, not a `file://` URL.
-  var filePath: String { get }
+  /// A file that has not been created yet reports a size of `0`. Other file-system errors propagate to the caller.
+  /// - Returns: The current recording status.
+  /// - Throws: An underlying file-system error if the current file size cannot be read.
+  func status() async throws -> RecordingStatus
+  /// The file URL this Recorder is recording, or will record, to.
+  var fileURL: URL { get }
 
-  /// Starts recording to the path selected when this Recorder was created.
+  /// Starts recording to the file selected when this Recorder was created.
   ///
   /// Returns when recording has successfully started. The finished callback runs after the video file has
   /// been finalized.
   ///
   /// - Parameters:
-  ///   - onRecordingFinished: Called with the absolute file path and the reason recording finished, after a stop request or a configured duration or file-size limit.
-  ///   - onRecordingError: Called when an unexpected error occurs after recording has started.
-  ///   - onRecordingPaused: Called when recording pauses.
-  ///   - onRecordingResumed: Called when a paused recording resumes.
+  ///   - onFinished: Called with the finalized video file and the reason recording finished, after a stop request or a configured duration or file-size limit.
+  ///   - onError: Called when an unexpected error occurs after recording has started.
+  ///   - onPaused: Called when recording pauses.
+  ///   - onResumed: Called when a paused recording resumes.
   /// - Throws: An error if recording cannot start. Errors reported before recording starts are thrown to the caller.
-  func startRecording(
-    onRecordingFinished: @escaping (_ filePath: String, _ reason: RecordingFinishedReason) -> Void,
-    onRecordingError: @escaping (_ error: Error) -> Void,
-    onRecordingPaused: (() -> Void)?,
-    onRecordingResumed: (() -> Void)?
+  func start(
+    onFinished: @escaping (_ result: RecordingResult) -> Void,
+    onError: @escaping (_ error: Error) -> Void,
+    onPaused: (() -> Void)?,
+    onResumed: (() -> Void)?
   ) async throws
   /// Requests the Video recording to stop.
   ///
   /// Returns after the stop request is submitted. Once the file has been finalized, the
-  /// `onRecordingFinished` callback passed to
-  /// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``
+  /// `onFinished` callback passed to
+  /// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``
   /// is called.
   ///
   /// This operation still submits the stop request when the calling task is cancelled.
-  func stopRecording() async
+  func stop() async
   /// Requests the Video recording to be paused.
   /// Once the recording has actually been paused,
-  /// the `onRecordingPaused` callback passed to
-  /// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``
+  /// the `onPaused` callback passed to
+  /// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``
   /// will be called.
   ///
   /// - Throws: An error if the recording backend does not support this operation. Movie-file recording requires iOS 18 or later; frame-based recording supports this on earlier deployment targets.
-  func pauseRecording() async throws
+  func pause() async throws
   /// Requests the currently paused Video recording
   /// to be resumed.
   /// Once the recording has actually been resumed,
-  /// the `onRecordingResumed` callback passed to
-  /// ``Recorder/startRecording(onRecordingFinished:onRecordingError:onRecordingPaused:onRecordingResumed:)``
+  /// the `onResumed` callback passed to
+  /// ``Recorder/start(onFinished:onError:onPaused:onResumed:)``
   /// will be called.
   ///
   /// - Throws: An error if the recording backend does not support this operation. Movie-file recording requires iOS 18 or later; frame-based recording supports this on earlier deployment targets.
-  func resumeRecording() async throws
+  func resume() async throws
   /// Cancels the current recording and deletes
   /// the video file.
   ///
@@ -75,5 +72,5 @@ public protocol Recorder: AnyObject {
   /// deletion errors are suppressed.
   ///
   /// - Throws: An error if there is no active recording, or if ``FrameRecorder`` cannot delete the file.
-  func cancelRecording() async throws
+  func cancel() async throws
 }

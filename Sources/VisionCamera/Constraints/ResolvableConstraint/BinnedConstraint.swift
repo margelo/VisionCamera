@@ -10,17 +10,8 @@
 /// ```swift
 /// BinnedConstraint(binned: true)
 /// ```
-public struct BinnedConstraint: Equatable, Sendable {
+struct BinnedConstraint: Equatable, Sendable {
   /// Whether to prefer pixel binning. Set this to `false` to prefer full-resolution sensor readout.
-  public var binned: Bool
+  let binned: Bool
 
-  /// Creates a preference for binned or non-binned sensor readout.
-  ///
-  /// - Parameters:
-  ///   - binned: Whether to prefer pixel binning. Set this to `false` to prefer full-resolution sensor readout.
-  public init(
-    binned: Bool
-  ) {
-    self.binned = binned
-  }
 }

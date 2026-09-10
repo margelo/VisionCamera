@@ -25,7 +25,7 @@ final class NativeMetadataTests: XCTestCase {
       [frame, frame],
     ] {
       XCTAssertThrowsError(try OutputSynchronizer(outputs: outputs)) { error in
-        XCTAssertTrue(error is CameraError)
+        XCTAssertTrue(error is CaptureError)
       }
     }
   }
@@ -36,7 +36,7 @@ final class NativeMetadataTests: XCTestCase {
       data: .metadata([]),
       metadata: MediaSampleMetadata(timestamp: timestamp, orientation: .left, isMirrored: true)
     )
-    guard case .metadata(let objects, let actualTimestamp) = data.toSynchronizedFrame() else {
+    guard case .metadata(let objects, let actualTimestamp) = data.synchronizedFrame else {
       return XCTFail("Metadata must remain a metadata sample")
     }
     XCTAssertTrue(objects.isEmpty)
@@ -46,7 +46,10 @@ final class NativeMetadataTests: XCTestCase {
   func testSynchronizerAcceptsNativeAudioAndSingleOutputBeforeConnectionValidation() {
     for output: any CameraOutput in [FrameOutput(), NativeAudioOutputFixture()] {
       XCTAssertThrowsError(try OutputSynchronizer(outputs: [output])) { error in
-        XCTAssertTrue(error.localizedDescription.contains("not all of the given outputs are connected"))
+        guard case .synchronizedOutputNotConnected(let index)? = error as? CaptureError else {
+          return XCTFail("Expected a disconnected native data output")
+        }
+        XCTAssertEqual(index, 0)
       }
     }
   }
@@ -76,7 +79,7 @@ final class NativeMetadataTests: XCTestCase {
     let original = try XCTUnwrap(buffer)
     let data = SynchronizedDataFrame(
       data: .audio(original), metadata: MediaSampleMetadata(timestamp: timestamp, orientation: .up, isMirrored: false))
-    guard case .audio(let delivered) = data.toSynchronizedFrame() else {
+    guard case .audio(let delivered) = data.synchronizedFrame else {
       return XCTFail("Audio must remain an audio sample")
     }
     XCTAssertTrue(original === delivered)
@@ -87,7 +90,7 @@ final class NativeMetadataTests: XCTestCase {
   func testSynchronizedFrameUsesTheOutputsRequestedTransform() throws {
     let output = FrameOutput()
     output.outputOrientation = .right
-    try output.configure(config: .init(mirrorMode: .on))
+    try output.configure(.init(mirrorMode: .on))
     let delegate = SynchronizedOutputDelegate(outputs: [output])
     let timestamp = CMTime(value: 17, timescale: 30)
     let regular = output.getMediaSampleMetadata(at: timestamp, orientation: .up, isMirrored: false)
@@ -106,7 +109,7 @@ final class NativeMetadataTests: XCTestCase {
   func testSynchronizedDepthUsesTheOutputsRequestedTransform() throws {
     let output = DepthOutput()
     output.outputOrientation = .down
-    try output.configure(config: .init(mirrorMode: .off))
+    try output.configure(.init(mirrorMode: .off))
     let delegate = SynchronizedOutputDelegate(outputs: [output])
     let timestamp = CMTime(value: 17, timescale: 30)
     let regular = output.getMediaSampleMetadata(at: timestamp, orientation: .up, isMirrored: true)
@@ -120,19 +123,19 @@ final class NativeMetadataTests: XCTestCase {
 
   func testIntrinsicMatrixReadsNativeColumnsAndRejectsMalformedAttachments() throws {
     let buffer = try makeSampleBuffer()
-    XCTAssertNil(buffer.getCameraIntrinsicMatrix())
+    XCTAssertNil(buffer.cameraIntrinsicMatrix)
     var expected = simd_float3x3(
       SIMD3<Float>(100, 0, 0), SIMD3<Float>(0, 200, 0), SIMD3<Float>(3, 4, 1))
     let bytes = withUnsafeBytes(of: &expected) { Data($0) }
     CMSetAttachment(buffer, key: kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix, value: bytes as CFData, attachmentMode: kCMAttachmentMode_ShouldPropagate)
-    let actual = try XCTUnwrap(buffer.getCameraIntrinsicMatrix())
+    let actual = try XCTUnwrap(buffer.cameraIntrinsicMatrix)
     XCTAssertEqual(actual.columns.0, expected.columns.0)
     XCTAssertEqual(actual.columns.1, expected.columns.1)
     XCTAssertEqual(actual.columns.2, expected.columns.2)
 
     CMSetAttachment(
       buffer, key: kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix, value: Data([1, 2, 3]) as CFData, attachmentMode: kCMAttachmentMode_ShouldPropagate)
-    XCTAssertNil(buffer.getCameraIntrinsicMatrix())
+    XCTAssertNil(buffer.cameraIntrinsicMatrix)
   }
 
   private func makeSampleBuffer() throws -> CMSampleBuffer {

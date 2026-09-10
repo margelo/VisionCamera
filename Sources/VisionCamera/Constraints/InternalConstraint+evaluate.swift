@@ -1,7 +1,7 @@
 import AVFoundation
 
 extension InternalConstraint {
-  func evaluate(for format: AVCaptureDevice.Format) throws(CameraError) -> ConstraintEvaluation {
+  func evaluate(for format: AVCaptureDevice.Format) throws(ConfigurationError) -> ConstraintEvaluation {
     switch self {
     case .userConstraint(let constraint):
       return try constraint.evaluate(for: format)

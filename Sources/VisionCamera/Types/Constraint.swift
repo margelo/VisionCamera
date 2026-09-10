@@ -12,24 +12,42 @@
 ///
 /// ```swift
 /// let constraints: [Constraint] = [
-///   .fps(FPSConstraint(fps: 60)),
-///   .videoStabilizationMode(
-///     VideoStabilizationModeConstraint(videoStabilizationMode: .cinematicExtended)),
+///   .frameRate(60),
+///   .videoStabilization(.cinematicExtended),
 /// ]
 /// ```
 public enum Constraint {
   /// Requests a frame rate for video, frame, and preview streams.
-  case fps(FPSConstraint)
+  case frameRate(Double)
   /// Requests a stabilization mode for video streams.
-  case videoStabilizationMode(VideoStabilizationModeConstraint)
+  case videoStabilization(TargetStabilizationMode)
   /// Requests a stabilization mode for the preview.
-  case previewStabilizationMode(PreviewStabilizationModeConstraint)
+  case previewStabilization(TargetStabilizationMode)
   /// Prioritizes an output's target resolution during format negotiation.
-  case resolutionBias(ResolutionBiasConstraint)
+  ///
+  /// The resolution bias goes both ways; for example, if the given
+  /// ``CameraOutput``'s resolution is very low, a Camera
+  /// configuration most closely matching that low resolution will
+  /// be used.
+  ///
+  /// If there are two resolution bias constraints, one with a very
+  /// high, and one with a very low output target resolution, a
+  /// good "middle-ground" will be chosen.
+  ///
+  /// For outputs with an explicit target resolution (e.g.
+  /// ``VideoOutput`` or ``PhotoOutput``),
+  /// resolution negotiation prefers aspect ratio matches
+  /// over raw pixel count differences first, then uses a
+  /// logarithmic scale to compare resolution differences.
+  /// A ``PreviewOutput`` instead only prefers
+  /// Formats at least as large as the screen, ignoring
+  /// aspect ratio (it fills the screen either way).
+  ///
+  case resolution(any CameraOutput)
   /// Requests a dynamic range for video streams.
-  case videoDynamicRange(VideoDynamicRangeConstraint)
+  case videoDynamicRange(TargetDynamicRange)
   /// Prefers a streaming format with the requested pixel format.
-  case pixelFormat(PixelFormatConstraint)
+  case pixelFormat(PixelFormat)
   /// Prefers a binned or non-binned sensor format.
-  case binned(BinnedConstraint)
+  case binned(Bool)
 }
