@@ -22,6 +22,12 @@ public final class PreviewView: UIView {
   ///
   /// The callback runs on the main actor when the preview stops or its output is detached.
   public var didStopPreview: (() -> Void)?
+  /// Called on the main actor when the interface orientation of this view's window scene changes.
+  ///
+  /// The preview follows this orientation independently of the orientation chosen for capture outputs.
+  public var onInterfaceOrientationChanged: ((CameraOrientation) -> Void)?
+  /// The current orientation of this view's window scene, or `nil` when detached.
+  public private(set) var interfaceOrientation: CameraOrientation?
   /// Sets the ``PreviewResizeMode`` for the ``PreviewView``.
   ///
   /// The default is ``PreviewResizeMode/aspectFill``
@@ -50,6 +56,8 @@ public final class PreviewView: UIView {
   private var isPreviewingObserver: NSKeyValueObservation?
   private var isPreviewing = false
   private var observationID = UUID()
+  private let orientationObserver = PreviewOrientationObserver()
+  private var orientationObservationID = UUID()
 
   /// Creates a preview view attached to the given output, or an empty view when the output is `nil`.
   public init(output: PreviewOutput? = nil) {
@@ -72,10 +80,17 @@ public final class PreviewView: UIView {
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard attachedLayer?.superlayer === layer else { return }
+    orientationObserver.update()
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     attachedLayer?.frame = bounds
     CATransaction.commit()
+  }
+
+  /// Tracks the interface orientation of the window scene displaying this preview.
+  public override func didMoveToWindow() {
+    super.didMoveToWindow()
+    updateOrientationObservation()
   }
 
   /// Converts normalized Camera coordinates into this view's coordinates, including rotation, mirroring, and cropping.
@@ -148,6 +163,34 @@ public final class PreviewView: UIView {
         }
       }
     }
+    updateOrientationObservation()
     if wasPreviewing { didStopPreview?() }
+  }
+
+  private func updateOrientationObservation() {
+    orientationObservationID = UUID()
+    guard attachedLayer?.superlayer === layer, let scene = window?.windowScene else {
+      orientationObserver.stop()
+      interfaceOrientation = nil
+      return
+    }
+    let observationID = orientationObservationID
+    orientationObserver.start(scene: scene) { [weak self] orientation in
+      guard let self else { return }
+      guard self.attachedLayer?.superlayer === self.layer else {
+        self.orientationObserver.stop()
+        self.interfaceOrientation = nil
+        return
+      }
+      self.interfaceOrientation = orientation
+      self.output?.setInterfaceOrientation(orientation)
+      DispatchQueue.main.async { [weak self] in
+        guard let self, self.orientationObservationID == observationID, self.interfaceOrientation == orientation else { return }
+        self.onInterfaceOrientationChanged?(orientation)
+      }
+    }
+    if let interfaceOrientation {
+      output?.setInterfaceOrientation(interfaceOrientation)
+    }
   }
 }

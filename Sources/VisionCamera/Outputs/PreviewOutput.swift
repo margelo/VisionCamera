@@ -24,12 +24,13 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
   public let mediaType: MediaType = .video
   /// The underlying `AVCaptureVideoPreviewLayer` connected to the Camera Session and displayed by ``PreviewView``.
   public let previewLayer: AVCaptureVideoPreviewLayer
-  private let orientationManager = InterfaceOrientationManager()
-  /// The preview's current orientation, driven by the app's interface orientation.
+  private let interfaceOrientation = OrientationSnapshot()
+  /// The interface orientation of the window scene displaying this preview.
   ///
-  /// Before a connection is available, this returns `.up`.
+  /// ``PreviewView`` supplies its window's orientation while attached. A detached output keeps its
+  /// last orientation, or ``CameraOrientation/up`` before mounting. The live preview always follows its interface, independently of the capture outputs.
   public var outputOrientation: CameraOrientation {
-    return previewLayer.connection?.orientation ?? .up
+    return interfaceOrientation.current ?? .up
   }
   /// The resolution that the underlying capture pipeline has resolved
   /// this ``CameraOutput`` to, in sensor-native (un-rotated) pixels,
@@ -62,16 +63,6 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
     self.targetResolution = .atLeast(CGSize(width: screen.bounds.width * screen.scale, height: screen.bounds.height * screen.scale))
     self.previewLayer = AVCaptureVideoPreviewLayer()
     self.previewLayer.videoGravity = .resizeAspectFill
-    self.orientationManager.startUpdates { [weak self] orientation in
-      guard let self else { return }
-      if let connection = self.previewLayer.connection {
-        try? connection.setOrientation(orientation)
-      }
-    }
-  }
-
-  deinit {
-    orientationManager.stopUpdates()
   }
 
   /// Applies mirroring and orientation settings to this output's current connection.
@@ -82,8 +73,19 @@ public final class PreviewOutput: CameraOutput, NativePreviewViewOutput {
       return
     }
     try connection.setMirrorMode(config.mirrorMode)
-    if let interfaceOrientation = orientationManager.currentOrientation {
-      try connection.setOrientation(interfaceOrientation)
-    }
+    try connection.setOrientation(outputOrientation)
+  }
+
+  @MainActor
+  func setInterfaceOrientation(_ orientation: CameraOrientation) {
+    guard interfaceOrientation.update(orientation) else { return }
+    CameraSession.queue.async(
+      execute: DispatchWorkItem { [weak self] in
+        guard let self,
+          self.interfaceOrientation.current == orientation,
+          let connection = self.previewLayer.connection
+        else { return }
+        try? connection.setOrientation(orientation)
+      })
   }
 }

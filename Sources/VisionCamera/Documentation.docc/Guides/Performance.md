@@ -30,7 +30,13 @@ Only enable the code formats you actually need to scan.
 
 Each connected output can add processing and bandwidth requirements. Attach only the outputs your current Camera screen needs.
 
-Use a ``PreviewView`` for a regular Camera preview. A custom frame renderer is useful when your app needs to render individual frames, but creates additional work in the frame path.
+Use ``Camera`` in SwiftUI or a ``PreviewView`` in UIKit for a regular Camera preview. A custom frame renderer is useful when your app needs to render individual frames, but creates additional work in the frame path.
+
+## Preserve SwiftUI object identity
+
+Keep outputs and renderers in a model owned by `@StateObject`. Constructing them inside `body` replaces native objects on every evaluation and can trigger session reconfiguration. ``Camera`` preserves its session and preview across view updates and compares configuration values before touching the session.
+
+Send streamed Frames directly to processing or a ``FrameRenderer``. Publishing each Frame as SwiftUI state needlessly updates the view hierarchy. See <doc:FrameRendererViewGuide>.
 
 ## Retain the session between uses
 

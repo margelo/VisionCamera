@@ -77,9 +77,18 @@ public enum ConfigurationError: Error, LocalizedError {
   /// The requested Core Video pixel format is unavailable on the connected output.
   case pixelFormatUnavailable
 
+  /// A fixed SwiftUI zoom value conflicts with the native zoom gesture.
+  case fixedZoomWithGesture
+  /// Session configuration did not return a controller for the SwiftUI Camera.
+  case missingCameraController
+
   /// A description of the unsupported session configuration.
   public var errorDescription: String? {
     switch self {
+    case .fixedZoomWithGesture:
+      return "A fixed zoom cannot be combined with the native zoom gesture. Pass a zoom binding or disable the gesture."
+    case .missingCameraController:
+      return "Camera configuration did not return a controller."
     case .frameRateUnsupported:
       return "The active capture format does not support the selected frame rate."
     case .videoStabilizationUnavailable:

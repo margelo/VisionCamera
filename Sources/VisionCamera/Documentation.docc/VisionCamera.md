@@ -1,10 +1,10 @@
 # ``VisionCamera``
 
-A Camera framework for iOS, with UIKit previews and native Swift access to photos, video, frames, and depth.
+A Camera framework for SwiftUI and UIKit, with photos, video, frames, and depth.
 
 ## Overview
 
-VisionCamera builds on AVFoundation. Create a Camera session, connect the outputs your app needs, and use the returned controllers to adjust the Camera while it is running.
+VisionCamera builds on AVFoundation. Install with Swift Package Manager and mount a SwiftUI Camera, or manage a native Camera session with UIKit. Both workflows use the same outputs and controllers. CocoaPods is also fully supported.
 
 Start with <doc:GettingStarted> to install the library and display a preview. The guides cover capture, controls, processing, and the native types you can use to build your own Camera experience.
 
@@ -13,6 +13,7 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 ### Getting started
 
 - <doc:GettingStarted>
+- <doc:SwiftUICamera>
 - <doc:CameraSessions>
 - <doc:CameraDevices>
 - <doc:CameraOutputs>
@@ -127,6 +128,12 @@ Start with <doc:GettingStarted> to install the library and display a preview. Th
 - ``ScannedObject``
 - ``ScannedCode``
 - ``ScannedFace``
+
+### SwiftUI APIs
+
+- ``Camera``
+- ``CameraPreview``
+- ``CameraFrameRenderer``
 
 ### UIKit and configuration APIs
 

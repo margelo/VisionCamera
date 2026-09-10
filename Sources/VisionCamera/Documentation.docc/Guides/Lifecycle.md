@@ -8,7 +8,15 @@ The ``CameraSession`` has three lifecycle stages:
 - Ready: connections configured, but not yet started.
 - Active: connections configured and started.
 
-## Switch between lifecycle stages
+## Control a SwiftUI Camera
+
+Pass `isActive` to ``Camera``. Include both scene activity and screen visibility. For example, use `isActive: scenePhase == .active && isCameraScreenVisible`.
+
+The Camera configures before starting, keeps its configuration while inactive, and stops and disconnects when removed from the hierarchy. It removes its event listeners, orientation updates, and gestures during teardown. Rapid input changes are serialized so an old configuration cannot restart an inactive Camera. See <doc:SwiftUICamera>.
+
+Set recording policy in your app. If hiding the Camera should finish or cancel a recording, await that operation before removing its output.
+
+## Switch a native session between lifecycle stages
 
 Move an active Camera session to the ready state when it goes out of view, to prevent the Camera from running in the background. This stops the Camera while keeping it configured and prepared in memory.
 

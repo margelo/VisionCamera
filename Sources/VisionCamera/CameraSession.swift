@@ -35,7 +35,7 @@ import Foundation
 public final class CameraSession {
   /// The underlying AVFoundation capture session. Session configuration, starting, and stopping are serialized by ``CameraSession``.
   public let session: AVCaptureSession
-  private static let queue: DispatchQueue = DispatchQueue(
+  static let queue: DispatchQueue = DispatchQueue(
     label: "com.margelo.camera.session",
     qos: .userInteractive,
     attributes: [],
@@ -104,7 +104,8 @@ public final class CameraSession {
   ///
   /// - Returns: One ``CameraController`` per ``CameraSessionConnection``.
   ///
-  /// - Throws: If Camera Permission has not been granted - see ``VisionCamera/cameraPermissionStatus``
+  /// - Throws: If connections are requested before Camera Permission has been granted - see ``VisionCamera/cameraPermissionStatus``.
+  /// An empty connections array can disconnect the session without Camera Permission.
   /// - Throws: If multiple `connections` are added, but the
   /// ``CameraSession`` was not created as a multi-cam session.
   /// - Throws: If hardware resources are being exhausted by too large connection graphs.
@@ -124,7 +125,7 @@ public final class CameraSession {
   /// Configuration runs on the session's serial queue. Keep the returned Camera Controllers alive while using them, and replace them after reconfiguration.
   public func configure(_ connections: [CameraSessionConnection], configuration: CameraSessionConfiguration = .init()) async throws -> [CameraController] {
     return try await Self.queue.perform {
-      guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+      guard connections.isEmpty || AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
         throw PermissionError.cameraAccessDenied(status: AVCaptureDevice.authorizationStatus(for: .video))
       }
 

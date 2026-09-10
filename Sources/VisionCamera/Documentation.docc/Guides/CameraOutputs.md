@@ -13,6 +13,8 @@ VisionCamera provides six core output kinds:
 - ``ObjectOutput``: <doc:ObjectOutputGuide>.
 - ``PreviewOutput``: <doc:PreviewOutputGuide>.
 
+In SwiftUI, pass retained outputs to ``Camera``. It connects its preview and adds output resolution preferences in order. See <doc:SwiftUICamera>.
+
 ## Connect outputs to a session
 
 Add each output to the connection's outputs array:

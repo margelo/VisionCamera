@@ -18,6 +18,8 @@
 
 - ``didStartPreview``
 - ``didStopPreview``
+- ``onInterfaceOrientationChanged``
+- ``interfaceOrientation``
 
 ### Converting coordinates
 
@@ -29,3 +31,4 @@
 ### Laying out the preview
 
 - ``layoutSubviews()``
+- ``didMoveToWindow()``

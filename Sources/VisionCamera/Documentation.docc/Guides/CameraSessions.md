@@ -4,6 +4,8 @@ Connect inputs to outputs and control the Camera's lifecycle.
 
 A ``CameraSession`` connects inputs, see <doc:CameraDevices>, to outputs, see <doc:CameraOutputs>, and orchestrates lifecycle.
 
+The SwiftUI ``Camera`` manages these steps for a single Camera. Use a session directly for UIKit, multi-camera capture, or custom ownership. See <doc:SwiftUICamera>.
+
 ## Create a CameraSession
 
 ```swift

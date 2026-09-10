@@ -1,8 +1,29 @@
 # Display a preview view
 
-Use UIKit to display a PreviewOutput and convert view coordinates.
+Display a PreviewOutput in SwiftUI or UIKit and convert view coordinates.
 
 ``PreviewView`` is a UIKit view that renders the contents of a ``PreviewOutput``. See <doc:PreviewOutputGuide>.
+
+## Display a SwiftUI preview
+
+For a Camera that owns its session, use ``Camera``. To display an output from a session your app already owns, use ``CameraPreview``:
+
+```swift
+import SwiftUI
+import VisionCamera
+
+struct SessionPreview: View {
+	let output: PreviewOutput
+
+	var body: some View {
+		CameraPreview(output: output, resizeMode: .aspectFill)
+	}
+}
+```
+
+Retain and configure the output in your session owner. The adapter displays that output and detaches it when removed. It does not start or stop the session. Use ordinary SwiftUI layout modifiers to size the preview.
+
+## Display a UIKit preview
 
 ```swift
 import UIKit
